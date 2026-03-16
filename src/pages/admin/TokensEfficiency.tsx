@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import {
-  Card, Row, Col, Statistic, Table, Tag, Tabs, Button, Select, DatePicker,
+  Card, Row, Col, Statistic, Table, Tag, Tabs, Button,
 } from 'antd';
 import {
-  DollarOutlined, ThunderboltOutlined, RiseOutlined,
-  DownloadOutlined, ArrowUpOutlined, ArrowDownOutlined,
+  DollarOutlined, ThunderboltOutlined,
+  DownloadOutlined, ArrowDownOutlined,
 } from '@ant-design/icons';
 import {
   ResponsiveContainer, PieChart, Pie, Cell, Tooltip,
@@ -108,7 +108,7 @@ const TokensEfficiency: React.FC = () => {
                             cy="50%"
                             outerRadius={90}
                             dataKey="value"
-                            label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                            label={({ name, percent }: { name?: string; percent?: number }) => `${name ?? ''} ${((percent ?? 0) * 100).toFixed(0)}%`}
                           >
                             {tokensScenario.map((entry, index) => (
                               <Cell key={index} fill={entry.color} />

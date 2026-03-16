@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card, Row, Col, Statistic, Tag, List, Badge, Button, Progress } from 'antd';
+import { Card, Row, Col, Statistic, Tag, List, Badge, Button } from 'antd';
 import {
   AlertOutlined,
   AuditOutlined,
@@ -179,7 +179,7 @@ const Dashboard: React.FC = () => {
                   innerRadius={50}
                   outerRadius={80}
                   dataKey="value"
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  label={({ name, percent }: { name?: string; percent?: number }) => `${name ?? ''} ${((percent ?? 0) * 100).toFixed(0)}%`}
                 >
                   {levelDistribution.map((entry, index) => (
                     <Cell key={index} fill={entry.color} />

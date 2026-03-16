@@ -8,7 +8,7 @@ import {
   CheckCircleOutlined, TeamOutlined, InfoCircleOutlined,
   DatabaseOutlined, FileTextOutlined, SyncOutlined,
 } from '@ant-design/icons';
-import { digitalEmployees, knowledgeBases, type DigitalEmployee, type KnowledgeBase } from '../../mock/data';
+import { digitalEmployees, knowledgeBases, type DigitalEmployee } from '../../mock/data';
 
 const typeIcon: Record<string, React.ReactNode> = {
   '知识库': <DatabaseOutlined style={{ color: '#1677ff' }} />,

@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import {
   Card, Table, Tag, Button, Space, Avatar, Modal, Checkbox, message,
-  Row, Col, Statistic, Descriptions, Input, Tooltip, List,
+  Row, Col, Statistic, Descriptions, Input, List,
 } from 'antd';
 import {
   SettingOutlined, SearchOutlined, ThunderboltOutlined,
   CheckCircleOutlined, TeamOutlined, InfoCircleOutlined,
 } from '@ant-design/icons';
-import { digitalEmployees, skills, type DigitalEmployee, type Skill } from '../../mock/data';
+import { digitalEmployees, skills, type DigitalEmployee } from '../../mock/data';
 
 const levelColor: Record<string, string> = {
   L1: '#C0C0C0', L2: '#6B7B8D', L3: '#1677ff', L4: '#0A1929',

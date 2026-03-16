@@ -1,13 +1,12 @@
 import React, { useState } from 'react';
 import {
   Card, Table, Tag, Button, Space, Input, Select, Modal, Form,
-  Row, Col, Statistic, Descriptions, message, DatePicker, Timeline,
-  Badge,
+  Row, Col, Statistic, Descriptions, message, Timeline,
 } from 'antd';
 import {
   PlusOutlined, SearchOutlined, PlayCircleOutlined,
   CheckCircleOutlined, ClockCircleOutlined, WarningOutlined,
-  ReloadOutlined, EyeOutlined, ScheduleOutlined,
+  ReloadOutlined, ScheduleOutlined,
   SyncOutlined,
 } from '@ant-design/icons';
 import { tasks, digitalEmployees, type TaskItem } from '../../mock/data';

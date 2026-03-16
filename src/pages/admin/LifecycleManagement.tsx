@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import {
   Card, Tabs, Table, Tag, Button, Space, Avatar, Input, Select,
-  Modal, Form, Progress, Descriptions, Badge, Tooltip, message,
-  Row, Col, Statistic,
+  Modal, Form, Progress, Descriptions, Tooltip, message,
+  Row, Col,
 } from 'antd';
 import {
-  PlusOutlined, SearchOutlined, EyeOutlined, EditOutlined,
-  StopOutlined, DeleteOutlined, FileTextOutlined, CheckCircleOutlined,
+  PlusOutlined, SearchOutlined,
+  FileTextOutlined,
 } from '@ant-design/icons';
 import { digitalEmployees, type DigitalEmployee } from '../../mock/data';
 
