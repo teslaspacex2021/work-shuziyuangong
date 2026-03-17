@@ -5,6 +5,7 @@ export interface DigitalEmployee {
   department: string;
   position: string;
   status: 'ACTIVE' | 'TRAINING' | 'SUSPENDED' | 'TERMINATED';
+  employmentStatus: '在职' | '离职';
   owner: string;
   ownerType: '自有' | '外包';
   skills: string[];
@@ -59,7 +60,7 @@ export interface TaskItem {
 
 export interface AlertItem {
   id: string;
-  type: '风险预警' | '待办审批' | '系统通知';
+  type: '风险预警' | '待办审批' | '系统通知' | '绩效考评' | '员工信息调整';
   title: string;
   description: string;
   level: 'critical' | 'warning' | 'info';
@@ -67,10 +68,157 @@ export interface AlertItem {
   handled: boolean;
 }
 
+export interface PositionItem {
+  id: string;
+  name: string;
+  department: string;
+  category: string;
+  description: string;
+  requiredSkills: string[];
+  level: string;
+  status: '启用' | '停用';
+  employeeCount: number;
+  maxEmployeeCount: number;
+  createTime: string;
+}
+
+export interface TaskLogItem {
+  id: string;
+  taskName: string;
+  assignee: string;
+  agentName: string;
+  department: string;
+  userName: string;
+  status: '待执行' | '执行中' | '已完成' | '已失败';
+  priority: '高' | '中' | '低';
+  createTime: string;
+  finishTime?: string;
+  result?: string;
+  duration?: string;
+}
+
+export interface AssessmentConfig {
+  id: string;
+  name: string;
+  cycle: '季度' | '半年' | '全年';
+  startDate: string;
+  endDate: string;
+  status: '进行中' | '已结束' | '未开始';
+  metrics: string[];
+}
+
+export interface AssessmentRecord {
+  id: string;
+  employeeId: string;
+  employeeName: string;
+  department: string;
+  position: string;
+  period: string;
+  cycle: '季度' | '半年' | '全年';
+  taskCompleteRate: number;
+  tokensUsed: number;
+  tokensQuota: number;
+  level: string;
+  score: number;
+  rank: number;
+}
+
+export interface PerformanceReview {
+  id: string;
+  year: number;
+  period: string;
+  periodType: '季度' | '半年' | '年度';
+  name: string;
+  status: '进行中' | '已结束';
+  currentStep: string;
+  steps: PerformanceStep[];
+  employees: PerformanceEmployeeRecord[];
+}
+
+export interface PerformanceStep {
+  key: string;
+  label: string;
+  status: '已完成' | '进行中' | '待处理';
+  deadline?: string;
+}
+
+export interface PerformanceEmployeeRecord {
+  employeeId: string;
+  employeeName: string;
+  department: string;
+  position: string;
+  taskCompleteRate: number;
+  tokensUsed: number;
+  level: string;
+  score: number;
+  selfEvaluation?: string;
+  managerEvaluation?: string;
+  currentAction?: string;
+}
+
+export interface OnboardRecord {
+  id: string;
+  employeeId: string;
+  employeeName: string;
+  owner: string;
+  ownerType: string;
+  department: string;
+  position: string;
+  applyDate: string;
+  status: '待提交' | '部门审批' | '人力审批' | '技术配置' | '已完成' | '已驳回';
+  currentStep: number;
+  approvalSteps: { step: string; status: '已完成' | '进行中' | '待处理' | '已驳回'; time?: string; approver?: string; remark?: string }[];
+}
+
+export interface ExitRecord {
+  id: string;
+  employeeId: string;
+  employeeName: string;
+  department: string;
+  position: string;
+  reason: string;
+  applyDate: string;
+  status: '待提交' | '部门审批' | '人力审批' | '资源回收' | '已完成' | '已驳回';
+  currentStep: number;
+  approvalSteps: { step: string; status: '已完成' | '进行中' | '待处理' | '已驳回'; time?: string; approver?: string; remark?: string }[];
+}
+
+export interface ConversationItem {
+  employeeId: string;
+  lastMessage: string;
+  lastTime: string;
+  unreadCount: number;
+}
+
+export interface ScheduledTask {
+  id: string;
+  name: string;
+  employeeId: string;
+  employeeName: string;
+  cron: string;
+  cronLabel: string;
+  enabled: boolean;
+  lastRun?: string;
+  nextRun: string;
+  description: string;
+}
+
+export interface EmployeeEditApproval {
+  id: string;
+  employeeId: string;
+  employeeName: string;
+  field: string;
+  oldValue: string;
+  newValue: string;
+  applyDate: string;
+  status: '待审批' | '已通过' | '已驳回';
+  applicant: string;
+}
+
 export const digitalEmployees: DigitalEmployee[] = [
   {
     id: 'DE-2026001', name: '小翼·客服', avatar: 'KC', department: '客户服务部', position: '智能客服专员',
-    status: 'ACTIVE', owner: '宇雷', ownerType: '自有',
+    status: 'ACTIVE', employmentStatus: '在职', owner: '宇雷', ownerType: '自有',
     skills: ['智能问答', '工单处理', '知识检索', '情感分析'],
     skillIds: ['SK001', 'SK005', 'SK010'],
     knowledgeIds: ['KB001', 'KB008'],
@@ -81,7 +229,7 @@ export const digitalEmployees: DigitalEmployee[] = [
   },
   {
     id: 'DE-2026002', name: '小翼·数据', avatar: 'SJ', department: '数据运营中心', position: '数据标注专员',
-    status: 'TRAINING', owner: '韩梅梅', ownerType: '外包',
+    status: 'TRAINING', employmentStatus: '在职', owner: '韩梅梅', ownerType: '外包',
     skills: ['数据标注', '数据清洗', '报表生成', '异常检测'],
     skillIds: ['SK003'],
     knowledgeIds: ['KB007'],
@@ -92,7 +240,7 @@ export const digitalEmployees: DigitalEmployee[] = [
   },
   {
     id: 'DE-2026003', name: '小翼·营销', avatar: 'YX', department: '数字化运营部', position: '营销策划专员',
-    status: 'ACTIVE', owner: '李明', ownerType: '自有',
+    status: 'ACTIVE', employmentStatus: '在职', owner: '李明', ownerType: '自有',
     skills: ['文案撰写', '营销方案', '用户画像', '竞品分析'],
     skillIds: ['SK002', 'SK004'],
     knowledgeIds: ['KB001', 'KB005'],
@@ -103,7 +251,7 @@ export const digitalEmployees: DigitalEmployee[] = [
   },
   {
     id: 'DE-2026004', name: '小翼·审计', avatar: 'SH', department: '审计部', position: '审计助理',
-    status: 'ACTIVE', owner: '王芳', ownerType: '自有',
+    status: 'ACTIVE', employmentStatus: '在职', owner: '王芳', ownerType: '自有',
     skills: ['工作底稿', '整改判定', '风险识别', '报告生成'],
     skillIds: ['SK006'],
     knowledgeIds: ['KB002'],
@@ -114,7 +262,7 @@ export const digitalEmployees: DigitalEmployee[] = [
   },
   {
     id: 'DE-2026005', name: '小翼·HR', avatar: 'HR', department: '人力资源部', position: '人事助理',
-    status: 'ACTIVE', owner: '张三', ownerType: '自有',
+    status: 'ACTIVE', employmentStatus: '在职', owner: '张三', ownerType: '自有',
     skills: ['人岗匹配', '简历筛选', '面试安排', '证书查询'],
     skillIds: ['SK008'],
     knowledgeIds: ['KB003'],
@@ -125,7 +273,7 @@ export const digitalEmployees: DigitalEmployee[] = [
   },
   {
     id: 'DE-2026006', name: '小翼·财务', avatar: 'CW', department: '财务共享中心', position: '财务分析专员',
-    status: 'ACTIVE', owner: '赵六', ownerType: '自有',
+    status: 'ACTIVE', employmentStatus: '在职', owner: '赵六', ownerType: '自有',
     skills: ['报销审核', '预算分析', '费用统计', '合规检查'],
     skillIds: ['SK007'],
     knowledgeIds: ['KB004'],
@@ -136,7 +284,7 @@ export const digitalEmployees: DigitalEmployee[] = [
   },
   {
     id: 'DE-2026007', name: '小翼·运维', avatar: 'YW', department: 'IT运维部', position: '运维工程师',
-    status: 'SUSPENDED', owner: '孙七', ownerType: '外包',
+    status: 'SUSPENDED', employmentStatus: '在职', owner: '孙七', ownerType: '外包',
     skills: ['故障诊断', '日志分析', '自动巡检', '性能优化'],
     skillIds: ['SK009'],
     knowledgeIds: ['KB006'],
@@ -147,7 +295,7 @@ export const digitalEmployees: DigitalEmployee[] = [
   },
   {
     id: 'DE-2026008', name: '小翼·商机', avatar: 'SJ', department: '数字化运营部', position: '商机分析专员',
-    status: 'ACTIVE', owner: '周八', ownerType: '自有',
+    status: 'ACTIVE', employmentStatus: '在职', owner: '周八', ownerType: '自有',
     skills: ['商机挖掘', '客户画像', '竞品追踪', '销售预测'],
     skillIds: ['SK004'],
     knowledgeIds: ['KB005'],
@@ -158,7 +306,7 @@ export const digitalEmployees: DigitalEmployee[] = [
   },
   {
     id: 'DE-2026009', name: '小翼·文档', avatar: 'WD', department: '综合管理部', position: '文档管理专员',
-    status: 'ACTIVE', owner: '钱九', ownerType: '自有',
+    status: 'ACTIVE', employmentStatus: '在职', owner: '钱九', ownerType: '自有',
     skills: ['文件解析', '摘要生成', '格式转换', '内容提取'],
     skillIds: ['SK001', 'SK002'],
     knowledgeIds: ['KB001'],
@@ -169,7 +317,7 @@ export const digitalEmployees: DigitalEmployee[] = [
   },
   {
     id: 'DE-2026010', name: '小翼·经分', avatar: 'JF', department: '经营分析部', position: '经营分析专员',
-    status: 'TRAINING', owner: '吴十', ownerType: '自有',
+    status: 'TRAINING', employmentStatus: '在职', owner: '吴十', ownerType: '自有',
     skills: ['经营报告', '指标分析', '趋势预测', '可视化'],
     skillIds: [],
     knowledgeIds: ['KB007'],
@@ -226,6 +374,244 @@ export const alerts: AlertItem[] = [
   { id: 'A006', type: '待办审批', title: 'IT运维手册 知识授权', description: 'KB006知识库授权变更待审批', level: 'info', time: '2026-03-11 17:00', handled: false },
   { id: 'A007', type: '系统通知', title: '翼答智能体 版本更新', description: '翼答V3.2已发布，建议更新关联数字员工', level: 'info', time: '2026-03-11 12:00', handled: true },
   { id: 'A008', type: '风险预警', title: '2月经营分析任务失败', description: '任务T009执行失败，数据源连接异常', level: 'critical', time: '2026-03-10 10:30', handled: false },
+  { id: 'A009', type: '绩效考评', title: '2025年度员工考核 - 自我评价', description: '2025年度员工考核已进入自我评价环节，请及时完成', level: 'info', time: '2026-03-15 09:00', handled: false },
+  { id: 'A010', type: '绩效考评', title: '2025年Q4季度考核 - HR审核', description: '2025年第四季度基干及员工考核待HR审核', level: 'info', time: '2026-03-14 10:00', handled: false },
+  { id: 'A011', type: '员工信息调整', title: '小翼·客服 信息变更审批', description: '小翼·客服的Tokens配额变更待审批', level: 'info', time: '2026-03-13 14:00', handled: false },
+  { id: 'A012', type: '员工信息调整', title: '小翼·数据 岗位调整审批', description: '小翼·数据的岗位信息变更待审批', level: 'info', time: '2026-03-12 16:00', handled: false },
+];
+
+export const positions: PositionItem[] = [
+  { id: 'POS001', name: '智能客服专员', department: '客户服务部', category: '服务类', description: '负责7×24小时智能客服，处理客户咨询和工单', requiredSkills: ['智能问答', '工单处理', '情感分析'], level: 'L2-L3', status: '启用', employeeCount: 3, maxEmployeeCount: 5, createTime: '2025-12-01' },
+  { id: 'POS002', name: '数据标注专员', department: '数据运营中心', category: '技术类', description: '负责各类数据标注、清洗和预处理工作', requiredSkills: ['数据标注', '数据清洗'], level: 'L1-L2', status: '启用', employeeCount: 2, maxEmployeeCount: 4, createTime: '2025-12-15' },
+  { id: 'POS003', name: '营销策划专员', department: '数字化运营部', category: '运营类', description: '负责营销文案创作、用户画像分析和竞品对比', requiredSkills: ['文案撰写', '用户画像', '竞品分析'], level: 'L2-L3', status: '启用', employeeCount: 2, maxEmployeeCount: 3, createTime: '2025-12-10' },
+  { id: 'POS004', name: '审计助理', department: '审计部', category: '合规类', description: '辅助审计人员撰写底稿、识别风险并生成建议', requiredSkills: ['工作底稿', '风险识别'], level: 'L2', status: '启用', employeeCount: 1, maxEmployeeCount: 2, createTime: '2026-01-05' },
+  { id: 'POS005', name: '人事助理', department: '人力资源部', category: '管理类', description: '人力资源管理支持，简历筛选和面试安排', requiredSkills: ['简历筛选', '人岗匹配'], level: 'L2-L3', status: '启用', employeeCount: 1, maxEmployeeCount: 2, createTime: '2025-11-20' },
+  { id: 'POS006', name: '财务分析专员', department: '财务共享中心', category: '财务类', description: '报销审核、预算分析和费用统计', requiredSkills: ['报销审核', '预算分析'], level: 'L3', status: '启用', employeeCount: 1, maxEmployeeCount: 2, createTime: '2025-11-25' },
+  { id: 'POS007', name: '运维工程师', department: 'IT运维部', category: '技术类', description: '系统运维监控、故障诊断和修复', requiredSkills: ['故障诊断', '日志分析', '自动巡检'], level: 'L2-L3', status: '启用', employeeCount: 1, maxEmployeeCount: 3, createTime: '2026-01-15' },
+  { id: 'POS008', name: '商机分析专员', department: '数字化运营部', category: '运营类', description: 'AI商机线索挖掘和客户画像分析', requiredSkills: ['商机挖掘', '客户画像'], level: 'L3-L4', status: '启用', employeeCount: 1, maxEmployeeCount: 2, createTime: '2025-10-20' },
+  { id: 'POS009', name: '文档管理专员', department: '综合管理部', category: '管理类', description: '文档智能处理、摘要生成和格式转换', requiredSkills: ['文件解析', '摘要生成'], level: 'L2', status: '启用', employeeCount: 1, maxEmployeeCount: 2, createTime: '2026-01-10' },
+  { id: 'POS010', name: '经营分析专员', department: '经营分析部', category: '分析类', description: '经营数据采集和多维度分析报告', requiredSkills: ['经营报告', '指标分析', '可视化'], level: 'L1-L2', status: '停用', employeeCount: 1, maxEmployeeCount: 2, createTime: '2026-02-01' },
+];
+
+export const taskLogs: TaskLogItem[] = [
+  { id: 'TL001', taskName: '处理今日客户咨询工单 (批次)', assignee: 'DE-2026001', agentName: '翼答', department: '客户服务部', userName: '宇雷', status: '已完成', priority: '高', createTime: '2026-03-12 08:00', finishTime: '2026-03-12 08:45', result: '处理128条工单，平均响应2.3秒', duration: '45分钟' },
+  { id: 'TL002', taskName: '生成3月营销周报', assignee: 'DE-2026003', agentName: '写作助手', department: '数字化运营部', userName: '李明', status: '执行中', priority: '中', createTime: '2026-03-12 09:00' },
+  { id: 'TL003', taskName: '标注新一批训练数据（2000条）', assignee: 'DE-2026002', agentName: '翼练', department: '数据运营中心', userName: '韩梅梅', status: '执行中', priority: '中', createTime: '2026-03-12 07:30' },
+  { id: 'TL004', taskName: '筛选高级Java工程师简历', assignee: 'DE-2026005', agentName: '人岗匹配', department: '人力资源部', userName: '张三', status: '已完成', priority: '高', createTime: '2026-03-11 14:00', finishTime: '2026-03-11 15:30', result: '从256份简历中筛选出18名候选人', duration: '1小时30分' },
+  { id: 'TL005', taskName: '审计底稿-费用专项', assignee: 'DE-2026004', agentName: '审计助手', department: '审计部', userName: '王芳', status: '待执行', priority: '高', createTime: '2026-03-12 10:00' },
+  { id: 'TL006', taskName: '本月报销单据合规检查', assignee: 'DE-2026006', agentName: '财务助手', department: '财务共享中心', userName: '赵六', status: '已完成', priority: '中', createTime: '2026-03-11 09:00', finishTime: '2026-03-11 17:00', result: '检查342笔报销，发现12笔异常', duration: '8小时' },
+  { id: 'TL007', taskName: '挖掘政企客户商机线索', assignee: 'DE-2026008', agentName: '翼达', department: '数字化运营部', userName: '周八', status: '执行中', priority: '高', createTime: '2026-03-12 08:30' },
+  { id: 'TL008', taskName: '处理上传文件批量摘要', assignee: 'DE-2026009', agentName: '文件助手', department: '综合管理部', userName: '钱九', status: '已完成', priority: '低', createTime: '2026-03-11 16:00', finishTime: '2026-03-11 16:30', result: '完成35份文档摘要提取', duration: '30分钟' },
+  { id: 'TL009', taskName: '生成2月经营分析报告', assignee: 'DE-2026010', agentName: '数据下载', department: '经营分析部', userName: '吴十', status: '已失败', priority: '高', createTime: '2026-03-10 10:00', result: '数据源连接超时，需重试' },
+  { id: 'TL010', taskName: '客户满意度周报分析', assignee: 'DE-2026001', agentName: '翼答', department: '客户服务部', userName: '宇雷', status: '待执行', priority: '中', createTime: '2026-03-12 14:00' },
+  { id: 'TL011', taskName: '批量处理员工入职资料', assignee: 'DE-2026005', agentName: '人岗匹配', department: '人力资源部', userName: '张三', status: '已完成', priority: '中', createTime: '2026-03-10 09:00', finishTime: '2026-03-10 11:00', result: '完成15名新员工资料核验', duration: '2小时' },
+  { id: 'TL012', taskName: '生成竞品月度分析报告', assignee: 'DE-2026003', agentName: '营销智能体', department: '数字化运营部', userName: '李明', status: '已完成', priority: '高', createTime: '2026-03-09 14:00', finishTime: '2026-03-09 16:30', result: '输出12页竞品分析PPT', duration: '2小时30分' },
+];
+
+export const onboardRecords: OnboardRecord[] = [
+  {
+    id: 'OB001', employeeId: 'DE-2026010', employeeName: '小翼·经分', owner: '吴十', ownerType: '自有',
+    department: '经营分析部', position: '经营分析专员', applyDate: '2026-02-25', status: '技术配置', currentStep: 3,
+    approvalSteps: [
+      { step: '提交申请', status: '已完成', time: '2026-02-25 10:00', approver: '吴十', remark: '申请入职' },
+      { step: '部门审批', status: '已完成', time: '2026-02-26 14:00', approver: '张部长', remark: '同意' },
+      { step: '人力审批', status: '已完成', time: '2026-02-27 11:00', approver: 'HR-李主管', remark: '审批通过' },
+      { step: '技术配置', status: '进行中', time: '2026-02-28 09:00', approver: '技术运维组' },
+      { step: '入职完成', status: '待处理' },
+    ],
+  },
+  {
+    id: 'OB002', employeeId: 'DE-2026002', employeeName: '小翼·数据', owner: '韩梅梅', ownerType: '外包',
+    department: '数据运营中心', position: '数据标注专员', applyDate: '2026-01-28', status: '已完成', currentStep: 5,
+    approvalSteps: [
+      { step: '提交申请', status: '已完成', time: '2026-01-28 09:00', approver: '韩梅梅' },
+      { step: '部门审批', status: '已完成', time: '2026-01-29 10:00', approver: '数据中心-王总监' },
+      { step: '人力审批', status: '已完成', time: '2026-01-30 14:00', approver: 'HR-李主管' },
+      { step: '技术配置', status: '已完成', time: '2026-01-31 11:00', approver: '技术运维组' },
+      { step: '入职完成', status: '已完成', time: '2026-02-01 09:00' },
+    ],
+  },
+  {
+    id: 'OB003', employeeId: 'NEW-001', employeeName: '小翼·法务', owner: '陈律师', ownerType: '自有',
+    department: '法务部', position: '法务助理', applyDate: '2026-03-10', status: '部门审批', currentStep: 2,
+    approvalSteps: [
+      { step: '提交申请', status: '已完成', time: '2026-03-10 09:00', approver: '陈律师', remark: '申请入职' },
+      { step: '部门审批', status: '进行中', time: '2026-03-10 14:00', approver: '法务部-刘总' },
+      { step: '人力审批', status: '待处理' },
+      { step: '技术配置', status: '待处理' },
+      { step: '入职完成', status: '待处理' },
+    ],
+  },
+];
+
+export const exitRecords: ExitRecord[] = [
+  {
+    id: 'EX001', employeeId: 'DE-2026007', employeeName: '小翼·运维', department: 'IT运维部', position: '运维工程师',
+    reason: '效能不达标', applyDate: '2026-03-08', status: '人力审批', currentStep: 3,
+    approvalSteps: [
+      { step: '提交退出申请', status: '已完成', time: '2026-03-08 10:00', approver: '孙七', remark: '连续3天未活跃，效能不达标' },
+      { step: '部门审批', status: '已完成', time: '2026-03-09 14:00', approver: 'IT部-周主管', remark: '同意退出' },
+      { step: '人力审批', status: '进行中', time: '2026-03-10 09:00', approver: 'HR-李主管' },
+      { step: '资源回收', status: '待处理' },
+      { step: '退出完成', status: '待处理' },
+    ],
+  },
+  {
+    id: 'EX002', employeeId: 'DE-2026009', employeeName: '小翼·文档', department: '综合管理部', position: '文档管理专员',
+    reason: '岗位调整', applyDate: '2026-03-05', status: '部门审批', currentStep: 2,
+    approvalSteps: [
+      { step: '提交退出申请', status: '已完成', time: '2026-03-05 15:00', approver: '钱九', remark: '岗位调整，合并至其他岗位' },
+      { step: '部门审批', status: '进行中', time: '2026-03-06 10:00', approver: '综合部-赵主任' },
+      { step: '人力审批', status: '待处理' },
+      { step: '资源回收', status: '待处理' },
+      { step: '退出完成', status: '待处理' },
+    ],
+  },
+];
+
+export const assessmentConfigs: AssessmentConfig[] = [
+  { id: 'AC001', name: '2026年Q1季度考核', cycle: '季度', startDate: '2026-01-01', endDate: '2026-03-31', status: '进行中', metrics: ['任务完成率', 'Tokens消耗效率', '用户满意度', '响应速度'] },
+  { id: 'AC002', name: '2025年H2半年考核', cycle: '半年', startDate: '2025-07-01', endDate: '2025-12-31', status: '已结束', metrics: ['任务完成率', 'Tokens消耗效率', '技能成长', '综合表现'] },
+  { id: 'AC003', name: '2025年度考核', cycle: '全年', startDate: '2025-01-01', endDate: '2025-12-31', status: '已结束', metrics: ['任务完成率', 'Tokens消耗效率', '能力提升', '创新贡献'] },
+  { id: 'AC004', name: '2026年H1半年考核', cycle: '半年', startDate: '2026-01-01', endDate: '2026-06-30', status: '未开始', metrics: ['任务完成率', 'Tokens效率', '用户满意度'] },
+];
+
+export const assessmentRecords: AssessmentRecord[] = digitalEmployees.map((e, i) => ({
+  id: `AR-${e.id}`,
+  employeeId: e.id,
+  employeeName: e.name,
+  department: e.department,
+  position: e.position,
+  period: '2026-Q1',
+  cycle: '季度' as const,
+  taskCompleteRate: e.taskCompleteRate,
+  tokensUsed: e.tokensUsed,
+  tokensQuota: e.tokensQuota,
+  level: e.level,
+  score: Math.round(e.taskCompleteRate * 0.4 + (1 - e.tokensUsed / e.tokensQuota) * 100 * 0.3 + (e.level === 'L4' ? 95 : e.level === 'L3' ? 85 : e.level === 'L2' ? 75 : 65) * 0.3),
+  rank: i + 1,
+}));
+
+export const performanceReviews: PerformanceReview[] = [
+  {
+    id: 'PR001', year: 2025, period: '第四季度', periodType: '季度',
+    name: '2025年第四季度基干及员工考核', status: '已结束', currentStep: '--',
+    steps: [
+      { key: 'init', label: '发起考核', status: '已完成', deadline: '2025-12-20' },
+      { key: 'self', label: '自我评价', status: '已完成', deadline: '2025-12-25' },
+      { key: 'manager', label: '主管评价', status: '已完成', deadline: '2025-12-28' },
+      { key: 'hr', label: 'HR审核', status: '已完成', deadline: '2025-12-30' },
+      { key: 'done', label: '考核完成', status: '已完成', deadline: '2025-12-31' },
+    ],
+    employees: digitalEmployees.map((e) => ({
+      employeeId: e.id, employeeName: e.name, department: e.department,
+      position: e.position, taskCompleteRate: e.taskCompleteRate,
+      tokensUsed: e.tokensUsed, level: e.level,
+      score: Math.round(Math.random() * 15 + 80),
+      selfEvaluation: '本季度圆满完成各项任务目标',
+      managerEvaluation: '表现优秀，建议继续保持',
+    })),
+  },
+  {
+    id: 'PR002', year: 2025, period: '年度', periodType: '年度',
+    name: '2025年度员工考核', status: '进行中', currentStep: 'HR审核',
+    steps: [
+      { key: 'init', label: '发起考核', status: '已完成', deadline: '2026-01-10' },
+      { key: 'self', label: '自我评价', status: '已完成', deadline: '2026-01-20' },
+      { key: 'manager', label: '主管评价', status: '已完成', deadline: '2026-02-01' },
+      { key: 'hr', label: 'HR审核', status: '进行中', deadline: '2026-03-15' },
+      { key: 'done', label: '考核完成', status: '待处理', deadline: '2026-03-31' },
+    ],
+    employees: digitalEmployees.map((e) => ({
+      employeeId: e.id, employeeName: e.name, department: e.department,
+      position: e.position, taskCompleteRate: e.taskCompleteRate,
+      tokensUsed: e.tokensUsed, level: e.level,
+      score: Math.round(Math.random() * 15 + 82),
+      selfEvaluation: '年度工作总结已提交',
+      managerEvaluation: '年度考评中',
+      currentAction: 'HR审核',
+    })),
+  },
+  {
+    id: 'PR003', year: 2025, period: '第三季度', periodType: '季度',
+    name: '2025年三季度基干及员工考核', status: '已结束', currentStep: '--',
+    steps: [
+      { key: 'init', label: '发起考核', status: '已完成' },
+      { key: 'self', label: '自我评价', status: '已完成' },
+      { key: 'manager', label: '主管评价', status: '已完成' },
+      { key: 'hr', label: 'HR审核', status: '已完成' },
+      { key: 'done', label: '考核完成', status: '已完成' },
+    ],
+    employees: [],
+  },
+  {
+    id: 'PR004', year: 2025, period: '第二季度', periodType: '季度',
+    name: '2025年二季度基干及员工考核', status: '已结束', currentStep: '--',
+    steps: [
+      { key: 'init', label: '发起考核', status: '已完成' },
+      { key: 'self', label: '自我评价', status: '已完成' },
+      { key: 'manager', label: '主管评价', status: '已完成' },
+      { key: 'hr', label: 'HR审核', status: '已完成' },
+      { key: 'done', label: '考核完成', status: '已完成' },
+    ],
+    employees: [],
+  },
+  {
+    id: 'PR005', year: 2025, period: '第一季度', periodType: '季度',
+    name: '2025年一季度基干及员工考核', status: '已结束', currentStep: '--',
+    steps: [
+      { key: 'init', label: '发起考核', status: '已完成' },
+      { key: 'self', label: '自我评价', status: '已完成' },
+      { key: 'manager', label: '主管评价', status: '已完成' },
+      { key: 'hr', label: 'HR审核', status: '已完成' },
+      { key: 'done', label: '考核完成', status: '已完成' },
+    ],
+    employees: [],
+  },
+  {
+    id: 'PR006', year: 2024, period: '年度', periodType: '年度',
+    name: '2024年度员工考核', status: '已结束', currentStep: '--',
+    steps: [
+      { key: 'init', label: '发起考核', status: '已完成' },
+      { key: 'self', label: '自我评价', status: '已完成' },
+      { key: 'manager', label: '主管评价', status: '已完成' },
+      { key: 'hr', label: 'HR审核', status: '已完成' },
+      { key: 'done', label: '考核完成', status: '已完成' },
+    ],
+    employees: [],
+  },
+  {
+    id: 'PR007', year: 2024, period: '第四季度', periodType: '季度',
+    name: '2024年四季度基干及员工考核', status: '已结束', currentStep: '--',
+    steps: [
+      { key: 'init', label: '发起考核', status: '已完成' },
+      { key: 'self', label: '自我评价', status: '已完成' },
+      { key: 'manager', label: '主管评价', status: '已完成' },
+      { key: 'hr', label: 'HR审核', status: '已完成' },
+      { key: 'done', label: '考核完成', status: '已完成' },
+    ],
+    employees: [],
+  },
+];
+
+export const employeeEditApprovals: EmployeeEditApproval[] = [
+  { id: 'EA001', employeeId: 'DE-2026001', employeeName: '小翼·客服', field: 'Tokens配额', oldValue: '500万', newValue: '800万', applyDate: '2026-03-13', status: '待审批', applicant: '宇雷' },
+  { id: 'EA002', employeeId: 'DE-2026002', employeeName: '小翼·数据', field: '岗位', oldValue: '数据标注专员', newValue: '数据分析专员', applyDate: '2026-03-12', status: '待审批', applicant: '韩梅梅' },
+];
+
+export const scheduledTasks: ScheduledTask[] = [
+  { id: 'ST001', name: '每日客户工单处理', employeeId: 'DE-2026001', employeeName: '小翼·客服', cron: '0 8 * * *', cronLabel: '每天 08:00', enabled: true, lastRun: '2026-03-17 08:00', nextRun: '2026-03-18 08:00', description: '自动处理前一天未完成的客户工单' },
+  { id: 'ST002', name: '周报自动生成', employeeId: 'DE-2026003', employeeName: '小翼·营销', cron: '0 9 * * 1', cronLabel: '每周一 09:00', enabled: true, lastRun: '2026-03-17 09:00', nextRun: '2026-03-24 09:00', description: '自动生成上周营销周报' },
+  { id: 'ST003', name: '月度报销检查', employeeId: 'DE-2026006', employeeName: '小翼·财务', cron: '0 9 1 * *', cronLabel: '每月1日 09:00', enabled: true, lastRun: '2026-03-01 09:00', nextRun: '2026-04-01 09:00', description: '自动执行月度报销单据合规检查' },
+  { id: 'ST004', name: '数据质量巡检', employeeId: 'DE-2026002', employeeName: '小翼·数据', cron: '0 6 * * *', cronLabel: '每天 06:00', enabled: false, lastRun: '2026-03-15 06:00', nextRun: '-', description: '每日自动检查数据质量' },
+];
+
+export const conversations: ConversationItem[] = [
+  { employeeId: 'DE-2026001', lastMessage: '已完成128条工单处理，平均响应2.3秒', lastTime: '10分钟前', unreadCount: 2 },
+  { employeeId: 'DE-2026003', lastMessage: '3月营销周报正在生成中，预计30分钟完成', lastTime: '30分钟前', unreadCount: 0 },
+  { employeeId: 'DE-2026005', lastMessage: '从256份简历中筛选出18名候选人，详情请查看', lastTime: '2小时前', unreadCount: 1 },
+  { employeeId: 'DE-2026006', lastMessage: '本月报销单据已检查完毕，发现12笔异常', lastTime: '昨天', unreadCount: 3 },
+  { employeeId: 'DE-2026008', lastMessage: '正在分析政企客户数据，已识别5条高价值线索', lastTime: '20分钟前', unreadCount: 0 },
 ];
 
 export const dashboardStats = {
@@ -235,12 +621,14 @@ export const dashboardStats = {
   avgTaskRate: 94.8,
   ownRatio: 65,
   outsourceRatio: 35,
-  riskAlerts: 3,
-  pendingApprovals: 5,
   healthScore: 98.5,
   healthChange: '+0.2%',
   monthNewPercent: 12,
   efficiencyGrade: 'A+',
+  totalUsers: 856,
+  todayActiveUsers: 342,
+  todayTaskCount: 1580,
+  avgResponseTime: '2.1s',
 };
 
 export const tokensWeekly = [
@@ -253,11 +641,41 @@ export const tokensWeekly = [
   { date: '03-12', text: 20800, multimodal: 5000 },
 ];
 
+export const userUsageTrend = [
+  { date: '03-06', users: 280, sessions: 1520, tasks: 890 },
+  { date: '03-07', users: 320, sessions: 1780, tasks: 1020 },
+  { date: '03-08', users: 260, sessions: 1350, tasks: 780 },
+  { date: '03-09', users: 310, sessions: 1680, tasks: 960 },
+  { date: '03-10', users: 350, sessions: 1920, tasks: 1100 },
+  { date: '03-11', users: 380, sessions: 2100, tasks: 1250 },
+  { date: '03-12', users: 342, sessions: 1850, tasks: 1080 },
+];
+
+export const monthlyStats = [
+  { month: '2025-10', employees: 980, users: 520, tokens: 98.5, tasks: 8200 },
+  { month: '2025-11', employees: 1050, users: 610, tokens: 112.3, tasks: 9800 },
+  { month: '2025-12', employees: 1120, users: 680, tokens: 128.6, tasks: 11500 },
+  { month: '2026-01', employees: 1180, users: 750, tokens: 138.2, tasks: 13200 },
+  { month: '2026-02', employees: 1220, users: 810, tokens: 145.8, tasks: 14800 },
+  { month: '2026-03', employees: 1248, users: 856, tokens: 152.8, tasks: 15200 },
+];
+
 export const levelDistribution = [
   { name: 'L1 基础', value: 180, color: '#C0C0C0' },
   { name: 'L2 进阶', value: 420, color: '#6B7B8D' },
   { name: 'L3 专家', value: 480, color: '#1677ff' },
   { name: 'L4 大师', value: 168, color: '#0A1929' },
+];
+
+export const departmentUsage = [
+  { department: '客户服务部', users: 120, sessions: 5800, tasks: 3200 },
+  { department: '数字化运营部', users: 95, sessions: 4200, tasks: 2100 },
+  { department: '财务共享中心', users: 80, sessions: 3600, tasks: 1800 },
+  { department: '人力资源部', users: 65, sessions: 2800, tasks: 1400 },
+  { department: '审计部', users: 45, sessions: 1900, tasks: 950 },
+  { department: 'IT运维部', users: 55, sessions: 2400, tasks: 1200 },
+  { department: '经营分析部', users: 40, sessions: 1600, tasks: 800 },
+  { department: '综合管理部', users: 35, sessions: 1200, tasks: 600 },
 ];
 
 export const tokensScenario = [
@@ -276,4 +694,77 @@ export const efficiencyReport = {
 
 export const chatMessages = [
   { role: 'assistant' as const, content: '您好！我是小翼·客服，很高兴为您服务。请问有什么可以帮您？' },
+];
+
+export const orgTree = [
+  {
+    key: 'org-root',
+    title: '天翼云数字员工',
+    children: [
+      {
+        key: 'dept-kfb',
+        title: '客户服务部',
+        children: [
+          { key: 'DE-2026001', title: '小翼·客服', isLeaf: true },
+        ],
+      },
+      {
+        key: 'dept-sjzx',
+        title: '数据运营中心',
+        children: [
+          { key: 'DE-2026002', title: '小翼·数据', isLeaf: true },
+        ],
+      },
+      {
+        key: 'dept-szhyy',
+        title: '数字化运营部',
+        children: [
+          { key: 'DE-2026003', title: '小翼·营销', isLeaf: true },
+          { key: 'DE-2026008', title: '小翼·商机', isLeaf: true },
+        ],
+      },
+      {
+        key: 'dept-sjb',
+        title: '审计部',
+        children: [
+          { key: 'DE-2026004', title: '小翼·审计', isLeaf: true },
+        ],
+      },
+      {
+        key: 'dept-rlzy',
+        title: '人力资源部',
+        children: [
+          { key: 'DE-2026005', title: '小翼·HR', isLeaf: true },
+        ],
+      },
+      {
+        key: 'dept-cwgx',
+        title: '财务共享中心',
+        children: [
+          { key: 'DE-2026006', title: '小翼·财务', isLeaf: true },
+        ],
+      },
+      {
+        key: 'dept-ityw',
+        title: 'IT运维部',
+        children: [
+          { key: 'DE-2026007', title: '小翼·运维', isLeaf: true },
+        ],
+      },
+      {
+        key: 'dept-zhgl',
+        title: '综合管理部',
+        children: [
+          { key: 'DE-2026009', title: '小翼·文档', isLeaf: true },
+        ],
+      },
+      {
+        key: 'dept-jyfx',
+        title: '经营分析部',
+        children: [
+          { key: 'DE-2026010', title: '小翼·经分', isLeaf: true },
+        ],
+      },
+    ],
+  },
 ];

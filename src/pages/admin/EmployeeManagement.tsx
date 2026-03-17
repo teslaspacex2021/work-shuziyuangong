@@ -1,0 +1,640 @@
+import React, { useState } from 'react';
+import {
+  Card, Table, Tag, Button, Space, Avatar, Modal, Form, Input, Select,
+  Row, Col, Statistic, Descriptions, Checkbox, Badge, message, Tabs, Progress, Tooltip,
+} from 'antd';
+import {
+  PlusOutlined, SearchOutlined, SettingOutlined, TeamOutlined,
+  ThunderboltOutlined, DatabaseOutlined, FileTextOutlined,
+  BookOutlined, InfoCircleOutlined, SyncOutlined, EditOutlined,
+  CheckCircleOutlined, ExperimentOutlined, PauseCircleOutlined,
+} from '@ant-design/icons';
+import {
+  digitalEmployees, skills, knowledgeBases, positions,
+  type DigitalEmployee, type Skill, type KnowledgeBase,
+} from '../../mock/data';
+
+const levelColor: Record<string, string> = {
+  L1: '#C0C0C0', L2: '#6B7B8D', L3: '#1677ff', L4: '#0A1929',
+};
+
+const typeIcon: Record<string, React.ReactNode> = {
+  '知识库': <DatabaseOutlined style={{ color: '#1677ff' }} />,
+  '知识卡片': <FileTextOutlined style={{ color: '#52c41a' }} />,
+  '数据集': <BookOutlined style={{ color: '#722ed1' }} />,
+};
+
+const EmployeeManagement: React.FC = () => {
+  const [employees, setEmployees] = useState(digitalEmployees);
+  const [searchText, setSearchText] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string | undefined>(undefined);
+  const [addVisible, setAddVisible] = useState(false);
+  const [configVisible, setConfigVisible] = useState(false);
+  const [configTab, setConfigTab] = useState('skills');
+  const [detailVisible, setDetailVisible] = useState(false);
+  const [editVisible, setEditVisible] = useState(false);
+  const [selectedEmployee, setSelectedEmployee] = useState<DigitalEmployee | null>(null);
+  const [selectedSkillIds, setSelectedSkillIds] = useState<string[]>([]);
+  const [selectedKBIds, setSelectedKBIds] = useState<string[]>([]);
+  const [addForm] = Form.useForm();
+  const [editForm] = Form.useForm();
+
+  const filtered = employees.filter((e) => {
+    const matchSearch = e.name.includes(searchText) || e.id.includes(searchText) || e.department.includes(searchText);
+    const matchStatus = !statusFilter || e.employmentStatus === statusFilter;
+    return matchSearch && matchStatus;
+  });
+
+  const totalDocs = knowledgeBases.reduce((s, k) => s + k.docCount, 0);
+  const activeCount = employees.filter((e) => e.status === 'ACTIVE').length;
+  const trainingCount = employees.filter((e) => e.status === 'TRAINING').length;
+  const inServiceCount = employees.filter((e) => e.employmentStatus === '在职').length;
+
+  const nextId = `DE-${new Date().getFullYear()}${String(employees.length + 1).padStart(3, '0')}`;
+
+  const openConfig = (emp: DigitalEmployee, tab: string = 'skills') => {
+    setSelectedEmployee(emp);
+    setSelectedSkillIds([...emp.skillIds]);
+    setSelectedKBIds([...emp.knowledgeIds]);
+    setConfigTab(tab);
+    setConfigVisible(true);
+  };
+
+  const saveConfig = () => {
+    if (!selectedEmployee) return;
+    const newSkillNames = skills.filter((s) => selectedSkillIds.includes(s.id)).map((s) => s.name);
+    setEmployees((prev) =>
+      prev.map((e) =>
+        e.id === selectedEmployee.id
+          ? { ...e, skillIds: selectedSkillIds, skills: newSkillNames, knowledgeIds: selectedKBIds }
+          : e,
+      ),
+    );
+    message.success(`已为 ${selectedEmployee.name} 更新配置`);
+    setConfigVisible(false);
+  };
+
+  const showDetail = (emp: DigitalEmployee) => {
+    setSelectedEmployee(emp);
+    setDetailVisible(true);
+  };
+
+  const openEdit = (emp: DigitalEmployee) => {
+    setSelectedEmployee(emp);
+    editForm.setFieldsValue({
+      name: emp.name,
+      department: emp.department,
+      position: emp.position,
+      owner: emp.owner,
+      ownerType: emp.ownerType,
+      tokensQuota: emp.tokensQuota,
+      description: emp.description,
+    });
+    setEditVisible(true);
+  };
+
+  const handleEdit = () => {
+    editForm.validateFields().then((values) => {
+      if (!selectedEmployee) return;
+      setEmployees((prev) =>
+        prev.map((e) => e.id === selectedEmployee.id ? { ...e, ...values } : e),
+      );
+      message.success('员工信息已更新，变更审批已发起');
+      setEditVisible(false);
+    });
+  };
+
+  const handleAddEmployee = () => {
+    addForm.validateFields().then((values) => {
+      const newEmp: DigitalEmployee = {
+        id: nextId,
+        name: values.name,
+        avatar: values.name.slice(-1),
+        department: values.department,
+        position: values.position,
+        status: 'TRAINING',
+        employmentStatus: '在职',
+        owner: values.owner,
+        ownerType: values.ownerType,
+        skills: [],
+        skillIds: [],
+        knowledgeIds: [],
+        description: values.description || '',
+        level: 'L1',
+        tokensQuota: Number(values.tokensQuota) || 2000000,
+        tokensUsed: 0,
+        taskCompleteRate: 0,
+        lastActive: '-',
+        onboardDate: new Date().toISOString().slice(0, 10),
+        relatedAgents: [],
+        likes: 0,
+        dislikes: 0,
+        heat: 0,
+      };
+      setEmployees((prev) => [...prev, newEmp]);
+      message.success('新增员工成功，入职流程已发起');
+      addForm.resetFields();
+      setAddVisible(false);
+    });
+  };
+
+  const columns = [
+    {
+      title: '工号', dataIndex: 'id', key: 'id', width: 120,
+      render: (text: string) => <span style={{ fontFamily: 'monospace' }}>{text}</span>,
+    },
+    {
+      title: '数字员工', key: 'name', width: 180,
+      render: (_: unknown, record: DigitalEmployee) => (
+        <Space>
+          <Badge dot color={record.status === 'ACTIVE' ? '#52c41a' : record.status === 'TRAINING' ? '#1677ff' : '#faad14'} offset={[-2, 32]}>
+            <Avatar style={{ background: record.status === 'ACTIVE' ? '#1677ff' : '#999' }}>
+              {record.avatar}
+            </Avatar>
+          </Badge>
+          <div>
+            <div style={{ fontWeight: 500 }}>{record.name}</div>
+            <div style={{ fontSize: 11, color: '#999' }}>{record.owner} ({record.ownerType})</div>
+          </div>
+        </Space>
+      ),
+    },
+    { title: '部门', dataIndex: 'department', key: 'department', width: 120 },
+    { title: '岗位', dataIndex: 'position', key: 'position', width: 120 },
+    {
+      title: '已配置技能', key: 'skills', width: 220,
+      render: (_: unknown, record: DigitalEmployee) => {
+        const shown = record.skills.slice(0, 3);
+        const rest = record.skills.length - 3;
+        if (shown.length === 0) return <span style={{ color: '#999', fontSize: 12 }}>暂未配置</span>;
+        return (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+            {shown.map((s) => <Tag key={s} color="processing" style={{ margin: 0 }}>{s}</Tag>)}
+            {rest > 0 && <Tag style={{ margin: 0 }}>+{rest}</Tag>}
+          </div>
+        );
+      },
+    },
+    {
+      title: '已关联知识', key: 'knowledge', width: 180,
+      render: (_: unknown, record: DigitalEmployee) => {
+        const kbs = knowledgeBases.filter((kb) => record.knowledgeIds.includes(kb.id));
+        if (kbs.length === 0) return <span style={{ color: '#999', fontSize: 12 }}>暂未关联</span>;
+        return (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+            {kbs.map((kb) => (
+              <Tag key={kb.id} icon={typeIcon[kb.type]} style={{ margin: 0 }}>{kb.name}</Tag>
+            ))}
+          </div>
+        );
+      },
+    },
+    {
+      title: '职级', dataIndex: 'level', key: 'level', width: 80,
+      render: (l: string) => (
+        <Tag color={levelColor[l]} style={{ color: l === 'L4' || l === 'L3' ? '#fff' : '#333' }}>{l}</Tag>
+      ),
+    },
+    {
+      title: '运行状态', dataIndex: 'status', key: 'status', width: 100,
+      render: (s: string) => {
+        const color = s === 'ACTIVE' ? 'success' : s === 'TRAINING' ? 'processing' : s === 'SUSPENDED' ? 'warning' : 'error';
+        return <Tag color={color}>{s}</Tag>;
+      },
+    },
+    {
+      title: '在职状态', dataIndex: 'employmentStatus', key: 'employmentStatus', width: 90,
+      render: (s: string) => <Tag color={s === '在职' ? 'green' : 'default'}>{s}</Tag>,
+    },
+    { title: '最近活跃', dataIndex: 'lastActive', key: 'lastActive', width: 100 },
+    {
+      title: '操作', key: 'action', width: 200, fixed: 'right' as const,
+      render: (_: unknown, record: DigitalEmployee) => (
+        <Space>
+          <Button type="primary" size="small" icon={<SettingOutlined />} onClick={() => openConfig(record)}>
+            配置
+          </Button>
+          {record.employmentStatus === '在职' && (
+            <Button size="small" icon={<EditOutlined />} onClick={() => openEdit(record)}>
+              编辑
+            </Button>
+          )}
+          <Button type="link" size="small" onClick={() => showDetail(record)}>详情</Button>
+        </Space>
+      ),
+    },
+  ];
+
+  const renderSkillCard = (skill: Skill) => (
+    <Col span={12} key={skill.id}>
+      <Card
+        size="small"
+        hoverable
+        style={{
+          borderRadius: 8,
+          borderColor: selectedSkillIds.includes(skill.id) ? '#1677ff' : '#f0f0f0',
+          background: selectedSkillIds.includes(skill.id) ? '#f0f5ff' : '#fff',
+        }}
+      >
+        <Checkbox value={skill.id} style={{ width: '100%' }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontWeight: 500 }}>{skill.name}</span>
+              <Tag color={levelColor[skill.level]} style={{ fontSize: 10, color: skill.level === 'L3' || skill.level === 'L4' ? '#fff' : '#333' }}>
+                {skill.level}
+              </Tag>
+              <Tag style={{ fontSize: 10 }}>{skill.category}</Tag>
+            </div>
+            <div style={{ fontSize: 12, color: '#999', marginTop: 2 }}>{skill.description}</div>
+            <div style={{ fontSize: 11, color: '#1677ff', marginTop: 2 }}>来源：{skill.source}</div>
+          </div>
+        </Checkbox>
+      </Card>
+    </Col>
+  );
+
+  const renderKbCard = (kb: KnowledgeBase) => (
+    <Col span={12} key={kb.id}>
+      <Card
+        size="small"
+        hoverable
+        style={{
+          borderRadius: 8,
+          borderColor: selectedKBIds.includes(kb.id) ? '#1677ff' : '#f0f0f0',
+          background: selectedKBIds.includes(kb.id) ? '#f0f5ff' : '#fff',
+        }}
+      >
+        <Checkbox value={kb.id} style={{ width: '100%' }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              {typeIcon[kb.type]}
+              <span style={{ fontWeight: 500 }}>{kb.name}</span>
+              <Tag
+                color={kb.status === '已发布' ? 'success' : kb.status === '学习中' ? 'processing' : 'warning'}
+                style={{ fontSize: 10 }}
+              >
+                {kb.status === '学习中' && <SyncOutlined spin style={{ marginRight: 2 }} />}
+                {kb.status}
+              </Tag>
+            </div>
+            <div style={{ fontSize: 12, color: '#999', marginTop: 2 }}>{kb.description}</div>
+            <div style={{ fontSize: 11, color: '#1677ff', marginTop: 2 }}>
+              {kb.type} · {kb.docCount} 篇文档 · 更新于 {kb.lastUpdate}
+            </div>
+          </div>
+        </Checkbox>
+      </Card>
+    </Col>
+  );
+
+  return (
+    <div>
+      <h2 style={{ marginBottom: 20, fontSize: 20, fontWeight: 600 }}>员工管理</h2>
+      <p style={{ color: '#666', marginBottom: 20, marginTop: -12 }}>
+        管理数字员工信息，配置技能与知识资源，全面掌控数字员工能力。
+      </p>
+
+      <Row gutter={16} style={{ marginBottom: 20 }}>
+        <Col span={5}>
+          <Card style={{ borderRadius: 12 }}>
+            <Statistic title="数字员工总数" value={employees.length} prefix={<TeamOutlined />} />
+          </Card>
+        </Col>
+        <Col span={5}>
+          <Card style={{ borderRadius: 12 }}>
+            <Statistic title="在职" value={inServiceCount} prefix={<CheckCircleOutlined style={{ color: '#52c41a' }} />} valueStyle={{ color: '#52c41a' }} />
+          </Card>
+        </Col>
+        <Col span={5}>
+          <Card style={{ borderRadius: 12 }}>
+            <Statistic title="ACTIVE" value={activeCount} prefix={<CheckCircleOutlined style={{ color: '#1677ff' }} />} valueStyle={{ color: '#1677ff' }} />
+          </Card>
+        </Col>
+        <Col span={5}>
+          <Card style={{ borderRadius: 12 }}>
+            <Statistic title="TRAINING" value={trainingCount} prefix={<ExperimentOutlined style={{ color: '#722ed1' }} />} valueStyle={{ color: '#722ed1' }} />
+          </Card>
+        </Col>
+        <Col span={4}>
+          <Card style={{ borderRadius: 12 }}>
+            <Statistic title="总文档数" value={totalDocs} prefix={<FileTextOutlined style={{ color: '#722ed1' }} />} />
+          </Card>
+        </Col>
+      </Row>
+
+      <Card
+        style={{ borderRadius: 12 }}
+        title="数字员工列表"
+        extra={
+          <Space>
+            <Input
+              placeholder="搜索员工名称/工号/部门..."
+              prefix={<SearchOutlined />}
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              style={{ width: 240 }}
+              allowClear
+            />
+            <Select
+              placeholder="在职状态"
+              style={{ width: 100 }}
+              allowClear
+              value={statusFilter}
+              onChange={setStatusFilter}
+              options={[
+                { label: '在职', value: '在职' },
+                { label: '离职', value: '离职' },
+              ]}
+            />
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => { addForm.setFieldsValue({ id: nextId }); setAddVisible(true); }}>
+              新增员工
+            </Button>
+          </Space>
+        }
+      >
+        <Table
+          dataSource={filtered}
+          columns={columns}
+          rowKey="id"
+          pagination={{ pageSize: 10 }}
+          size="middle"
+          scroll={{ x: 1600 }}
+        />
+      </Card>
+
+      {/* Add Employee Modal */}
+      <Modal
+        title="新增数字员工"
+        open={addVisible}
+        onCancel={() => { addForm.resetFields(); setAddVisible(false); }}
+        onOk={handleAddEmployee}
+        okText="提交"
+        width={640}
+      >
+        <Form form={addForm} layout="vertical" initialValues={{ id: nextId }}>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item label="员工名称" name="name" rules={[{ required: true, message: '请输入员工名称' }]}>
+                <Input placeholder="例：小翼·xxx" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item label="工号（自动生成）" name="id">
+                <Input disabled style={{ fontFamily: 'monospace' }} />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item label="所属自然人" name="owner" rules={[{ required: true, message: '请输入归属人姓名' }]}>
+                <Input placeholder="请输入归属人姓名" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item label="身份类型" name="ownerType" rules={[{ required: true, message: '请选择身份类型' }]}>
+                <Select options={[{ value: '自有', label: '自有' }, { value: '外包', label: '外包' }]} placeholder="请选择" />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item label="岗位" name="position" rules={[{ required: true, message: '请选择岗位' }]}>
+                <Select
+                  placeholder="请选择岗位"
+                  options={positions.filter((p) => p.status === '启用').map((p) => ({ value: p.name, label: `${p.name}（${p.department}）` }))}
+                />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item label="部门" name="department" rules={[{ required: true, message: '请输入部门' }]}>
+                <Input placeholder="请输入所属部门" />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item label="Tokens配额" name="tokensQuota">
+                <Input type="number" placeholder="默认200万" suffix="tokens" />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Form.Item label="描述" name="description">
+            <Input.TextArea rows={3} placeholder="请描述该数字员工的职责和能力" />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* Unified Config Modal with Tabs */}
+      <Modal
+        title={`配置 — ${selectedEmployee?.name}`}
+        open={configVisible}
+        onCancel={() => setConfigVisible(false)}
+        onOk={saveConfig}
+        okText="保存配置"
+        width={720}
+      >
+        {selectedEmployee && (
+          <div>
+            <div style={{ display: 'flex', gap: 12, marginBottom: 16, padding: 12, background: '#f5f5f5', borderRadius: 8 }}>
+              <Avatar size={48} style={{ background: '#1677ff' }}>{selectedEmployee.avatar}</Avatar>
+              <div>
+                <div style={{ fontWeight: 600, fontSize: 15 }}>{selectedEmployee.name}</div>
+                <div style={{ fontSize: 13, color: '#666' }}>{selectedEmployee.department} · {selectedEmployee.position}</div>
+                <div style={{ fontSize: 12, color: '#999', marginTop: 2 }}>{selectedEmployee.description}</div>
+              </div>
+            </div>
+            <Tabs
+              activeKey={configTab}
+              onChange={setConfigTab}
+              items={[
+                {
+                  key: 'skills',
+                  label: <span><ThunderboltOutlined /> 技能配置</span>,
+                  children: (
+                    <div>
+                      <div style={{ fontWeight: 500, marginBottom: 12 }}>
+                        <InfoCircleOutlined style={{ marginRight: 4 }} />
+                        勾选技能后，该数字员工将根据用户输入自动匹配并调用对应技能：
+                      </div>
+                      <Checkbox.Group
+                        value={selectedSkillIds}
+                        onChange={(vals) => setSelectedSkillIds(vals as string[])}
+                        style={{ width: '100%' }}
+                      >
+                        <Row gutter={[12, 12]}>
+                          {skills.map(renderSkillCard)}
+                        </Row>
+                      </Checkbox.Group>
+                      <div style={{ marginTop: 12, fontSize: 12, color: '#999' }}>
+                        已选择 {selectedSkillIds.length} 项技能
+                      </div>
+                    </div>
+                  ),
+                },
+                {
+                  key: 'knowledge',
+                  label: <span><DatabaseOutlined /> 知识配置</span>,
+                  children: (
+                    <div>
+                      <div style={{ fontWeight: 500, marginBottom: 12 }}>
+                        <InfoCircleOutlined style={{ marginRight: 4 }} />
+                        勾选知识资源，数字员工将基于这些知识来回答问题和处理任务：
+                      </div>
+                      <Checkbox.Group
+                        value={selectedKBIds}
+                        onChange={(vals) => setSelectedKBIds(vals as string[])}
+                        style={{ width: '100%' }}
+                      >
+                        <Row gutter={[12, 12]}>
+                          {knowledgeBases.map(renderKbCard)}
+                        </Row>
+                      </Checkbox.Group>
+                      <div style={{ marginTop: 12, fontSize: 12, color: '#999' }}>
+                        已选择 {selectedKBIds.length} 个知识资源
+                      </div>
+                    </div>
+                  ),
+                },
+              ]}
+            />
+          </div>
+        )}
+      </Modal>
+
+      {/* Edit Employee Modal */}
+      <Modal
+        title={`编辑员工信息 — ${selectedEmployee?.name}`}
+        open={editVisible}
+        onCancel={() => setEditVisible(false)}
+        onOk={handleEdit}
+        okText="提交审批"
+        width={600}
+      >
+        <Form form={editForm} layout="vertical" style={{ marginTop: 16 }}>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item label="员工名称" name="name" rules={[{ required: true }]}>
+                <Input />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item label="部门" name="department" rules={[{ required: true }]}>
+                <Input />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item label="岗位" name="position" rules={[{ required: true }]}>
+                <Select
+                  options={positions.filter((p) => p.status === '启用').map((p) => ({ value: p.name, label: p.name }))}
+                />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item label="所属自然人" name="owner" rules={[{ required: true }]}>
+                <Input />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item label="身份类型" name="ownerType">
+                <Select options={[{ value: '自有', label: '自有' }, { value: '外包', label: '外包' }]} />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item label="Tokens配额" name="tokensQuota">
+                <Input type="number" suffix="tokens" />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Form.Item label="描述" name="description">
+            <Input.TextArea rows={3} />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* Detail Modal - includes OnDuty info */}
+      <Modal
+        title={`员工详情 — ${selectedEmployee?.name}`}
+        open={detailVisible}
+        onCancel={() => setDetailVisible(false)}
+        footer={null}
+        width={750}
+      >
+        {selectedEmployee && (
+          <div>
+            <div style={{ display: 'flex', gap: 16, marginBottom: 20 }}>
+              <Avatar size={64} style={{ background: '#1677ff', fontSize: 24 }}>
+                {selectedEmployee.avatar}
+              </Avatar>
+              <div>
+                <div style={{ fontSize: 18, fontWeight: 600 }}>{selectedEmployee.name}</div>
+                <div style={{ color: '#999', marginTop: 4 }}>{selectedEmployee.description}</div>
+              </div>
+            </div>
+            <Descriptions column={2} bordered size="small" style={{ marginBottom: 16 }}>
+              <Descriptions.Item label="工号">
+                <span style={{ fontFamily: 'monospace' }}>{selectedEmployee.id}</span>
+              </Descriptions.Item>
+              <Descriptions.Item label="在职状态">
+                <Tag color={selectedEmployee.employmentStatus === '在职' ? 'green' : 'default'}>{selectedEmployee.employmentStatus}</Tag>
+              </Descriptions.Item>
+              <Descriptions.Item label="运行状态">
+                <Tag color={selectedEmployee.status === 'ACTIVE' ? 'success' : selectedEmployee.status === 'TRAINING' ? 'processing' : 'warning'}>{selectedEmployee.status}</Tag>
+              </Descriptions.Item>
+              <Descriptions.Item label="职级">
+                <Tag color={levelColor[selectedEmployee.level]} style={{ color: selectedEmployee.level === 'L3' || selectedEmployee.level === 'L4' ? '#fff' : '#333' }}>
+                  {selectedEmployee.level}
+                </Tag>
+              </Descriptions.Item>
+              <Descriptions.Item label="部门">{selectedEmployee.department}</Descriptions.Item>
+              <Descriptions.Item label="岗位">{selectedEmployee.position}</Descriptions.Item>
+              <Descriptions.Item label="所属自然人">{selectedEmployee.owner}</Descriptions.Item>
+              <Descriptions.Item label="身份类型">
+                <Tag color={selectedEmployee.ownerType === '自有' ? 'blue' : 'orange'}>{selectedEmployee.ownerType}</Tag>
+              </Descriptions.Item>
+              <Descriptions.Item label="入职日期">{selectedEmployee.onboardDate}</Descriptions.Item>
+              <Descriptions.Item label="最近活跃">{selectedEmployee.lastActive}</Descriptions.Item>
+              <Descriptions.Item label="Tokens配额" span={2}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <Progress
+                    percent={Math.round((selectedEmployee.tokensUsed / selectedEmployee.tokensQuota) * 100)}
+                    size="small"
+                    style={{ width: 200 }}
+                    status={selectedEmployee.tokensUsed / selectedEmployee.tokensQuota > 0.8 ? 'exception' : 'active'}
+                  />
+                  <span>{(selectedEmployee.tokensUsed / 1000000).toFixed(1)}M / {(selectedEmployee.tokensQuota / 1000000).toFixed(1)}M</span>
+                </div>
+              </Descriptions.Item>
+              <Descriptions.Item label="任务完成率" span={2}>
+                <Progress percent={selectedEmployee.taskCompleteRate} size="small" style={{ width: 200 }} />
+              </Descriptions.Item>
+              <Descriptions.Item label="已配置技能" span={2}>
+                {selectedEmployee.skills.length > 0
+                  ? selectedEmployee.skills.map((s) => <Tag key={s} color="processing">{s}</Tag>)
+                  : <span style={{ color: '#999' }}>暂未配置</span>}
+              </Descriptions.Item>
+              <Descriptions.Item label="已关联知识" span={2}>
+                {(() => {
+                  const kbs = knowledgeBases.filter((kb) => selectedEmployee.knowledgeIds.includes(kb.id));
+                  return kbs.length > 0
+                    ? kbs.map((kb) => <Tag key={kb.id} icon={typeIcon[kb.type]}>{kb.name}</Tag>)
+                    : <span style={{ color: '#999' }}>暂未关联</span>;
+                })()}
+              </Descriptions.Item>
+              <Descriptions.Item label="关联智能体" span={2}>
+                {selectedEmployee.relatedAgents.map((a) => <Tag key={a}>{a}</Tag>)}
+              </Descriptions.Item>
+              <Descriptions.Item label="热度">{selectedEmployee.heat}</Descriptions.Item>
+              <Descriptions.Item label="点赞/踩">{selectedEmployee.likes} / {selectedEmployee.dislikes}</Descriptions.Item>
+            </Descriptions>
+          </div>
+        )}
+      </Modal>
+    </div>
+  );
+};
+
+export default EmployeeManagement;

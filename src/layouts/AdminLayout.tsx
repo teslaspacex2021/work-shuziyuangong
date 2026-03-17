@@ -3,15 +3,19 @@ import { Layout, Menu, Avatar, Dropdown, Badge } from 'antd';
 import {
   DashboardOutlined,
   TeamOutlined,
-  DollarOutlined,
   ScheduleOutlined,
-  ThunderboltOutlined,
-  BookOutlined,
   RobotOutlined,
   UserOutlined,
   AlertOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
+  BellOutlined,
+  AuditOutlined,
+  SettingOutlined,
+  FileTextOutlined,
+  UserSwitchOutlined,
+  TrophyOutlined,
+  LogoutOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 
@@ -29,7 +33,23 @@ const AdminLayout: React.FC = () => {
       type: 'group' as const,
       children: [
         { key: '/admin/dashboard', icon: <DashboardOutlined />, label: '运营驾驶舱' },
-        { key: '/admin/alerts', icon: <AlertOutlined />, label: <span>预警与待办 <Badge count={6} size="small" offset={[6, -2]} /></span> },
+      ],
+    },
+    {
+      key: 'alerts-group',
+      label: '预警与待办',
+      type: 'group' as const,
+      children: [
+        {
+          key: '/admin/pending',
+          icon: <AuditOutlined />,
+          label: <span>我的待办 <Badge count={5} size="small" offset={[6, -2]} /></span>,
+        },
+        {
+          key: '/admin/alerts',
+          icon: <AlertOutlined />,
+          label: <span>数字人预警 <Badge count={3} size="small" offset={[6, -2]} /></span>,
+        },
       ],
     },
     {
@@ -37,25 +57,39 @@ const AdminLayout: React.FC = () => {
       label: '数字员工管理',
       type: 'group' as const,
       children: [
-        { key: '/admin/lifecycle', icon: <TeamOutlined />, label: '全生命周期管理' },
-        { key: '/admin/skills', icon: <ThunderboltOutlined />, label: '技能配置' },
-        { key: '/admin/knowledge', icon: <BookOutlined />, label: '知识配置' },
-        { key: '/admin/tokens', icon: <DollarOutlined />, label: 'Tokens与效益' },
-        { key: '/admin/tasks', icon: <ScheduleOutlined />, label: '任务调度' },
+        { key: '/admin/employees', icon: <TeamOutlined />, label: '员工管理' },
+        { key: '/admin/positions', icon: <SettingOutlined />, label: '岗位设置' },
+      ],
+    },
+    {
+      key: 'hr-mgmt',
+      label: '人事管理',
+      type: 'group' as const,
+      children: [
+        { key: '/admin/onboard', icon: <UserSwitchOutlined />, label: '入职管理' },
+        { key: '/admin/performance', icon: <TrophyOutlined />, label: '绩效管理' },
+        { key: '/admin/exit', icon: <LogoutOutlined />, label: '退出管理' },
+      ],
+    },
+    {
+      key: 'logs-group',
+      label: '任务日志',
+      type: 'group' as const,
+      children: [
+        { key: '/admin/task-logs', icon: <FileTextOutlined />, label: '任务调度日志' },
+        { key: '/admin/schedule', icon: <ScheduleOutlined />, label: '调度配置' },
       ],
     },
   ];
 
   const getSelectedKey = () => {
-    const path = location.pathname;
-    if (path.startsWith('/admin/lifecycle')) return '/admin/lifecycle';
-    return path;
+    return location.pathname;
   };
 
   const userMenu = {
     items: [
-      { key: 'user', label: '切换到用户端', onClick: () => navigate('/user/digital-employees') },
-      { key: 'logout', label: '退出登录' },
+      { key: 'user', label: '切换到用户端', icon: <RobotOutlined />, onClick: () => navigate('/user/chat') },
+      { key: 'logout', label: '退出登录', icon: <LogoutOutlined /> },
     ],
   };
 
@@ -115,12 +149,17 @@ const AdminLayout: React.FC = () => {
               {collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
             </span>
           </div>
-          <Dropdown menu={userMenu} placement="bottomRight">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
-              <Avatar size="small" icon={<UserOutlined />} style={{ background: '#1677ff' }} />
-              <span style={{ fontSize: 14 }}>管理员</span>
-            </div>
-          </Dropdown>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <Badge count={8} size="small">
+              <BellOutlined style={{ fontSize: 16, cursor: 'pointer' }} onClick={() => navigate('/admin/pending')} />
+            </Badge>
+            <Dropdown menu={userMenu} placement="bottomRight">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                <Avatar size="small" icon={<UserOutlined />} style={{ background: '#1677ff' }} />
+                <span style={{ fontSize: 14 }}>管理员</span>
+              </div>
+            </Dropdown>
+          </div>
         </Header>
         <Content style={{ background: '#f0f2f5', padding: 24, overflow: 'auto' }}>
           <Outlet />

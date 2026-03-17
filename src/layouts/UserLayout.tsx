@@ -1,18 +1,20 @@
 import React, { useState } from 'react';
-import { Layout, Menu, Button, Avatar } from 'antd';
+import { Layout, Menu, Button, Avatar, Divider } from 'antd';
 import {
   UserOutlined,
   TeamOutlined,
-  ShopOutlined,
-  RadarChartOutlined,
-  AppstoreOutlined,
-  DatabaseOutlined,
-  BookOutlined,
-  HistoryOutlined,
+  MessageOutlined,
   RobotOutlined,
   PlusOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
+  SettingOutlined,
+  AppstoreOutlined,
+  BookOutlined,
+  BulbOutlined,
+  AimOutlined,
+  HistoryOutlined,
+  FundProjectionScreenOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 
@@ -26,25 +28,42 @@ const UserLayout: React.FC = () => {
   const menuItems = [
     { key: '/user/chat', icon: <UserOutlined />, label: '个人助手' },
     { key: '/user/match', icon: <TeamOutlined />, label: '人岗匹配' },
-    { key: '/user/marketing', icon: <ShopOutlined />, label: '营销智能体' },
-    { key: '/user/radar', icon: <RadarChartOutlined />, label: '翼达（商机挖掘）' },
+    { key: '/user/marketing', icon: <BulbOutlined />, label: '营销智能体' },
+    { key: '/user/opportunity', icon: <AimOutlined />, label: '翼达（商机挖掘）' },
     { key: '/user/agents', icon: <AppstoreOutlined />, label: '更多智能体' },
     { type: 'divider' as const },
-    { key: '/user/knowledge', icon: <DatabaseOutlined />, label: '知识中心' },
+    { key: '/user/knowledge', icon: <BookOutlined />, label: '知识中心' },
+    { key: '/user/digital-employee', icon: <RobotOutlined />, label: 'AI数字员工' },
     {
-      key: '/user/digital-employees',
-      icon: <RobotOutlined />,
-      label: 'AI数字员工',
+      key: 'knowledge-ops',
+      icon: <FundProjectionScreenOutlined />,
+      label: '知识运营',
+      children: [
+        { key: '/user/knowledge-ops/overview', label: '运营概览' },
+        { key: '/user/knowledge-ops/content', label: '内容管理' },
+      ],
     },
-    { key: '/user/ops', icon: <BookOutlined />, label: '知识运营', children: [
-      { key: '/user/ops/1', label: '运营管理' },
-    ]},
     { key: '/user/recent', icon: <HistoryOutlined />, label: '最近对话' },
   ];
 
   const getSelectedKey = () => {
-    if (location.pathname.startsWith('/user/digital-employees')) return '/user/digital-employees';
+    if (location.pathname === '/user/digital-employee') return '/user/digital-employee';
+    if (location.pathname === '/user/agents') return '/user/agents';
+    if (location.pathname.startsWith('/user/chat')) return '/user/chat';
+    if (location.pathname.startsWith('/user/digital-employees')) return '/user/digital-employee';
     return location.pathname;
+  };
+
+  const handleMenuClick = (key: string) => {
+    if (key === '/user/digital-employee') {
+      navigate('/user/chat');
+      return;
+    }
+    if (['/user/match', '/user/marketing', '/user/opportunity', '/user/knowledge', '/user/recent', '/user/knowledge-ops/overview', '/user/knowledge-ops/content'].includes(key)) {
+      navigate('/user/chat');
+      return;
+    }
+    navigate(key);
   };
 
   return (
@@ -73,6 +92,7 @@ const UserLayout: React.FC = () => {
             block
             icon={<PlusOutlined />}
             style={{ borderRadius: 8 }}
+            onClick={() => navigate('/user/chat')}
           >
             {!collapsed && '新对话'}
           </Button>
@@ -81,7 +101,7 @@ const UserLayout: React.FC = () => {
           mode="inline"
           selectedKeys={[getSelectedKey()]}
           items={menuItems}
-          onClick={({ key }) => navigate(key)}
+          onClick={({ key }) => handleMenuClick(key)}
           style={{ border: 'none' }}
         />
       </Sider>
@@ -101,7 +121,13 @@ const UserLayout: React.FC = () => {
             onClick={() => setCollapsed(!collapsed)}
           />
           <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-            <span style={{ fontSize: 13, color: '#666' }}>无感模式</span>
+            <Button
+              type="text"
+              icon={<SettingOutlined />}
+              onClick={() => navigate('/admin/dashboard')}
+            >
+              管理后台
+            </Button>
             <Avatar size="small" icon={<UserOutlined />} style={{ background: '#e4393c' }} />
           </div>
         </Header>

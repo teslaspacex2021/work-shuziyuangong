@@ -4,15 +4,20 @@ import zhCN from 'antd/locale/zh_CN';
 
 import UserLayout from './layouts/UserLayout';
 import AdminLayout from './layouts/AdminLayout';
-import DigitalEmployeeList from './pages/user/DigitalEmployeeList';
-import DigitalEmployeeChat from './pages/user/DigitalEmployeeChat';
+
+import DigitalEmployeeDirectory from './pages/user/DigitalEmployeeDirectory';
+import ChatPage from './pages/user/ChatPage';
+import AgentHub from './pages/user/AgentHub';
+
 import Dashboard from './pages/admin/Dashboard';
-import AlertsPage from './pages/admin/AlertsPage';
-import LifecycleManagement from './pages/admin/LifecycleManagement';
-import SkillConfig from './pages/admin/SkillConfig';
-import KnowledgeConfig from './pages/admin/KnowledgeConfig';
-import TokensEfficiency from './pages/admin/TokensEfficiency';
-import TaskManagement from './pages/admin/TaskManagement';
+import PendingTasks from './pages/admin/PendingTasks';
+import AlertsWarning from './pages/admin/AlertsWarning';
+import EmployeeManagement from './pages/admin/EmployeeManagement';
+import PositionSettings from './pages/admin/PositionSettings';
+import OnboardManagement from './pages/admin/OnboardManagement';
+import PerformanceManagement from './pages/admin/PerformanceManagement';
+import ExitManagement from './pages/admin/ExitManagement';
+import TaskLogs from './pages/admin/TaskLogs';
 
 function App() {
   return (
@@ -36,26 +41,30 @@ function App() {
     >
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Navigate to="/user/digital-employees" replace />} />
+          <Route path="/" element={<Navigate to="/user/chat" replace />} />
 
           {/* User Portal */}
           <Route path="/user" element={<UserLayout />}>
-            <Route index element={<Navigate to="/user/digital-employees" replace />} />
-            <Route path="digital-employees" element={<DigitalEmployeeList />} />
-            <Route path="digital-employees/:id" element={<DigitalEmployeeChat />} />
-            <Route path="*" element={<DigitalEmployeeList />} />
+            <Route index element={<Navigate to="/user/chat" replace />} />
+            <Route path="digital-employees" element={<DigitalEmployeeDirectory />} />
+            <Route path="agents" element={<AgentHub />} />
+            <Route path="chat" element={<ChatPage />} />
+            <Route path="*" element={<ChatPage />} />
           </Route>
 
           {/* Admin Portal */}
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<Navigate to="/admin/dashboard" replace />} />
             <Route path="dashboard" element={<Dashboard />} />
-            <Route path="alerts" element={<AlertsPage />} />
-            <Route path="lifecycle" element={<LifecycleManagement />} />
-            <Route path="skills" element={<SkillConfig />} />
-            <Route path="knowledge" element={<KnowledgeConfig />} />
-            <Route path="tokens" element={<TokensEfficiency />} />
-            <Route path="tasks" element={<TaskManagement />} />
+            <Route path="pending" element={<PendingTasks />} />
+            <Route path="alerts" element={<AlertsWarning />} />
+            <Route path="employees" element={<EmployeeManagement />} />
+            <Route path="positions" element={<PositionSettings />} />
+            <Route path="onboard" element={<OnboardManagement />} />
+            <Route path="performance" element={<PerformanceManagement />} />
+            <Route path="exit" element={<ExitManagement />} />
+            <Route path="task-logs" element={<TaskLogs />} />
+            <Route path="schedule" element={<TaskLogs />} />
             <Route path="*" element={<Dashboard />} />
           </Route>
         </Routes>
