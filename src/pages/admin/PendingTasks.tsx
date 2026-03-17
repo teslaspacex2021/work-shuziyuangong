@@ -1,12 +1,12 @@
 import React, { useState, useMemo } from 'react';
 import {
-  Card, Table, Tag, Button, Space, Badge, Modal, message,
-  Row, Col, Statistic, Descriptions, Tabs, List, Timeline,
+  Card, Tag, Button, Space, Badge, Modal, message,
+  Row, Col, Statistic, Descriptions, List, Timeline,
   Segmented, Input, Divider,
 } from 'antd';
 import {
   AuditOutlined, CheckCircleOutlined,
-  ClockCircleOutlined, ExclamationCircleOutlined, InfoCircleOutlined,
+  ClockCircleOutlined, InfoCircleOutlined,
   UserAddOutlined, UserDeleteOutlined, TrophyOutlined, EditOutlined,
   SearchOutlined,
 } from '@ant-design/icons';

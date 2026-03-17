@@ -1,11 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import {
   Card, Table, Tag, Button, Space, Modal, Select, Row, Col, Steps,
-  Descriptions, Progress, message, Form, Input, Divider, Tabs, DatePicker,
+  Descriptions, Progress, message, Form, Input, Tabs, DatePicker,
   Avatar,
 } from 'antd';
 import {
-  EyeOutlined, CheckCircleOutlined, ClockCircleOutlined,
+  EyeOutlined,
   EditOutlined, FileTextOutlined, ArrowLeftOutlined,
   PlusOutlined, DeleteOutlined, TrophyOutlined, LoginOutlined,
 } from '@ant-design/icons';
@@ -16,12 +16,6 @@ import {
   type PerformanceReview, type PerformanceEmployeeRecord,
   type AssessmentRecord, type AssessmentConfig,
 } from '../../mock/data';
-
-const stepStatusIcon: Record<string, React.ReactNode> = {
-  '已完成': <CheckCircleOutlined style={{ color: '#52c41a' }} />,
-  '进行中': <ClockCircleOutlined style={{ color: '#1677ff' }} />,
-  '待处理': <ClockCircleOutlined style={{ color: '#d9d9d9' }} />,
-};
 
 const levelColorMap: Record<string, string> = {
   L1: '#C0C0C0', L2: '#6B7B8D', L3: '#1677ff', L4: '#0A1929',
@@ -47,7 +41,7 @@ const PerformanceManagement: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<string | undefined>(undefined);
   const [detailReview, setDetailReview] = useState<PerformanceReview | null>(null);
   const [actionVisible, setActionVisible] = useState(false);
-  const [actionType, setActionType] = useState('');
+  const [actionType] = useState('');
   const [selectedEmpRecord, setSelectedEmpRecord] = useState<PerformanceEmployeeRecord | null>(null);
   const [empDetailVisible, setEmpDetailVisible] = useState(false);
   const [actionForm] = Form.useForm();
@@ -80,34 +74,12 @@ const PerformanceManagement: React.FC = () => {
     setEmpDetailVisible(true);
   };
 
-  const handleAction = (review: PerformanceReview, actionLabel: string) => {
-    setDetailReview(review);
-    setActionType(actionLabel);
-    actionForm.resetFields();
-    setActionVisible(true);
-  };
 
   const submitAction = () => {
     actionForm.validateFields().then(() => {
       message.success(`${actionType} 已提交`);
       setActionVisible(false);
     });
-  };
-
-  const getActionButton = (review: PerformanceReview) => {
-    if (review.status === '已结束') return null;
-    const currentStep = review.steps.find((s) => s.status === '进行中');
-    if (!currentStep) return null;
-    return (
-      <Button
-        type="primary"
-        size="small"
-        icon={<EditOutlined />}
-        onClick={() => handleAction(review, currentStep.label)}
-      >
-        {currentStep.label}
-      </Button>
-    );
   };
 
   // Assessment records

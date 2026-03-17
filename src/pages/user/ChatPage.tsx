@@ -13,10 +13,10 @@ import {
   PlusOutlined, ContactsOutlined, ClockCircleOutlined,
   ScheduleOutlined, TeamOutlined, ApartmentOutlined,
 } from '@ant-design/icons';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import {
   digitalEmployees, conversations, tasks, skills, knowledgeBases,
-  scheduledTasks, positions,
+  scheduledTasks,
   type ConversationItem, type ScheduledTask,
 } from '../../mock/data';
 
@@ -72,7 +72,6 @@ interface PositionNode {
 
 const ChatPage: React.FC = () => {
   const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
   const initialEmployeeId = searchParams.get('employeeId') || '';
 
   const [selectedConvId, setSelectedConvId] = useState<string>(initialEmployeeId);

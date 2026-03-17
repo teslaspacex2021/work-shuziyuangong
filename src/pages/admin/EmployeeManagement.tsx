@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import {
   Card, Table, Tag, Button, Space, Avatar, Modal, Form, Input, Select,
-  Row, Col, Statistic, Descriptions, Checkbox, Badge, message, Tabs, Progress, Tooltip,
+  Row, Col, Statistic, Descriptions, Checkbox, Badge, message, Tabs, Progress,
 } from 'antd';
 import {
   PlusOutlined, SearchOutlined, SettingOutlined, TeamOutlined,
   ThunderboltOutlined, DatabaseOutlined, FileTextOutlined,
   BookOutlined, InfoCircleOutlined, SyncOutlined, EditOutlined,
-  CheckCircleOutlined, ExperimentOutlined, PauseCircleOutlined,
+  CheckCircleOutlined, ExperimentOutlined,
 } from '@ant-design/icons';
 import {
   digitalEmployees, skills, knowledgeBases, positions,

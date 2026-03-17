@@ -39,7 +39,7 @@ const presets: { label: string; value: [Dayjs, Dayjs] }[] = [
   { label: '本周', value: [dayjs().startOf('week'), dayjs()] },
   { label: '本月', value: [dayjs().startOf('month'), dayjs()] },
   { label: '近3个月', value: [dayjs().subtract(3, 'month'), dayjs()] },
-  { label: '本季度', value: [dayjs().startOf('quarter'), dayjs()] },
+  { label: '本季度', value: [dayjs().subtract(dayjs().month() % 3, 'month').startOf('month'), dayjs()] },
   { label: '本年', value: [dayjs().startOf('year'), dayjs()] },
 ];
 

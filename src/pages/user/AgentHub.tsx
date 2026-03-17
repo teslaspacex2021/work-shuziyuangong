@@ -1,11 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import {
-  Input, Avatar, Tag, Card, Row, Col, Badge, Progress, Button, Empty,
+  Input, Avatar, Tag, Card, Row, Col, Badge, Empty,
   Tabs, Select, Tooltip, Rate,
 } from 'antd';
 import {
   SearchOutlined, ThunderboltOutlined, StarOutlined, StarFilled,
-  FireOutlined, MessageOutlined, UserOutlined,
+  MessageOutlined, UserOutlined,
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { digitalEmployees, type DigitalEmployee } from '../../mock/data';
@@ -115,7 +115,7 @@ const AgentHub: React.FC = () => {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #f0f0f0', paddingTop: 10, fontSize: 12, color: '#999' }}>
           <span><UserOutlined /> {Math.floor(emp.tokensUsed / 10000)}</span>
           <span><MessageOutlined /> {Math.floor(emp.tokensUsed / 50000)}</span>
-          <span>完成率 {emp.taskCompletionRate}%</span>
+          <span>完成率 {emp.taskCompleteRate}%</span>
           <span><ThunderboltOutlined style={{ color: '#fa8c16' }} /> {(emp.tokensUsed / 10000).toFixed(0)}万</span>
         </div>
       </Card>

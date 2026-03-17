@@ -3,7 +3,7 @@ import {
   Input, Avatar, Tag, Card, Row, Col, Badge, Progress, Button, Empty, Descriptions, Tabs,
 } from 'antd';
 import {
-  SearchOutlined, TeamOutlined, UserOutlined,
+  SearchOutlined, TeamOutlined,
   MessageOutlined, ThunderboltOutlined,
   ApartmentOutlined, DownOutlined, RightOutlined,
   AppstoreOutlined,

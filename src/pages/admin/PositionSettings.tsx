@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import {
   Card, Table, Tag, Button, Space, Modal, Form, Input, Select, InputNumber,
-  Row, Col, Statistic, message, Progress,
+  Row, Col, Statistic, message,
 } from 'antd';
 import {
   SearchOutlined, PlusOutlined, EditOutlined,

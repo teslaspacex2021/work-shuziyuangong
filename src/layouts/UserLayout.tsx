@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
-import { Layout, Menu, Button, Avatar, Divider } from 'antd';
+import { Layout, Menu, Button, Avatar } from 'antd';
 import {
   UserOutlined,
   TeamOutlined,
-  MessageOutlined,
   RobotOutlined,
   PlusOutlined,
   MenuFoldOutlined,

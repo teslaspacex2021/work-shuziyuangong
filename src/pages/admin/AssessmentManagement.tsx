@@ -4,7 +4,7 @@ import {
   Row, Col, Progress, Tabs, message, DatePicker,
 } from 'antd';
 import {
-  SearchOutlined, PlusOutlined, EditOutlined, DeleteOutlined,
+  PlusOutlined, EditOutlined, DeleteOutlined,
   EyeOutlined, FileTextOutlined, TrophyOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';

@@ -4,7 +4,7 @@ import {
   Row, Col, Statistic, Descriptions, message, Timeline, DatePicker,
 } from 'antd';
 import {
-  SearchOutlined, DownloadOutlined,
+  DownloadOutlined,
   CheckCircleOutlined, ClockCircleOutlined, WarningOutlined,
   ScheduleOutlined, SyncOutlined, FileTextOutlined,
 } from '@ant-design/icons';
