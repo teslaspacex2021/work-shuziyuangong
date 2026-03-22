@@ -192,7 +192,7 @@ const PendingTasks: React.FC = () => {
     }).map((s, idx, arr) => {
       if (action === 'approve' && s.status === '待处理' && idx > 0 && arr[idx - 1].status === '已完成') {
         const prevWasJustApproved = arr.slice(0, idx).every((prev) => prev.status === '已完成');
-        if (prevWasJustApproved && !arr.slice(0, idx).some((prev, i) => i < idx && arr.slice(i + 1, idx).some((p) => p.status === '进行中'))) {
+        if (prevWasJustApproved && !arr.slice(0, idx).some((_prev, i) => i < idx && arr.slice(i + 1, idx).some((p) => p.status === '进行中'))) {
           return { ...s, status: '进行中' as const };
         }
       }

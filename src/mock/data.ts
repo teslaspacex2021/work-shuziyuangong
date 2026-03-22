@@ -842,7 +842,7 @@ export const chatMessages = [
   { role: 'assistant' as const, content: '您好！我是小翼·客服，很高兴为您服务。请问有什么可以帮您？' },
 ];
 
-export type SystemRole = '系统管理员' | '部门经理' | '人力部门' | '普通用户';
+export type SystemRole = '系统管理员' | '部门经理' | '人力部门' | '审计' | '普通用户';
 
 export interface UserInfo {
   id: string;
@@ -883,6 +883,9 @@ export const rolePermissions: Record<SystemRole, string[]> = {
     'position:create', 'position:edit',
     'performance:initiate', 'performance:evaluate',
   ],
+  '审计': [
+    'task-logs', 'schedule',
+  ],
   '普通用户': [
     'dashboard', 'pending',
     'employees',
@@ -903,6 +906,7 @@ export const mockUsers: UserInfo[] = [
   { id: 'U002', name: '张部长', role: '部门经理', department: '经营分析部', permissions: rolePermissions['部门经理'] },
   { id: 'U003', name: '李主管', role: '人力部门', department: '人力资源部', permissions: rolePermissions['人力部门'] },
   { id: 'U004', name: '宇雷', role: '普通用户', department: '客户服务部', permissions: rolePermissions['普通用户'] },
+  { id: 'U005', name: '王芳', role: '审计', department: '审计部', permissions: rolePermissions['审计'] },
 ];
 
 export const orgTree = [

@@ -29,6 +29,7 @@ const roleColorMap: Record<string, string> = {
   '系统管理员': 'red',
   '部门经理': 'blue',
   '人力部门': 'green',
+  '审计': 'purple',
   '普通用户': 'default',
 };
 
@@ -180,6 +181,7 @@ const AdminLayout: React.FC = () => {
                 { label: '系统管理员', value: '系统管理员' },
                 { label: '部门经理', value: '部门经理' },
                 { label: '人力部门', value: '人力部门' },
+                { label: '审计', value: '审计' },
                 { label: '普通用户', value: '普通用户' },
               ]}
             />
