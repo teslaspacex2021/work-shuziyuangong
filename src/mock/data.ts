@@ -156,6 +156,15 @@ export interface PerformanceEmployeeRecord {
   currentAction?: string;
 }
 
+export interface ApprovalStep {
+  step: string;
+  status: '已完成' | '进行中' | '待处理' | '已驳回';
+  time?: string;
+  approver?: string;
+  remark?: string;
+  opinion?: string;
+}
+
 export interface OnboardRecord {
   id: string;
   employeeId: string;
@@ -165,9 +174,9 @@ export interface OnboardRecord {
   department: string;
   position: string;
   applyDate: string;
-  status: '待提交' | '部门审批' | '人力审批' | '技术配置' | '已完成' | '已驳回';
+  status: '待提交' | '部门经理审批' | '人力部门审批' | '已完成' | '已驳回';
   currentStep: number;
-  approvalSteps: { step: string; status: '已完成' | '进行中' | '待处理' | '已驳回'; time?: string; approver?: string; remark?: string }[];
+  approvalSteps: ApprovalStep[];
 }
 
 export interface ExitRecord {
@@ -178,9 +187,41 @@ export interface ExitRecord {
   position: string;
   reason: string;
   applyDate: string;
-  status: '待提交' | '部门审批' | '人力审批' | '资源回收' | '已完成' | '已驳回';
+  status: '待提交' | '部门经理审批' | '人力部门审批' | '已完成' | '已驳回';
   currentStep: number;
-  approvalSteps: { step: string; status: '已完成' | '进行中' | '待处理' | '已驳回'; time?: string; approver?: string; remark?: string }[];
+  approvalSteps: ApprovalStep[];
+}
+
+export interface TransferRecord {
+  id: string;
+  employeeId: string;
+  employeeName: string;
+  fromDepartment: string;
+  fromPosition: string;
+  toDepartment: string;
+  toPosition: string;
+  reason: string;
+  applyDate: string;
+  applicant: string;
+  status: '待提交' | '部门经理审批' | '人力部门审批' | '已完成' | '已驳回';
+  currentStep: number;
+  approvalSteps: ApprovalStep[];
+}
+
+export interface DemandRecord {
+  id: string;
+  title: string;
+  department: string;
+  position: string;
+  headcount: number;
+  urgency: '紧急' | '普通';
+  reason: string;
+  requirements: string;
+  applyDate: string;
+  applicant: string;
+  status: '待提交' | '部门经理审批' | '人力部门审批' | '已完成' | '已驳回';
+  currentStep: number;
+  approvalSteps: ApprovalStep[];
 }
 
 export interface ConversationItem {
@@ -411,34 +452,41 @@ export const taskLogs: TaskLogItem[] = [
 export const onboardRecords: OnboardRecord[] = [
   {
     id: 'OB001', employeeId: 'DE-2026010', employeeName: '小翼·经分', owner: '吴十', ownerType: '自有',
-    department: '经营分析部', position: '经营分析专员', applyDate: '2026-02-25', status: '技术配置', currentStep: 3,
+    department: '经营分析部', position: '经营分析专员', applyDate: '2026-02-25', status: '已完成', currentStep: 4,
     approvalSteps: [
-      { step: '提交申请', status: '已完成', time: '2026-02-25 10:00', approver: '吴十', remark: '申请入职' },
-      { step: '部门审批', status: '已完成', time: '2026-02-26 14:00', approver: '张部长', remark: '同意' },
-      { step: '人力审批', status: '已完成', time: '2026-02-27 11:00', approver: 'HR-李主管', remark: '审批通过' },
-      { step: '技术配置', status: '进行中', time: '2026-02-28 09:00', approver: '技术运维组' },
-      { step: '入职完成', status: '待处理' },
+      { step: '发起申请', status: '已完成', time: '2026-02-25 10:00', approver: '吴十', remark: '申请入职经营分析专员岗位' },
+      { step: '部门经理审批', status: '已完成', time: '2026-02-26 14:00', approver: '经营分析部-张部长', opinion: '同意入职，该岗位急需人力补充', remark: '同意' },
+      { step: '人力部门审批', status: '已完成', time: '2026-02-27 11:00', approver: '人力资源部-李主管', opinion: '审核通过，资质符合要求', remark: '审批通过' },
+      { step: '入职完成', status: '已完成', time: '2026-03-01 09:00' },
     ],
   },
   {
     id: 'OB002', employeeId: 'DE-2026002', employeeName: '小翼·数据', owner: '韩梅梅', ownerType: '外包',
-    department: '数据运营中心', position: '数据标注专员', applyDate: '2026-01-28', status: '已完成', currentStep: 5,
+    department: '数据运营中心', position: '数据标注专员', applyDate: '2026-01-28', status: '已完成', currentStep: 4,
     approvalSteps: [
-      { step: '提交申请', status: '已完成', time: '2026-01-28 09:00', approver: '韩梅梅' },
-      { step: '部门审批', status: '已完成', time: '2026-01-29 10:00', approver: '数据中心-王总监' },
-      { step: '人力审批', status: '已完成', time: '2026-01-30 14:00', approver: 'HR-李主管' },
-      { step: '技术配置', status: '已完成', time: '2026-01-31 11:00', approver: '技术运维组' },
+      { step: '发起申请', status: '已完成', time: '2026-01-28 09:00', approver: '韩梅梅', remark: '申请外包数据标注专员入职' },
+      { step: '部门经理审批', status: '已完成', time: '2026-01-29 10:00', approver: '数据运营中心-王总监', opinion: '同意引入外包人员', remark: '同意' },
+      { step: '人力部门审批', status: '已完成', time: '2026-01-30 14:00', approver: '人力资源部-李主管', opinion: '外包资质审核通过', remark: '通过' },
       { step: '入职完成', status: '已完成', time: '2026-02-01 09:00' },
     ],
   },
   {
     id: 'OB003', employeeId: 'NEW-001', employeeName: '小翼·法务', owner: '陈律师', ownerType: '自有',
-    department: '法务部', position: '法务助理', applyDate: '2026-03-10', status: '部门审批', currentStep: 2,
+    department: '法务部', position: '法务助理', applyDate: '2026-03-10', status: '部门经理审批', currentStep: 2,
     approvalSteps: [
-      { step: '提交申请', status: '已完成', time: '2026-03-10 09:00', approver: '陈律师', remark: '申请入职' },
-      { step: '部门审批', status: '进行中', time: '2026-03-10 14:00', approver: '法务部-刘总' },
-      { step: '人力审批', status: '待处理' },
-      { step: '技术配置', status: '待处理' },
+      { step: '发起申请', status: '已完成', time: '2026-03-10 09:00', approver: '陈律师', remark: '申请入职法务助理岗位，用于合同审核和法规检索' },
+      { step: '部门经理审批', status: '进行中', time: '2026-03-10 14:00', approver: '法务部-刘总' },
+      { step: '人力部门审批', status: '待处理' },
+      { step: '入职完成', status: '待处理' },
+    ],
+  },
+  {
+    id: 'OB004', employeeId: 'NEW-002', employeeName: '小翼·培训', owner: '赵丽', ownerType: '自有',
+    department: '人力资源部', position: '培训助理', applyDate: '2026-03-15', status: '人力部门审批', currentStep: 3,
+    approvalSteps: [
+      { step: '发起申请', status: '已完成', time: '2026-03-15 09:00', approver: '赵丽', remark: '申请入职培训助理岗位' },
+      { step: '部门经理审批', status: '已完成', time: '2026-03-16 10:00', approver: '人力资源部-陈经理', opinion: '部门需要AI培训助手，同意入职', remark: '同意' },
+      { step: '人力部门审批', status: '进行中', time: '2026-03-17 09:00', approver: '人力资源部-李主管' },
       { step: '入职完成', status: '待处理' },
     ],
   },
@@ -447,24 +495,122 @@ export const onboardRecords: OnboardRecord[] = [
 export const exitRecords: ExitRecord[] = [
   {
     id: 'EX001', employeeId: 'DE-2026007', employeeName: '小翼·运维', department: 'IT运维部', position: '运维工程师',
-    reason: '效能不达标', applyDate: '2026-03-08', status: '人力审批', currentStep: 3,
+    reason: '效能不达标', applyDate: '2026-03-08', status: '人力部门审批', currentStep: 3,
     approvalSteps: [
-      { step: '提交退出申请', status: '已完成', time: '2026-03-08 10:00', approver: '孙七', remark: '连续3天未活跃，效能不达标' },
-      { step: '部门审批', status: '已完成', time: '2026-03-09 14:00', approver: 'IT部-周主管', remark: '同意退出' },
-      { step: '人力审批', status: '进行中', time: '2026-03-10 09:00', approver: 'HR-李主管' },
-      { step: '资源回收', status: '待处理' },
+      { step: '发起申请', status: '已完成', time: '2026-03-08 10:00', approver: '孙七', remark: '连续3天未活跃，效能不达标，申请退出' },
+      { step: '部门经理审批', status: '已完成', time: '2026-03-09 14:00', approver: 'IT运维部-周主管', opinion: '确认该员工效能持续低于标准，同意退出', remark: '同意退出' },
+      { step: '人力部门审批', status: '进行中', time: '2026-03-10 09:00', approver: '人力资源部-李主管' },
       { step: '退出完成', status: '待处理' },
     ],
   },
   {
     id: 'EX002', employeeId: 'DE-2026009', employeeName: '小翼·文档', department: '综合管理部', position: '文档管理专员',
-    reason: '岗位调整', applyDate: '2026-03-05', status: '部门审批', currentStep: 2,
+    reason: '岗位调整', applyDate: '2026-03-05', status: '部门经理审批', currentStep: 2,
     approvalSteps: [
-      { step: '提交退出申请', status: '已完成', time: '2026-03-05 15:00', approver: '钱九', remark: '岗位调整，合并至其他岗位' },
-      { step: '部门审批', status: '进行中', time: '2026-03-06 10:00', approver: '综合部-赵主任' },
-      { step: '人力审批', status: '待处理' },
-      { step: '资源回收', status: '待处理' },
+      { step: '发起申请', status: '已完成', time: '2026-03-05 15:00', approver: '钱九', remark: '岗位调整，文档管理工作合并至其他岗位' },
+      { step: '部门经理审批', status: '进行中', time: '2026-03-06 10:00', approver: '综合管理部-赵主任' },
+      { step: '人力部门审批', status: '待处理' },
       { step: '退出完成', status: '待处理' },
+    ],
+  },
+  {
+    id: 'EX003', employeeId: 'DE-2026004', employeeName: '小翼·审计', department: '审计部', position: '审计助理',
+    reason: '合同到期', applyDate: '2026-03-18', status: '已完成', currentStep: 4,
+    approvalSteps: [
+      { step: '发起申请', status: '已完成', time: '2026-03-18 09:00', approver: '王芳', remark: '服务合同到期，申请退出' },
+      { step: '部门经理审批', status: '已完成', time: '2026-03-19 10:00', approver: '审计部-马经理', opinion: '合同到期，同意退出', remark: '同意' },
+      { step: '人力部门审批', status: '已完成', time: '2026-03-20 14:00', approver: '人力资源部-李主管', opinion: '已确认合同到期，资源已回收', remark: '通过' },
+      { step: '退出完成', status: '已完成', time: '2026-03-21 09:00' },
+    ],
+  },
+];
+
+export const transferRecords: TransferRecord[] = [
+  {
+    id: 'TF001', employeeId: 'DE-2026002', employeeName: '小翼·数据',
+    fromDepartment: '数据运营中心', fromPosition: '数据标注专员',
+    toDepartment: '数字化运营部', toPosition: '数据分析专员',
+    reason: '业务需要，该员工具备数据分析能力，调动至数字化运营部承担更重要的数据分析工作',
+    applyDate: '2026-03-12', applicant: '韩梅梅',
+    status: '部门经理审批', currentStep: 2,
+    approvalSteps: [
+      { step: '发起申请', status: '已完成', time: '2026-03-12 09:00', approver: '韩梅梅', remark: '申请调动小翼·数据至数字化运营部' },
+      { step: '部门经理审批', status: '进行中', time: '2026-03-12 14:00', approver: '数据运营中心-王总监' },
+      { step: '人力部门审批', status: '待处理' },
+      { step: '调动完成', status: '待处理' },
+    ],
+  },
+  {
+    id: 'TF002', employeeId: 'DE-2026009', employeeName: '小翼·文档',
+    fromDepartment: '综合管理部', fromPosition: '文档管理专员',
+    toDepartment: '客户服务部', toPosition: '知识管理专员',
+    reason: '客户服务部需要知识管理能力，小翼·文档的文件解析和摘要能力可以更好地服务于客服知识库建设',
+    applyDate: '2026-03-08', applicant: '钱九',
+    status: '人力部门审批', currentStep: 3,
+    approvalSteps: [
+      { step: '发起申请', status: '已完成', time: '2026-03-08 10:00', approver: '钱九', remark: '申请调动至客户服务部' },
+      { step: '部门经理审批', status: '已完成', time: '2026-03-09 11:00', approver: '综合管理部-赵主任', opinion: '同意调动，综合管理部文档工作可由其他员工分担', remark: '同意' },
+      { step: '人力部门审批', status: '进行中', time: '2026-03-10 09:00', approver: '人力资源部-李主管' },
+      { step: '调动完成', status: '待处理' },
+    ],
+  },
+  {
+    id: 'TF003', employeeId: 'DE-2026003', employeeName: '小翼·营销',
+    fromDepartment: '数字化运营部', fromPosition: '营销策划专员',
+    toDepartment: '数字化运营部', toPosition: '高级营销策划专员',
+    reason: '该员工表现优异，完成率93.8%，建议晋升为高级营销策划专员',
+    applyDate: '2026-02-20', applicant: '李明',
+    status: '已完成', currentStep: 4,
+    approvalSteps: [
+      { step: '发起申请', status: '已完成', time: '2026-02-20 09:00', approver: '李明', remark: '申请岗位调整晋升' },
+      { step: '部门经理审批', status: '已完成', time: '2026-02-21 10:00', approver: '数字化运营部-刘总监', opinion: '同意晋升，该员工业绩突出', remark: '同意' },
+      { step: '人力部门审批', status: '已完成', time: '2026-02-22 14:00', approver: '人力资源部-李主管', opinion: '审核通过，符合晋升条件', remark: '通过' },
+      { step: '调动完成', status: '已完成', time: '2026-02-23 09:00' },
+    ],
+  },
+];
+
+export const demandRecords: DemandRecord[] = [
+  {
+    id: 'DM001', title: '客服部智能客服专员扩编', department: '客户服务部', position: '智能客服专员',
+    headcount: 2, urgency: '紧急',
+    reason: '315消费者权益日期间客户咨询量激增，现有客服人力不足，需紧急扩编',
+    requirements: '需具备智能问答、工单处理、情感分析能力，L2及以上职级',
+    applyDate: '2026-03-05', applicant: '客户服务部-宇雷',
+    status: '人力部门审批', currentStep: 3,
+    approvalSteps: [
+      { step: '发起申请', status: '已完成', time: '2026-03-05 09:00', approver: '宇雷', remark: '紧急扩编需求' },
+      { step: '部门经理审批', status: '已完成', time: '2026-03-06 10:00', approver: '客户服务部-陈总监', opinion: '同意扩编，当前客服压力大，需增加人力', remark: '同意' },
+      { step: '人力部门审批', status: '进行中', time: '2026-03-07 09:00', approver: '人力资源部-李主管' },
+      { step: '需求完成', status: '待处理' },
+    ],
+  },
+  {
+    id: 'DM002', title: '审计部AI审计助理招募', department: '审计部', position: '审计助理',
+    headcount: 1, urgency: '普通',
+    reason: '年度审计工作量增加，需补充AI审计助理协助完成工作底稿',
+    requirements: '需具备工作底稿、风险识别、报告生成能力',
+    applyDate: '2026-03-10', applicant: '审计部-王芳',
+    status: '部门经理审批', currentStep: 2,
+    approvalSteps: [
+      { step: '发起申请', status: '已完成', time: '2026-03-10 09:00', approver: '王芳', remark: '补充审计人力' },
+      { step: '部门经理审批', status: '进行中', time: '2026-03-11 10:00', approver: '审计部-马经理' },
+      { step: '人力部门审批', status: '待处理' },
+      { step: '需求完成', status: '待处理' },
+    ],
+  },
+  {
+    id: 'DM003', title: '财务中心报表分析师需求', department: '财务共享中心', position: '财务分析专员',
+    headcount: 1, urgency: '普通',
+    reason: '季度报表分析工作繁重，需增加一名AI财务分析专员',
+    requirements: '需具备报销审核、预算分析、费用统计能力，L3职级',
+    applyDate: '2026-02-15', applicant: '财务共享中心-赵六',
+    status: '已完成', currentStep: 4,
+    approvalSteps: [
+      { step: '发起申请', status: '已完成', time: '2026-02-15 09:00', approver: '赵六', remark: '增加财务分析人力' },
+      { step: '部门经理审批', status: '已完成', time: '2026-02-16 10:00', approver: '财务共享中心-吴总监', opinion: '同意增员，当前人力紧张', remark: '同意' },
+      { step: '人力部门审批', status: '已完成', time: '2026-02-17 14:00', approver: '人力资源部-李主管', opinion: '审核通过，已安排入职流程', remark: '通过' },
+      { step: '需求完成', status: '已完成', time: '2026-02-18 09:00' },
     ],
   },
 ];
@@ -497,11 +643,11 @@ export const performanceReviews: PerformanceReview[] = [
     id: 'PR001', year: 2025, period: '第四季度', periodType: '季度',
     name: '2025年第四季度基干及员工考核', status: '已结束', currentStep: '--',
     steps: [
-      { key: 'init', label: '发起考核', status: '已完成', deadline: '2025-12-20' },
-      { key: 'self', label: '自我评价', status: '已完成', deadline: '2025-12-25' },
-      { key: 'manager', label: '主管评价', status: '已完成', deadline: '2025-12-28' },
-      { key: 'hr', label: 'HR审核', status: '已完成', deadline: '2025-12-30' },
-      { key: 'done', label: '考核完成', status: '已完成', deadline: '2025-12-31' },
+      { key: 'init', label: '系统发起', status: '已完成', deadline: '2025-12-20' },
+      { key: 'self', label: '自然人自我评价', status: '已完成', deadline: '2025-12-25' },
+      { key: 'manager', label: '部门经理评价', status: '已完成', deadline: '2025-12-28' },
+      { key: 'hr', label: '人力部门评价', status: '已完成', deadline: '2025-12-30' },
+      { key: 'done', label: '结束', status: '已完成', deadline: '2025-12-31' },
     ],
     employees: digitalEmployees.map((e) => ({
       employeeId: e.id, employeeName: e.name, department: e.department,
@@ -514,13 +660,13 @@ export const performanceReviews: PerformanceReview[] = [
   },
   {
     id: 'PR002', year: 2025, period: '年度', periodType: '年度',
-    name: '2025年度员工考核', status: '进行中', currentStep: 'HR审核',
+    name: '2025年度员工考核', status: '进行中', currentStep: '人力部门评价',
     steps: [
-      { key: 'init', label: '发起考核', status: '已完成', deadline: '2026-01-10' },
-      { key: 'self', label: '自我评价', status: '已完成', deadline: '2026-01-20' },
-      { key: 'manager', label: '主管评价', status: '已完成', deadline: '2026-02-01' },
-      { key: 'hr', label: 'HR审核', status: '进行中', deadline: '2026-03-15' },
-      { key: 'done', label: '考核完成', status: '待处理', deadline: '2026-03-31' },
+      { key: 'init', label: '系统发起', status: '已完成', deadline: '2026-01-10' },
+      { key: 'self', label: '自然人自我评价', status: '已完成', deadline: '2026-01-20' },
+      { key: 'manager', label: '部门经理评价', status: '已完成', deadline: '2026-02-01' },
+      { key: 'hr', label: '人力部门评价', status: '进行中', deadline: '2026-03-15' },
+      { key: 'done', label: '结束', status: '待处理', deadline: '2026-03-31' },
     ],
     employees: digitalEmployees.map((e) => ({
       employeeId: e.id, employeeName: e.name, department: e.department,
@@ -536,11 +682,11 @@ export const performanceReviews: PerformanceReview[] = [
     id: 'PR003', year: 2025, period: '第三季度', periodType: '季度',
     name: '2025年三季度基干及员工考核', status: '已结束', currentStep: '--',
     steps: [
-      { key: 'init', label: '发起考核', status: '已完成' },
-      { key: 'self', label: '自我评价', status: '已完成' },
-      { key: 'manager', label: '主管评价', status: '已完成' },
-      { key: 'hr', label: 'HR审核', status: '已完成' },
-      { key: 'done', label: '考核完成', status: '已完成' },
+      { key: 'init', label: '系统发起', status: '已完成' },
+      { key: 'self', label: '自然人自我评价', status: '已完成' },
+      { key: 'manager', label: '部门经理评价', status: '已完成' },
+      { key: 'hr', label: '人力部门评价', status: '已完成' },
+      { key: 'done', label: '结束', status: '已完成' },
     ],
     employees: [],
   },
@@ -548,11 +694,11 @@ export const performanceReviews: PerformanceReview[] = [
     id: 'PR004', year: 2025, period: '第二季度', periodType: '季度',
     name: '2025年二季度基干及员工考核', status: '已结束', currentStep: '--',
     steps: [
-      { key: 'init', label: '发起考核', status: '已完成' },
-      { key: 'self', label: '自我评价', status: '已完成' },
-      { key: 'manager', label: '主管评价', status: '已完成' },
-      { key: 'hr', label: 'HR审核', status: '已完成' },
-      { key: 'done', label: '考核完成', status: '已完成' },
+      { key: 'init', label: '系统发起', status: '已完成' },
+      { key: 'self', label: '自然人自我评价', status: '已完成' },
+      { key: 'manager', label: '部门经理评价', status: '已完成' },
+      { key: 'hr', label: '人力部门评价', status: '已完成' },
+      { key: 'done', label: '结束', status: '已完成' },
     ],
     employees: [],
   },
@@ -560,11 +706,11 @@ export const performanceReviews: PerformanceReview[] = [
     id: 'PR005', year: 2025, period: '第一季度', periodType: '季度',
     name: '2025年一季度基干及员工考核', status: '已结束', currentStep: '--',
     steps: [
-      { key: 'init', label: '发起考核', status: '已完成' },
-      { key: 'self', label: '自我评价', status: '已完成' },
-      { key: 'manager', label: '主管评价', status: '已完成' },
-      { key: 'hr', label: 'HR审核', status: '已完成' },
-      { key: 'done', label: '考核完成', status: '已完成' },
+      { key: 'init', label: '系统发起', status: '已完成' },
+      { key: 'self', label: '自然人自我评价', status: '已完成' },
+      { key: 'manager', label: '部门经理评价', status: '已完成' },
+      { key: 'hr', label: '人力部门评价', status: '已完成' },
+      { key: 'done', label: '结束', status: '已完成' },
     ],
     employees: [],
   },
@@ -572,11 +718,11 @@ export const performanceReviews: PerformanceReview[] = [
     id: 'PR006', year: 2024, period: '年度', periodType: '年度',
     name: '2024年度员工考核', status: '已结束', currentStep: '--',
     steps: [
-      { key: 'init', label: '发起考核', status: '已完成' },
-      { key: 'self', label: '自我评价', status: '已完成' },
-      { key: 'manager', label: '主管评价', status: '已完成' },
-      { key: 'hr', label: 'HR审核', status: '已完成' },
-      { key: 'done', label: '考核完成', status: '已完成' },
+      { key: 'init', label: '系统发起', status: '已完成' },
+      { key: 'self', label: '自然人自我评价', status: '已完成' },
+      { key: 'manager', label: '部门经理评价', status: '已完成' },
+      { key: 'hr', label: '人力部门评价', status: '已完成' },
+      { key: 'done', label: '结束', status: '已完成' },
     ],
     employees: [],
   },
@@ -584,11 +730,11 @@ export const performanceReviews: PerformanceReview[] = [
     id: 'PR007', year: 2024, period: '第四季度', periodType: '季度',
     name: '2024年四季度基干及员工考核', status: '已结束', currentStep: '--',
     steps: [
-      { key: 'init', label: '发起考核', status: '已完成' },
-      { key: 'self', label: '自我评价', status: '已完成' },
-      { key: 'manager', label: '主管评价', status: '已完成' },
-      { key: 'hr', label: 'HR审核', status: '已完成' },
-      { key: 'done', label: '考核完成', status: '已完成' },
+      { key: 'init', label: '系统发起', status: '已完成' },
+      { key: 'self', label: '自然人自我评价', status: '已完成' },
+      { key: 'manager', label: '部门经理评价', status: '已完成' },
+      { key: 'hr', label: '人力部门评价', status: '已完成' },
+      { key: 'done', label: '结束', status: '已完成' },
     ],
     employees: [],
   },
@@ -694,6 +840,69 @@ export const efficiencyReport = {
 
 export const chatMessages = [
   { role: 'assistant' as const, content: '您好！我是小翼·客服，很高兴为您服务。请问有什么可以帮您？' },
+];
+
+export type SystemRole = '系统管理员' | '部门经理' | '人力部门' | '普通用户';
+
+export interface UserInfo {
+  id: string;
+  name: string;
+  role: SystemRole;
+  department?: string;
+  permissions: string[];
+}
+
+export const rolePermissions: Record<SystemRole, string[]> = {
+  '系统管理员': [
+    'dashboard', 'pending', 'alerts',
+    'employees', 'positions',
+    'onboard', 'transfer', 'demand', 'performance', 'exit',
+    'task-logs', 'schedule',
+    'approval:approve', 'approval:reject',
+    'employee:create', 'employee:edit', 'employee:delete',
+    'position:create', 'position:edit', 'position:delete',
+    'performance:initiate', 'performance:evaluate',
+    'system:settings',
+  ],
+  '部门经理': [
+    'dashboard', 'pending', 'alerts',
+    'employees', 'positions',
+    'onboard', 'transfer', 'demand', 'performance', 'exit',
+    'task-logs',
+    'approval:approve', 'approval:reject',
+    'employee:edit',
+    'performance:evaluate',
+  ],
+  '人力部门': [
+    'dashboard', 'pending', 'alerts',
+    'employees', 'positions',
+    'onboard', 'transfer', 'demand', 'performance', 'exit',
+    'task-logs', 'schedule',
+    'approval:approve', 'approval:reject',
+    'employee:create', 'employee:edit',
+    'position:create', 'position:edit',
+    'performance:initiate', 'performance:evaluate',
+  ],
+  '普通用户': [
+    'dashboard', 'pending',
+    'employees',
+    'onboard', 'performance',
+    'task-logs',
+  ],
+};
+
+export const currentUser: UserInfo = {
+  id: 'U001',
+  name: '管理员',
+  role: '系统管理员',
+  permissions: rolePermissions['系统管理员'],
+};
+
+export const mockUsers: UserInfo[] = [
+  { id: 'U001', name: '管理员', role: '系统管理员', permissions: rolePermissions['系统管理员'] },
+  { id: 'U002', name: '张部长', role: '部门经理', department: '经营分析部', permissions: rolePermissions['部门经理'] },
+  { id: 'U003', name: '李主管', role: '人力部门', department: '人力资源部', permissions: rolePermissions['人力部门'] },
+  { id: 'U004', name: '宇雷', role: '普通用户', department: '客户服务部', permissions: rolePermissions['普通用户'] },
 ];
 
 export const orgTree = [

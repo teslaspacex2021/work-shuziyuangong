@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import {
   Card, Table, Tag, Button, Space, Modal, Select, Row, Col, Steps,
   Descriptions, Progress, message, Form, Input, Tabs, DatePicker,
-  Avatar,
+  Avatar, Divider,
 } from 'antd';
 import {
   EyeOutlined,
@@ -16,6 +16,7 @@ import {
   type PerformanceReview, type PerformanceEmployeeRecord,
   type AssessmentRecord, type AssessmentConfig,
 } from '../../mock/data';
+import { usePermission } from '../../contexts/PermissionContext';
 
 const levelColorMap: Record<string, string> = {
   L1: '#C0C0C0', L2: '#6B7B8D', L3: '#1677ff', L4: '#0A1929',
@@ -40,19 +41,15 @@ const PerformanceManagement: React.FC = () => {
   const [periodFilter, setPeriodFilter] = useState<string | undefined>(undefined);
   const [statusFilter, setStatusFilter] = useState<string | undefined>(undefined);
   const [detailReview, setDetailReview] = useState<PerformanceReview | null>(null);
-  const [actionVisible, setActionVisible] = useState(false);
-  const [actionType] = useState('');
   const [selectedEmpRecord, setSelectedEmpRecord] = useState<PerformanceEmployeeRecord | null>(null);
-  const [empDetailVisible, setEmpDetailVisible] = useState(false);
-  const [actionForm] = Form.useForm();
+  const { hasPermission } = usePermission();
 
-  // Assessment config state (restored from original)
   const [configs, setConfigs] = useState<AssessmentConfig[]>(assessmentConfigs);
   const [configModalVisible, setConfigModalVisible] = useState(false);
   const [editingConfig, setEditingConfig] = useState<AssessmentConfig | null>(null);
   const [configForm] = Form.useForm();
+  const [evaluationForm] = Form.useForm();
 
-  // Assessment records filters
   const [cycleFilter, setCycleFilter] = useState<string | undefined>(undefined);
   const [positionFilter, setPositionFilter] = useState<string | undefined>(undefined);
   const [deptFilter, setDeptFilter] = useState<string | undefined>(undefined);
@@ -69,20 +66,6 @@ const PerformanceManagement: React.FC = () => {
   const years = [...new Set(reviews.map((r) => r.year))].sort((a, b) => b - a);
   const periods = [...new Set(reviews.map((r) => r.period))];
 
-  const showEmpDetail = (emp: PerformanceEmployeeRecord) => {
-    setSelectedEmpRecord(emp);
-    setEmpDetailVisible(true);
-  };
-
-
-  const submitAction = () => {
-    actionForm.validateFields().then(() => {
-      message.success(`${actionType} 已提交`);
-      setActionVisible(false);
-    });
-  };
-
-  // Assessment records
   const sortedRecords = useMemo(() => {
     return [...assessmentRecords]
       .sort((a, b) => b.score - a.score)
@@ -124,7 +107,6 @@ const PerformanceManagement: React.FC = () => {
     return '#ff4d4f';
   };
 
-  // Config CRUD
   const handleAddConfig = () => {
     setEditingConfig(null);
     configForm.resetFields();
@@ -173,6 +155,14 @@ const PerformanceManagement: React.FC = () => {
     });
   };
 
+  const handleSubmitEvaluation = () => {
+    evaluationForm.validateFields().then((values) => {
+      message.success('评价已提交');
+      evaluationForm.resetFields();
+      console.log('Evaluation submitted:', values);
+    });
+  };
+
   const columns: ColumnsType<PerformanceReview> = [
     { title: '年度', dataIndex: 'year', key: 'year', width: 80 },
     {
@@ -184,7 +174,7 @@ const PerformanceManagement: React.FC = () => {
       render: (name: string) => <span style={{ fontWeight: 500 }}>{name}</span>,
     },
     {
-      title: '当前步骤', dataIndex: 'currentStep', key: 'currentStep', width: 120,
+      title: '当前步骤', dataIndex: 'currentStep', key: 'currentStep', width: 140,
       render: (step: string) => step === '--' ? <span style={{ color: '#999' }}>--</span> : <Tag color="processing">{step}</Tag>,
     },
     {
@@ -202,30 +192,6 @@ const PerformanceManagement: React.FC = () => {
   ];
 
   const empColumns: ColumnsType<PerformanceEmployeeRecord> = [
-    {
-      title: '年度', key: 'reviewYear', width: 80,
-      render: () => detailReview?.year,
-    },
-    {
-      title: '周期', key: 'reviewPeriod', width: 100,
-      render: () => <Tag>{detailReview?.period}</Tag>,
-    },
-    {
-      title: '活动名称', key: 'reviewName', width: 200,
-      render: () => <span style={{ fontWeight: 500 }}>{detailReview?.name}</span>,
-    },
-    {
-      title: '当前步骤', key: 'reviewStep', width: 120,
-      render: () => detailReview?.currentStep === '--'
-        ? <span style={{ color: '#999' }}>--</span>
-        : <Tag color="processing">{detailReview?.currentStep}</Tag>,
-    },
-    {
-      title: '考核状态', key: 'reviewStatus', width: 100,
-      render: () => (
-        <Tag color={detailReview?.status === '进行中' ? 'processing' : 'default'}>{detailReview?.status}</Tag>
-      ),
-    },
     { title: '员工名称', dataIndex: 'employeeName', key: 'employeeName', width: 120 },
     { title: '部门', dataIndex: 'department', key: 'department', width: 120 },
     { title: '岗位', dataIndex: 'position', key: 'position', width: 120 },
@@ -250,7 +216,7 @@ const PerformanceManagement: React.FC = () => {
     {
       title: '操作', key: 'action', width: 80,
       render: (_, record) => (
-        <Button type="link" size="small" onClick={() => showEmpDetail(record)}>详情</Button>
+        <Button type="link" size="small" onClick={() => setSelectedEmpRecord(record)}>详情</Button>
       ),
     },
   ];
@@ -347,7 +313,109 @@ const PerformanceManagement: React.FC = () => {
     },
   ];
 
-  // Detail sub-page for a specific review
+  // Employee performance detail page
+  if (selectedEmpRecord && detailReview) {
+    const currentStepIdx = detailReview.steps.findIndex((s) => s.status === '进行中');
+    const isEnded = detailReview.status === '已结束';
+    const canEvaluate = hasPermission('performance:evaluate') && !isEnded;
+
+    return (
+      <div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
+          <Button icon={<ArrowLeftOutlined />} onClick={() => setSelectedEmpRecord(null)}>返回员工列表</Button>
+          <h2 style={{ margin: 0, fontSize: 20, fontWeight: 600 }}>
+            绩效详情 — {selectedEmpRecord.employeeName}
+          </h2>
+          <Tag color={detailReview.status === '进行中' ? 'processing' : 'default'}>{detailReview.status}</Tag>
+        </div>
+
+        <Card title="考核信息" style={{ borderRadius: 12, marginBottom: 20 }}>
+          <Descriptions column={2} bordered size="small">
+            <Descriptions.Item label="考核名称">{detailReview.name}</Descriptions.Item>
+            <Descriptions.Item label="考核周期">{detailReview.year} {detailReview.period}</Descriptions.Item>
+            <Descriptions.Item label="员工名称">{selectedEmpRecord.employeeName}</Descriptions.Item>
+            <Descriptions.Item label="部门">{selectedEmpRecord.department}</Descriptions.Item>
+            <Descriptions.Item label="岗位">{selectedEmpRecord.position}</Descriptions.Item>
+            <Descriptions.Item label="职级"><Tag color="blue">{selectedEmpRecord.level}</Tag></Descriptions.Item>
+            <Descriptions.Item label="任务完成率" span={2}>
+              <Progress percent={selectedEmpRecord.taskCompleteRate} size="small" style={{ width: 200 }} />
+            </Descriptions.Item>
+            <Descriptions.Item label="Tokens消耗">{(selectedEmpRecord.tokensUsed / 10000).toFixed(0)}万</Descriptions.Item>
+            <Descriptions.Item label="综合评分">
+              <span style={{ fontWeight: 700, fontSize: 20, color: selectedEmpRecord.score >= 90 ? '#52c41a' : '#1677ff' }}>
+                {selectedEmpRecord.score}
+              </span>
+            </Descriptions.Item>
+          </Descriptions>
+        </Card>
+
+        <Card title="绩效考核流程" style={{ borderRadius: 12, marginBottom: 20 }}>
+          <div style={{ marginBottom: 16, fontSize: 13, color: '#666' }}>
+            流程：系统发起 → 自然人自我评价 → 部门经理评价 → 人力部门评价 → 结束
+          </div>
+          <Steps
+            current={currentStepIdx >= 0 ? currentStepIdx : detailReview.steps.length - 1}
+            size="small"
+            direction="vertical"
+            items={detailReview.steps.map((step) => ({
+              title: <span style={{ fontWeight: 500 }}>{step.label}</span>,
+              description: (
+                <div style={{ fontSize: 13, color: '#666', padding: '4px 0 8px' }}>
+                  {step.deadline && <div>截止日期：{step.deadline}</div>}
+                  <div>状态：<Tag color={step.status === '已完成' ? 'success' : step.status === '进行中' ? 'processing' : 'default'}>{step.status}</Tag></div>
+                  {step.key === 'self' && selectedEmpRecord.selfEvaluation && (
+                    <div style={{ marginTop: 4, padding: '8px 12px', background: '#f6f8fa', borderRadius: 6, borderLeft: '3px solid #52c41a' }}>
+                      <span style={{ color: '#333' }}>自我评价：{selectedEmpRecord.selfEvaluation}</span>
+                    </div>
+                  )}
+                  {step.key === 'manager' && selectedEmpRecord.managerEvaluation && (
+                    <div style={{ marginTop: 4, padding: '8px 12px', background: '#f6f8fa', borderRadius: 6, borderLeft: '3px solid #1677ff' }}>
+                      <span style={{ color: '#333' }}>部门经理评价：{selectedEmpRecord.managerEvaluation}</span>
+                    </div>
+                  )}
+                </div>
+              ),
+              status: step.status === '已完成' ? 'finish' : step.status === '进行中' ? 'process' : 'wait',
+            }))}
+          />
+        </Card>
+
+        {canEvaluate && currentStepIdx >= 0 && (
+          <Card title={`评价操作 — ${detailReview.steps[currentStepIdx]?.label}`} style={{ borderRadius: 12, marginBottom: 20 }}>
+            <Form form={evaluationForm} layout="vertical">
+              <Form.Item name="content" label="评价内容" rules={[{ required: true, message: '请填写评价内容' }]}>
+                <Input.TextArea rows={4} placeholder={`请填写${detailReview.steps[currentStepIdx]?.label}内容...`} maxLength={500} showCount />
+              </Form.Item>
+              <Form.Item name="score" label="评分" rules={[{ required: true, message: '请输入评分' }]}>
+                <Input type="number" placeholder="请输入评分（0-100）" suffix="分" style={{ width: 200 }} />
+              </Form.Item>
+              <Form.Item name="remark" label="备注">
+                <Input.TextArea rows={2} placeholder="补充说明（选填）" />
+              </Form.Item>
+              <Divider style={{ margin: '16px 0' }} />
+              <Space>
+                <Button type="primary" size="large" onClick={handleSubmitEvaluation} style={{ minWidth: 120 }}>
+                  提交评价
+                </Button>
+              </Space>
+            </Form>
+          </Card>
+        )}
+
+        {selectedEmpRecord.selfEvaluation && (
+          <Card size="small" title="自我评价" style={{ marginBottom: 12, borderRadius: 8 }}>
+            <p style={{ margin: 0, color: '#666' }}>{selectedEmpRecord.selfEvaluation}</p>
+          </Card>
+        )}
+        {selectedEmpRecord.managerEvaluation && (
+          <Card size="small" title="部门经理评价" style={{ borderRadius: 8 }}>
+            <p style={{ margin: 0, color: '#666' }}>{selectedEmpRecord.managerEvaluation}</p>
+          </Card>
+        )}
+      </div>
+    );
+  }
+
   if (detailReview) {
     return (
       <div>
@@ -368,6 +436,21 @@ const PerformanceManagement: React.FC = () => {
           </Descriptions>
         </Card>
 
+        <Card title="绩效考核流程" size="small" style={{ borderRadius: 12, marginBottom: 20 }}>
+          <div style={{ marginBottom: 12, fontSize: 13, color: '#666' }}>
+            流程：系统发起 → 自然人自我评价 → 部门经理评价 → 人力部门评价 → 结束
+          </div>
+          <Steps
+            current={detailReview.steps.findIndex((s) => s.status === '进行中')}
+            size="small"
+            items={detailReview.steps.map((step) => ({
+              title: step.label,
+              description: step.deadline ? `截止 ${step.deadline}` : undefined,
+              status: step.status === '已完成' ? 'finish' : step.status === '进行中' ? 'process' : 'wait',
+            }))}
+          />
+        </Card>
+
         {detailReview.employees.length > 0 && (
           <Card title={`考核员工列表（共 ${detailReview.employees.length} 人）`} size="small" style={{ borderRadius: 12 }}>
             <Table
@@ -380,78 +463,6 @@ const PerformanceManagement: React.FC = () => {
             />
           </Card>
         )}
-
-        {/* Employee Performance Detail Modal */}
-        <Modal
-          title={`绩效详情 — ${selectedEmpRecord?.employeeName}`}
-          open={empDetailVisible}
-          onCancel={() => setEmpDetailVisible(false)}
-          footer={null}
-          width={700}
-        >
-          {selectedEmpRecord && (
-            <div>
-              <Card size="small" title="绩效考核流程" style={{ marginBottom: 16, borderRadius: 8 }}>
-                <Steps
-                  current={detailReview.steps.findIndex((s) => s.status === '进行中')}
-                  size="small"
-                  items={detailReview.steps.map((step) => ({
-                    title: step.label,
-                    description: step.deadline ? `截止 ${step.deadline}` : undefined,
-                    status: step.status === '已完成' ? 'finish' : step.status === '进行中' ? 'process' : 'wait',
-                  }))}
-                />
-              </Card>
-              <Descriptions column={2} bordered size="small" style={{ marginBottom: 16 }}>
-                <Descriptions.Item label="员工">{selectedEmpRecord.employeeName}</Descriptions.Item>
-                <Descriptions.Item label="部门">{selectedEmpRecord.department}</Descriptions.Item>
-                <Descriptions.Item label="岗位">{selectedEmpRecord.position}</Descriptions.Item>
-                <Descriptions.Item label="职级"><Tag color="blue">{selectedEmpRecord.level}</Tag></Descriptions.Item>
-                <Descriptions.Item label="任务完成率" span={2}>
-                  <Progress percent={selectedEmpRecord.taskCompleteRate} size="small" style={{ width: 200 }} />
-                </Descriptions.Item>
-                <Descriptions.Item label="Tokens消耗">{(selectedEmpRecord.tokensUsed / 10000).toFixed(0)}万</Descriptions.Item>
-                <Descriptions.Item label="综合评分">
-                  <span style={{ fontWeight: 700, fontSize: 20, color: selectedEmpRecord.score >= 90 ? '#52c41a' : '#1677ff' }}>
-                    {selectedEmpRecord.score}
-                  </span>
-                </Descriptions.Item>
-              </Descriptions>
-              {selectedEmpRecord.selfEvaluation && (
-                <Card size="small" title="自我评价" style={{ marginBottom: 12, borderRadius: 8 }}>
-                  <p style={{ margin: 0, color: '#666' }}>{selectedEmpRecord.selfEvaluation}</p>
-                </Card>
-              )}
-              {selectedEmpRecord.managerEvaluation && (
-                <Card size="small" title="主管评价" style={{ borderRadius: 8 }}>
-                  <p style={{ margin: 0, color: '#666' }}>{selectedEmpRecord.managerEvaluation}</p>
-                </Card>
-              )}
-            </div>
-          )}
-        </Modal>
-
-        {/* Action Modal */}
-        <Modal
-          title={`${actionType} — ${detailReview?.name}`}
-          open={actionVisible}
-          onCancel={() => setActionVisible(false)}
-          onOk={submitAction}
-          okText="提交"
-          width={560}
-        >
-          <Form form={actionForm} layout="vertical" style={{ marginTop: 16 }}>
-            <Form.Item name="content" label={`${actionType}内容`} rules={[{ required: true, message: '请填写内容' }]}>
-              <Input.TextArea rows={4} placeholder={`请填写${actionType}内容...`} />
-            </Form.Item>
-            <Form.Item name="score" label="评分" rules={[{ required: true, message: '请输入评分' }]}>
-              <Input type="number" placeholder="请输入评分（0-100）" suffix="分" />
-            </Form.Item>
-            <Form.Item name="remark" label="备注">
-              <Input.TextArea rows={2} placeholder="补充说明（选填）" />
-            </Form.Item>
-          </Form>
-        </Modal>
       </div>
     );
   }
@@ -462,7 +473,9 @@ const PerformanceManagement: React.FC = () => {
         <FileTextOutlined style={{ marginRight: 8 }} />
         绩效管理
       </h2>
-      <p style={{ color: '#999', marginBottom: 20 }}>人力部每个季度发起绩效考核流程，管理数字员工的绩效评定</p>
+      <p style={{ color: '#999', marginBottom: 20 }}>
+        流程：系统发起 → 自然人自我评价 → 部门经理评价 → 人力部门评价 → 结束
+      </p>
 
       <Card style={{ borderRadius: 12 }}>
         <Tabs
@@ -508,7 +521,6 @@ const PerformanceManagement: React.FC = () => {
                       />
                     </Col>
                   </Row>
-
                   <Table
                     columns={columns}
                     dataSource={filteredReviews}
@@ -526,70 +538,28 @@ const PerformanceManagement: React.FC = () => {
                 <>
                   <Row gutter={12} style={{ marginBottom: 16 }}>
                     <Col>
-                      <Select
-                        placeholder="年度"
-                        style={{ width: 100 }}
-                        allowClear
-                        value={recordYearFilter}
-                        onChange={setRecordYearFilter}
-                        options={recordYearOptions.map((y) => ({ label: y, value: y }))}
-                      />
+                      <Select placeholder="年度" style={{ width: 100 }} allowClear value={recordYearFilter} onChange={setRecordYearFilter}
+                        options={recordYearOptions.map((y) => ({ label: y, value: y }))} />
                     </Col>
                     <Col>
-                      <Select
-                        placeholder="考核周期"
-                        style={{ width: 120 }}
-                        allowClear
-                        value={cycleFilter}
-                        onChange={setCycleFilter}
-                        options={[
-                          { label: '季度', value: '季度' },
-                          { label: '半年', value: '半年' },
-                          { label: '全年', value: '全年' },
-                        ]}
-                      />
+                      <Select placeholder="考核周期" style={{ width: 120 }} allowClear value={cycleFilter} onChange={setCycleFilter}
+                        options={[{ label: '季度', value: '季度' }, { label: '半年', value: '半年' }, { label: '全年', value: '全年' }]} />
                     </Col>
                     <Col>
-                      <Select
-                        placeholder="岗位"
-                        style={{ width: 150 }}
-                        allowClear
-                        value={positionFilter}
-                        onChange={setPositionFilter}
-                        options={positionOptions.map((p) => ({ label: p, value: p }))}
-                      />
+                      <Select placeholder="岗位" style={{ width: 150 }} allowClear value={positionFilter} onChange={setPositionFilter}
+                        options={positionOptions.map((p) => ({ label: p, value: p }))} />
                     </Col>
                     <Col>
-                      <Select
-                        placeholder="部门"
-                        style={{ width: 150 }}
-                        allowClear
-                        value={deptFilter}
-                        onChange={setDeptFilter}
-                        options={deptOptions.map((d) => ({ label: d, value: d }))}
-                      />
+                      <Select placeholder="部门" style={{ width: 150 }} allowClear value={deptFilter} onChange={setDeptFilter}
+                        options={deptOptions.map((d) => ({ label: d, value: d }))} />
                     </Col>
                     <Col>
-                      <Select
-                        placeholder="考核状态"
-                        style={{ width: 120 }}
-                        allowClear
-                        value={recordStatusFilter}
-                        onChange={setRecordStatusFilter}
-                        options={[
-                          { label: '已通过', value: '已通过' },
-                          { label: '未通过', value: '未通过' },
-                        ]}
-                      />
+                      <Select placeholder="考核状态" style={{ width: 120 }} allowClear value={recordStatusFilter} onChange={setRecordStatusFilter}
+                        options={[{ label: '已通过', value: '已通过' }, { label: '未通过', value: '未通过' }]} />
                     </Col>
                   </Row>
-                  <Table
-                    columns={recordColumns}
-                    dataSource={filteredRecords}
-                    rowKey="id"
-                    scroll={{ x: 1200 }}
-                    pagination={{ pageSize: 10, showTotal: (total) => `共 ${total} 条` }}
-                  />
+                  <Table columns={recordColumns} dataSource={filteredRecords} rowKey="id" scroll={{ x: 1200 }}
+                    pagination={{ pageSize: 10, showTotal: (total) => `共 ${total} 条` }} />
                 </>
               ),
             },
@@ -601,13 +571,8 @@ const PerformanceManagement: React.FC = () => {
                   <div style={{ marginBottom: 16, textAlign: 'right' }}>
                     <Button type="primary" icon={<PlusOutlined />} onClick={handleAddConfig}>新增考核</Button>
                   </div>
-                  <Table
-                    columns={configColumns}
-                    dataSource={configs}
-                    rowKey="id"
-                    scroll={{ x: 1000 }}
-                    pagination={{ pageSize: 10, showTotal: (total) => `共 ${total} 条` }}
-                  />
+                  <Table columns={configColumns} dataSource={configs} rowKey="id" scroll={{ x: 1000 }}
+                    pagination={{ pageSize: 10, showTotal: (total) => `共 ${total} 条` }} />
                 </>
               ),
             },
@@ -615,7 +580,6 @@ const PerformanceManagement: React.FC = () => {
         />
       </Card>
 
-      {/* Config Modal */}
       <Modal
         title={editingConfig ? '编辑考核配置' : '新增考核配置'}
         open={configModalVisible}
@@ -629,14 +593,7 @@ const PerformanceManagement: React.FC = () => {
             <Input placeholder="请输入考核名称" />
           </Form.Item>
           <Form.Item name="cycle" label="考核周期" rules={[{ required: true, message: '请选择考核周期' }]}>
-            <Select
-              placeholder="请选择周期"
-              options={[
-                { label: '季度', value: '季度' },
-                { label: '半年', value: '半年' },
-                { label: '全年', value: '全年' },
-              ]}
-            />
+            <Select placeholder="请选择周期" options={[{ label: '季度', value: '季度' }, { label: '半年', value: '半年' }, { label: '全年', value: '全年' }]} />
           </Form.Item>
           <Form.Item name="startDate" label="开始日期" rules={[{ required: true, message: '请选择开始日期' }]}>
             <DatePicker style={{ width: '100%' }} />
@@ -645,18 +602,11 @@ const PerformanceManagement: React.FC = () => {
             <DatePicker style={{ width: '100%' }} />
           </Form.Item>
           <Form.Item name="metrics" label="考核指标" rules={[{ required: true, message: '请选择考核指标' }]}>
-            <Select
-              mode="multiple"
-              placeholder="请选择考核指标"
-              options={metricsOptions.map((m) => ({ label: m, value: m }))}
-            />
+            <Select mode="multiple" placeholder="请选择考核指标" options={metricsOptions.map((m) => ({ label: m, value: m }))} />
           </Form.Item>
           <Form.Item name="scope" label="考核范围">
-            <Select
-              mode="multiple"
-              placeholder="请选择考核范围（部门/人员）"
-              options={[...new Set(digitalEmployees.map((e) => e.department))].map((d) => ({ label: d, value: d }))}
-            />
+            <Select mode="multiple" placeholder="请选择考核范围（部门/人员）"
+              options={[...new Set(digitalEmployees.map((e) => e.department))].map((d) => ({ label: d, value: d }))} />
           </Form.Item>
         </Form>
       </Modal>

@@ -1,46 +1,28 @@
 import React, { useState, useMemo } from 'react';
 import {
-  Card, Table, Tag, Button, Space, Modal, Input, Select,
-  Descriptions, Steps,
+  Card, Table, Tag, Button, Space, Input, Select, message,
 } from 'antd';
-import {
-  SearchOutlined, EyeOutlined,
-  CheckCircleOutlined, ClockCircleOutlined, CloseCircleOutlined, LoadingOutlined,
-} from '@ant-design/icons';
+import { SearchOutlined, EyeOutlined, UserAddOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { onboardRecords, type OnboardRecord } from '../../mock/data';
+import ApprovalDetailPage from '../../components/ApprovalDetailPage';
 
 const statusColorMap: Record<OnboardRecord['status'], string> = {
   '待提交': 'default',
-  '部门审批': 'processing',
-  '人力审批': 'processing',
-  '技术配置': 'warning',
+  '部门经理审批': 'processing',
+  '人力部门审批': 'processing',
   '已完成': 'success',
   '已驳回': 'error',
 };
 
-const stepStatusMap: Record<string, 'finish' | 'process' | 'wait' | 'error'> = {
-  '已完成': 'finish',
-  '进行中': 'process',
-  '待处理': 'wait',
-  '已驳回': 'error',
-};
-
-const stepIconMap: Record<string, React.ReactNode> = {
-  '已完成': <CheckCircleOutlined />,
-  '进行中': <LoadingOutlined />,
-  '待处理': <ClockCircleOutlined />,
-  '已驳回': <CloseCircleOutlined />,
-};
-
 const OnboardManagement: React.FC = () => {
+  const [data, setData] = useState(onboardRecords);
   const [searchText, setSearchText] = useState('');
   const [statusFilter, setStatusFilter] = useState<string | undefined>(undefined);
-  const [detailVisible, setDetailVisible] = useState(false);
   const [currentRecord, setCurrentRecord] = useState<OnboardRecord | null>(null);
 
   const filteredData = useMemo(() => {
-    return onboardRecords.filter((r) => {
+    return data.filter((r) => {
       const matchSearch =
         !searchText ||
         r.employeeName.includes(searchText) ||
@@ -48,7 +30,46 @@ const OnboardManagement: React.FC = () => {
       const matchStatus = !statusFilter || r.status === statusFilter;
       return matchSearch && matchStatus;
     });
-  }, [searchText, statusFilter]);
+  }, [data, searchText, statusFilter]);
+
+  const handleApprove = (opinion: string) => {
+    if (!currentRecord) return;
+    setData((prev) =>
+      prev.map((r) => {
+        if (r.id !== currentRecord.id) return r;
+        const updatedSteps = r.approvalSteps.map((s) => {
+          if (s.status === '进行中') return { ...s, status: '已完成' as const, opinion, remark: '同意' };
+          return s;
+        });
+        const nextIdx = updatedSteps.findIndex((s) => s.status === '待处理');
+        if (nextIdx >= 0) {
+          updatedSteps[nextIdx] = { ...updatedSteps[nextIdx], status: '进行中' };
+        }
+        const allDone = updatedSteps.every((s) => s.status === '已完成');
+        const newStatus = allDone ? '已完成' : updatedSteps.find((s) => s.status === '进行中')?.step as OnboardRecord['status'] || r.status;
+        const updated = { ...r, approvalSteps: updatedSteps, status: newStatus, currentStep: r.currentStep + 1 };
+        setCurrentRecord(updated);
+        return updated;
+      }),
+    );
+  };
+
+  const handleReject = (opinion: string) => {
+    if (!currentRecord) return;
+    setData((prev) =>
+      prev.map((r) => {
+        if (r.id !== currentRecord.id) return r;
+        const updatedSteps = r.approvalSteps.map((s) => {
+          if (s.status === '进行中') return { ...s, status: '已驳回' as const, opinion, remark: '驳回' };
+          return s;
+        });
+        const updated = { ...r, approvalSteps: updatedSteps, status: '已驳回' as const };
+        setCurrentRecord(updated);
+        return updated;
+      }),
+    );
+    message.warning('已驳回');
+  };
 
   const columns: ColumnsType<OnboardRecord> = [
     { title: '申请单号', dataIndex: 'id', key: 'id', width: 110 },
@@ -58,7 +79,7 @@ const OnboardManagement: React.FC = () => {
     { title: '岗位', dataIndex: 'position', key: 'position', width: 130 },
     { title: '申请日期', dataIndex: 'applyDate', key: 'applyDate', width: 120 },
     {
-      title: '当前状态', dataIndex: 'status', key: 'status', width: 110,
+      title: '当前状态', dataIndex: 'status', key: 'status', width: 120,
       render: (status: OnboardRecord['status']) => (
         <Tag color={statusColorMap[status]}>{status}</Tag>
       ),
@@ -70,7 +91,7 @@ const OnboardManagement: React.FC = () => {
           type="link"
           size="small"
           icon={<EyeOutlined />}
-          onClick={() => { setCurrentRecord(record); setDetailVisible(true); }}
+          onClick={() => setCurrentRecord(record)}
         >
           详情
         </Button>
@@ -78,9 +99,40 @@ const OnboardManagement: React.FC = () => {
     },
   ];
 
+  if (currentRecord) {
+    return (
+      <ApprovalDetailPage
+        title={`入职申请 - ${currentRecord.employeeName}`}
+        status={currentRecord.status}
+        statusColor={statusColorMap[currentRecord.status]}
+        basicInfoItems={[
+          { label: '申请单号', value: currentRecord.id },
+          { label: '员工名称', value: currentRecord.employeeName },
+          { label: '员工工号', value: currentRecord.employeeId },
+          { label: '所属自然人', value: currentRecord.owner },
+          { label: '身份类型', value: <Tag color={currentRecord.ownerType === '自有' ? 'blue' : 'orange'}>{currentRecord.ownerType}</Tag> },
+          { label: '部门', value: currentRecord.department },
+          { label: '岗位', value: currentRecord.position },
+          { label: '申请日期', value: currentRecord.applyDate },
+          { label: '当前状态', value: <Tag color={statusColorMap[currentRecord.status]}>{currentRecord.status}</Tag> },
+        ]}
+        approvalSteps={currentRecord.approvalSteps}
+        currentStep={currentRecord.currentStep}
+        onBack={() => setCurrentRecord(null)}
+        onApprove={handleApprove}
+        onReject={handleReject}
+        isCompleted={currentRecord.status === '已完成' || currentRecord.status === '已驳回'}
+      />
+    );
+  }
+
   return (
     <div>
-      <h2 style={{ marginBottom: 20, fontSize: 20, fontWeight: 600 }}>入职管理</h2>
+      <h2 style={{ marginBottom: 4, fontSize: 20, fontWeight: 600 }}>
+        <UserAddOutlined style={{ marginRight: 8 }} />
+        入职管理
+      </h2>
+      <p style={{ color: '#999', marginBottom: 20 }}>管理数字员工的入职申请与审批流程</p>
 
       <Card style={{ borderRadius: 12 }}>
         <Space style={{ marginBottom: 16 }} wrap>
@@ -100,9 +152,8 @@ const OnboardManagement: React.FC = () => {
             onChange={setStatusFilter}
             options={[
               { label: '待提交', value: '待提交' },
-              { label: '部门审批', value: '部门审批' },
-              { label: '人力审批', value: '人力审批' },
-              { label: '技术配置', value: '技术配置' },
+              { label: '部门经理审批', value: '部门经理审批' },
+              { label: '人力部门审批', value: '人力部门审批' },
               { label: '已完成', value: '已完成' },
               { label: '已驳回', value: '已驳回' },
             ]}
@@ -117,52 +168,6 @@ const OnboardManagement: React.FC = () => {
           pagination={{ pageSize: 10, showTotal: (total) => `共 ${total} 条` }}
         />
       </Card>
-
-      <Modal
-        title="入职申请详情"
-        open={detailVisible}
-        onCancel={() => setDetailVisible(false)}
-        footer={null}
-        width={720}
-      >
-        {currentRecord && (
-          <>
-            <Descriptions bordered column={2} size="small" style={{ marginBottom: 24 }}>
-              <Descriptions.Item label="申请单号">{currentRecord.id}</Descriptions.Item>
-              <Descriptions.Item label="员工名称">{currentRecord.employeeName}</Descriptions.Item>
-              <Descriptions.Item label="所属自然人">{currentRecord.owner}</Descriptions.Item>
-              <Descriptions.Item label="身份">
-                <Tag color={currentRecord.ownerType === '自有' ? 'blue' : 'orange'}>{currentRecord.ownerType}</Tag>
-              </Descriptions.Item>
-              <Descriptions.Item label="部门">{currentRecord.department}</Descriptions.Item>
-              <Descriptions.Item label="岗位">{currentRecord.position}</Descriptions.Item>
-              <Descriptions.Item label="申请日期">{currentRecord.applyDate}</Descriptions.Item>
-              <Descriptions.Item label="当前状态">
-                <Tag color={statusColorMap[currentRecord.status]}>{currentRecord.status}</Tag>
-              </Descriptions.Item>
-            </Descriptions>
-
-            <h4 style={{ marginBottom: 16, fontWeight: 600 }}>审批流程</h4>
-            <Steps
-              current={currentRecord.currentStep - 1}
-              direction="vertical"
-              size="small"
-              items={currentRecord.approvalSteps.map((s) => ({
-                title: s.step,
-                status: stepStatusMap[s.status],
-                icon: stepIconMap[s.status],
-                description: (
-                  <div style={{ fontSize: 12, color: '#999' }}>
-                    {s.approver && <div>审批人：{s.approver}</div>}
-                    {s.time && <div>时间：{s.time}</div>}
-                    {s.remark && <div>备注：{s.remark}</div>}
-                  </div>
-                ),
-              }))}
-            />
-          </>
-        )}
-      </Modal>
     </div>
   );
 };
