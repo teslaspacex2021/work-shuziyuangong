@@ -19,7 +19,7 @@ import {
 import { usePermission } from '../../contexts/PermissionContext';
 
 const levelColorMap: Record<string, string> = {
-  L1: '#C0C0C0', L2: '#6B7B8D', L3: '#1677ff', L4: '#0A1929',
+  L1: '#8c8c8c', L2: '#2f54eb', L3: '#1677ff', L4: '#13c2c2',
 };
 
 const cycleColorMap: Record<string, string> = {

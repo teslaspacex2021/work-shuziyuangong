@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   Card, Table, Tag, Button, Space, Input, Select, Modal, Form,
-  Row, Col, Statistic, message, Rate, Empty,
+  Row, Col, Statistic, message, Empty,
 } from 'antd';
 import {
   PlusOutlined, MessageOutlined, CheckCircleOutlined,

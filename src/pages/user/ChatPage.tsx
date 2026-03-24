@@ -19,7 +19,6 @@ import {
   digitalEmployees, conversations, tasks, skills, knowledgeBases,
   scheduledTasks,
   type ConversationItem, type ScheduledTask,
-  type FeedbackItem,
 } from '../../mock/data';
 
 const { TextArea } = Input;
@@ -258,7 +257,7 @@ const ChatPage: React.FC = () => {
   };
 
   const handleFeedbackSubmit = () => {
-    feedbackForm.validateFields().then((values) => {
+    feedbackForm.validateFields().then(() => {
       message.success('感谢您的反馈，我们会尽快处理！');
       feedbackForm.resetFields();
       setFeedbackVisible(false);

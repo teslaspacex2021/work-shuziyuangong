@@ -9,7 +9,6 @@ import {
   BookOutlined, InfoCircleOutlined, SyncOutlined, EditOutlined,
   CheckCircleOutlined, ExperimentOutlined, SolutionOutlined,
 } from '@ant-design/icons';
-import { useNavigate } from 'react-router-dom';
 import {
   digitalEmployees, skills, knowledgeBases, positions,
   type DigitalEmployee, type Skill, type KnowledgeBase,
@@ -26,7 +25,6 @@ const typeIcon: Record<string, React.ReactNode> = {
 };
 
 const EmployeeManagement: React.FC = () => {
-  const navigate = useNavigate();
   const [employees, setEmployees] = useState(digitalEmployees);
   const [searchText, setSearchText] = useState('');
   const [statusFilter, setStatusFilter] = useState<string | undefined>(undefined);

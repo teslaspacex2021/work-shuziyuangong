@@ -6,7 +6,6 @@ import {
   SearchOutlined, ThunderboltOutlined,
   MessageOutlined, UserOutlined,
 } from '@ant-design/icons';
-import { useNavigate } from 'react-router-dom';
 
 const mockAgents = [
   { id: 'a1', name: '个人助手', desc: '智能个人助手，帮助处理日常工作事务、日程管理、邮件处理等。', tags: ['日程管理', '邮件处理', '工作汇报'], users: 1560, sessions: 42, tokens: 8900, rating: 4.5 },
@@ -18,7 +17,6 @@ const mockAgents = [
 ];
 
 const AgentHub: React.FC = () => {
-  const navigate = useNavigate();
   const [searchText, setSearchText] = useState('');
 
   const filteredAgents = useMemo(() => {
