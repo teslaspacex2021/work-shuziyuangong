@@ -58,7 +58,7 @@ const UserLayout: React.FC = () => {
       return;
     }
     if (['/user/match', '/user/marketing', '/user/opportunity', '/user/knowledge', '/user/recent', '/user/knowledge-ops/overview', '/user/knowledge-ops/content'].includes(key)) {
-      navigate('/user/chat');
+      navigate('/user/agents');
       return;
     }
     navigate(key);

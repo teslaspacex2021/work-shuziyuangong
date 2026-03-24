@@ -22,7 +22,7 @@ const levelLabel: Record<string, string> = {
   L1: '基础', L2: '进阶', L3: '专家', L4: '大师',
 };
 const levelColor: Record<string, string> = {
-  L1: '#8c8c8c', L2: '#2f54eb', L3: '#1677ff', L4: '#13c2c2',
+  L1: '#595959', L2: '#1d39c4', L3: '#0958d9', L4: '#006d75',
 };
 
 const EmployeePlaza: React.FC = () => {
@@ -139,9 +139,11 @@ const EmployeePlaza: React.FC = () => {
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     <span style={{ fontWeight: 600, fontSize: 16, color: '#1a2332' }}>{emp.name}</span>
-                    <Tag color={levelColor[emp.level]} style={{
-                      fontSize: 10, borderRadius: 4, margin: 0, lineHeight: '18px',
-                      color: '#fff',
+                    <Tag style={{
+                      fontSize: 11, borderRadius: 4, margin: 0, lineHeight: '20px',
+                      padding: '0 8px', fontWeight: 600, color: '#fff',
+                      letterSpacing: 0.5, border: 'none',
+                      background: levelColor[emp.level],
                     }}>{emp.level} {levelLabel[emp.level]}</Tag>
                   </div>
                   <div style={{ fontSize: 12, color: '#5a6b7d', marginTop: 4 }}>
@@ -260,9 +262,11 @@ const EmployeePlaza: React.FC = () => {
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{ fontWeight: 600, fontSize: 15, color: '#1a2332' }}>{emp.name}</span>
             <Tag color={statusColor[emp.status]} style={{ fontSize: 10 }}>{statusLabel[emp.status]}</Tag>
-            <Tag color={levelColor[emp.level]} style={{
-              fontSize: 10, color: '#fff',
-            }}>{emp.level}</Tag>
+            <Tag style={{
+              fontSize: 11, fontWeight: 600, color: '#fff',
+              padding: '0 8px', letterSpacing: 0.5, border: 'none',
+              background: levelColor[emp.level],
+            }}>{emp.level} {levelLabel[emp.level]}</Tag>
           </div>
           <div style={{ fontSize: 12, color: '#5a6b7d', marginTop: 4 }}>
             {emp.department} · {emp.position} · 归属人：{emp.owner}
@@ -438,7 +442,7 @@ const EmployeePlaza: React.FC = () => {
                 </div>
                 <div style={{ marginTop: 10, display: 'flex', justifyContent: 'center', gap: 6 }}>
                   <Tag color={statusColor[emp.status]}>{statusLabel[emp.status]}</Tag>
-                  <Tag color={levelColor[emp.level]} style={{ color: '#fff' }}>
+                  <Tag style={{ color: '#fff', fontWeight: 600, fontSize: 12, padding: '2px 10px', border: 'none', background: levelColor[emp.level] }}>
                     {emp.level} {levelLabel[emp.level]}
                   </Tag>
                 </div>
@@ -501,7 +505,7 @@ const EmployeePlaza: React.FC = () => {
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                         <ThunderboltOutlined style={{ color: '#1677ff' }} />
                         <span style={{ fontWeight: 500, color: '#1a2332' }}>{sk.name}</span>
-                        <Tag color={levelColor[sk.level]} style={{ fontSize: 10, color: '#fff' }}>{sk.level}</Tag>
+                        <Tag style={{ fontSize: 11, fontWeight: 600, color: '#fff', padding: '0 8px', border: 'none', background: levelColor[sk.level] }}>{sk.level}</Tag>
                       </div>
                       <div style={{ fontSize: 12, color: '#8c99a8', marginTop: 2, paddingLeft: 20 }}>{sk.description}</div>
                     </div>

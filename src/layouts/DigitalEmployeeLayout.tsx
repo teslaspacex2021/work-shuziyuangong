@@ -100,7 +100,7 @@ const DigitalEmployeeLayout: React.FC = () => {
               <Button
                 type="text"
                 icon={<ArrowLeftOutlined />}
-                onClick={() => window.open('/user/chat', '_self')}
+                onClick={() => window.open('/user/agents', '_self')}
                 style={{ color: '#8c8c8c' }}
               >
                 返回主页

@@ -51,11 +51,11 @@ function App() {
       <PermissionProvider>
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<Navigate to="/user/chat" replace />} />
+            <Route path="/" element={<Navigate to="/user/agents" replace />} />
 
             {/* User Portal */}
             <Route path="/user" element={<UserLayout />}>
-              <Route index element={<Navigate to="/user/chat" replace />} />
+              <Route index element={<Navigate to="/user/agents" replace />} />
               <Route path="digital-employees" element={<DigitalEmployeeDirectory />} />
               <Route path="agents" element={<AgentHub />} />
               <Route path="chat" element={<ChatPage />} />

@@ -3,7 +3,6 @@ import { Layout, Menu, Avatar, Dropdown, Badge, Tag, Select } from 'antd';
 import {
   DashboardOutlined,
   TeamOutlined,
-  ScheduleOutlined,
   RobotOutlined,
   UserOutlined,
   AlertOutlined,
@@ -117,7 +116,7 @@ const AdminLayout: React.FC = () => {
 
   const userMenu = {
     items: [
-      { key: 'user', label: '切换到用户端', icon: <RobotOutlined />, onClick: () => navigate('/digital-employee/plaza') },
+      { key: 'user', label: '切换到用户端', icon: <RobotOutlined />, onClick: () => navigate('/user/agents') },
       { key: 'logout', label: '退出登录', icon: <LogoutOutlined /> },
     ],
   };
