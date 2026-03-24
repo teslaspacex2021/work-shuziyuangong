@@ -258,6 +258,17 @@ export interface EmployeeEditApproval {
 
 export const digitalEmployees: DigitalEmployee[] = [
   {
+    id: 'DE-2026000', name: '小翼·智能助手', avatar: 'https://api.dicebear.com/7.x/personas/svg?seed=assistant2026&backgroundColor=b7eb8f', department: '综合服务部', position: '智能综合助理',
+    status: 'ACTIVE', employmentStatus: '在职', owner: '系统', ownerType: '自有',
+    skills: ['智能问答', '任务分派', '流程引导', '综合咨询'],
+    skillIds: ['SK001'],
+    knowledgeIds: ['KB001'],
+    description: '您好！我是小翼·智能助手，您的专属AI工作伙伴。我熟悉所有数字员工的能力，可以帮您了解各类数字员工、分配工作任务、解答业务问题。无论您需要什么帮助，请直接告诉我！',
+    level: 'L3', tokensQuota: 10000000, tokensUsed: 1200000, taskCompleteRate: 98.0,
+    lastActive: '在线', onboardDate: '2026-01-01', relatedAgents: ['翼答', '通用问答智能体'],
+    likes: 520, dislikes: 5, heat: 2500,
+  },
+  {
     id: 'DE-2026001', name: '小翼·客服', avatar: 'https://api.dicebear.com/7.x/personas/svg?seed=kefu&backgroundColor=b6e3f4', department: '客户服务部', position: '智能客服专员',
     status: 'ACTIVE', employmentStatus: '在职', owner: '宇雷', ownerType: '自有',
     skills: ['智能问答', '工单处理', '知识检索', '情感分析'],
@@ -807,10 +818,10 @@ export const monthlyStats = [
 ];
 
 export const levelDistribution = [
-  { name: 'L1 基础', value: 180, color: '#C0C0C0' },
-  { name: 'L2 进阶', value: 420, color: '#6B7B8D' },
-  { name: 'L3 专家', value: 480, color: '#1677ff' },
-  { name: 'L4 大师', value: 168, color: '#0A1929' },
+  { name: 'L1 初级', value: 180, color: '#C0C0C0' },
+  { name: 'L2 中级', value: 420, color: '#6B7B8D' },
+  { name: 'L3 高级', value: 480, color: '#1677ff' },
+  { name: 'L4 专家', value: 168, color: '#0A1929' },
 ];
 
 export const departmentUsage = [

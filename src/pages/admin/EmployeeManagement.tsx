@@ -7,7 +7,7 @@ import {
   PlusOutlined, SearchOutlined, SettingOutlined, TeamOutlined,
   ThunderboltOutlined, DatabaseOutlined, FileTextOutlined,
   BookOutlined, InfoCircleOutlined, SyncOutlined, EditOutlined,
-  CheckCircleOutlined, ExperimentOutlined, SolutionOutlined,
+  CheckCircleOutlined, ExperimentOutlined,
 } from '@ant-design/icons';
 import {
   digitalEmployees, skills, knowledgeBases, positions,
@@ -38,8 +38,6 @@ const EmployeeManagement: React.FC = () => {
   const [selectedKBIds, setSelectedKBIds] = useState<string[]>([]);
   const [addForm] = Form.useForm();
   const [editForm] = Form.useForm();
-  const [posApplyVisible, setPosApplyVisible] = useState(false);
-  const [posApplyForm] = Form.useForm();
 
   const filtered = employees.filter((e) => {
     const matchSearch = e.name.includes(searchText) || e.id.includes(searchText) || e.department.includes(searchText);
@@ -289,20 +287,11 @@ const EmployeeManagement: React.FC = () => {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
-        <div>
-          <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 4 }}>员工管理</h2>
-          <p style={{ color: '#666', margin: 0 }}>
-            管理数字员工信息，配置技能与知识资源，全面掌控数字员工能力。
-          </p>
-        </div>
-        <Button
-          icon={<SolutionOutlined />}
-          onClick={() => setPosApplyVisible(true)}
-          style={{ borderRadius: 8 }}
-        >
-          岗位申请
-        </Button>
+      <div style={{ marginBottom: 20 }}>
+        <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 4 }}>员工管理</h2>
+        <p style={{ color: '#666', margin: 0 }}>
+          管理数字员工信息，配置技能与知识资源，全面掌控数字员工能力。
+        </p>
       </div>
 
       <Row gutter={16} style={{ marginBottom: 20 }}>
@@ -648,101 +637,6 @@ const EmployeeManagement: React.FC = () => {
         )}
       </Modal>
 
-      {/* Position Application Modal */}
-      <Modal
-        title="岗位申请"
-        open={posApplyVisible}
-        onOk={() => {
-          posApplyForm.validateFields().then(() => {
-            message.success('岗位申请已提交，请等待审批');
-            posApplyForm.resetFields();
-            setPosApplyVisible(false);
-          });
-        }}
-        onCancel={() => { posApplyForm.resetFields(); setPosApplyVisible(false); }}
-        okText="提交申请"
-        width={640}
-      >
-        {/* Approval workflow diagram */}
-        <div style={{
-          background: '#f8fafc', borderRadius: 12, padding: '16px 20px',
-          marginBottom: 20, border: '1px solid #e8ecf1',
-        }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: '#1a2332', marginBottom: 12 }}>审批流程</div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0 }}>
-            {[
-              { label: '提交申请', color: '#1677ff' },
-              { label: '部门经理审批', color: '#faad14' },
-              { label: '人力部门审核', color: '#faad14' },
-              { label: '系统管理员确认', color: '#faad14' },
-              { label: '完成创建', color: '#52c41a' },
-            ].map((step, index, arr) => (
-              <React.Fragment key={step.label}>
-                <div style={{ textAlign: 'center', minWidth: 80 }}>
-                  <div style={{
-                    width: 32, height: 32, borderRadius: '50%',
-                    background: step.color, color: '#fff',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    margin: '0 auto 6px', fontSize: 14, fontWeight: 600,
-                  }}>{index + 1}</div>
-                  <div style={{ fontSize: 11, color: '#5a6b7d', lineHeight: 1.3 }}>{step.label}</div>
-                </div>
-                {index < arr.length - 1 && (
-                  <div style={{
-                    flex: 1, height: 2, background: '#e0e6ed',
-                    marginBottom: 18, minWidth: 20,
-                  }} />
-                )}
-              </React.Fragment>
-            ))}
-          </div>
-        </div>
-
-        <Form form={posApplyForm} layout="vertical">
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="positionName" label="岗位名称" rules={[{ required: true, message: '请输入岗位名称' }]}>
-                <Input placeholder="如：智能客服专员" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="department" label="所属部门" rules={[{ required: true, message: '请选择部门' }]}>
-                <Select placeholder="选择部门" options={
-                  Array.from(new Set(digitalEmployees.map((e) => e.department))).map((d) => ({ label: d, value: d }))
-                } />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="level" label="岗位职级" rules={[{ required: true, message: '请选择职级' }]}>
-                <Select placeholder="选择职级" options={[
-                  { label: 'L1 基础', value: 'L1' },
-                  { label: 'L2 进阶', value: 'L2' },
-                  { label: 'L3 专家', value: 'L3' },
-                  { label: 'L4 大师', value: 'L4' },
-                ]} />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="headcount" label="需求人数" rules={[{ required: true, message: '请输入人数' }]}>
-                <Input type="number" min={1} placeholder="请输入人数" />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Form.Item name="requiredSkills" label="技能要求">
-            <Select mode="multiple" placeholder="选择所需技能" options={
-              skills.map((s) => ({ label: s.name, value: s.id }))
-            } />
-          </Form.Item>
-          <Form.Item name="description" label="岗位职责" rules={[{ required: true, message: '请输入岗位职责' }]}>
-            <Input.TextArea rows={3} placeholder="请描述岗位职责和要求..." />
-          </Form.Item>
-          <Form.Item name="reason" label="申请原因" rules={[{ required: true, message: '请输入申请原因' }]}>
-            <Input.TextArea rows={2} placeholder="请说明申请该岗位的原因..." />
-          </Form.Item>
-        </Form>
-      </Modal>
     </div>
   );
 };

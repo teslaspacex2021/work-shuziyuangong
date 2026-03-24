@@ -8,9 +8,8 @@ import {
   SettingOutlined,
   TeamOutlined,
   ScheduleOutlined,
-  MessageOutlined,
   ArrowLeftOutlined,
-  PlusCircleOutlined,
+  PlusOutlined,
   ClockCircleOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
@@ -23,7 +22,6 @@ const DigitalEmployeeLayout: React.FC = () => {
   const [collapsed, setCollapsed] = useState(false);
 
   const menuItems = [
-    { key: '/digital-employee/new-chat', icon: <PlusCircleOutlined />, label: '新建对话' },
     { key: '/digital-employee/chat', icon: <ClockCircleOutlined />, label: '对话记录' },
     { key: '/digital-employee/plaza', icon: <TeamOutlined />, label: '员工广场' },
     { key: '/digital-employee/schedule', icon: <ScheduleOutlined />, label: '定时任务' },
@@ -31,16 +29,15 @@ const DigitalEmployeeLayout: React.FC = () => {
 
   const getSelectedKey = () => {
     if (location.pathname.startsWith('/digital-employee/chat')) return '/digital-employee/chat';
-    if (location.pathname.startsWith('/digital-employee/new-chat')) return '/digital-employee/new-chat';
     return location.pathname;
   };
 
   const handleMenuClick = ({ key }: { key: string }) => {
-    if (key === '/digital-employee/new-chat') {
-      navigate(`/digital-employee/chat?new=${Date.now()}`);
-    } else {
-      navigate(key);
-    }
+    navigate(key);
+  };
+
+  const handleNewChat = () => {
+    navigate('/digital-employee/chat?employeeId=DE-2026000');
   };
 
   return (
@@ -78,13 +75,25 @@ const DigitalEmployeeLayout: React.FC = () => {
             </span>
           )}
         </div>
+        <div style={{ padding: collapsed ? '12px 8px' : '12px 16px' }}>
+          <Button
+            type="primary"
+            danger
+            block
+            icon={<PlusOutlined />}
+            onClick={handleNewChat}
+            style={{ borderRadius: 8, height: 38, fontWeight: 600 }}
+          >
+            {!collapsed && '新对话'}
+          </Button>
+        </div>
         <Menu
           mode="inline"
           selectedKeys={[getSelectedKey()]}
           items={menuItems}
           onClick={handleMenuClick}
           style={{
-            border: 'none', marginTop: 8,
+            border: 'none',
             background: 'transparent',
             fontWeight: 500,
           }}

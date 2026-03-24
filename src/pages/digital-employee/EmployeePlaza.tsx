@@ -21,7 +21,7 @@ const statusLabel: Record<string, string> = {
   ACTIVE: '在线', TRAINING: '训练中', SUSPENDED: '已暂停', TERMINATED: '已停用',
 };
 const levelLabel: Record<string, string> = {
-  L1: '基础', L2: '进阶', L3: '专家', L4: '大师',
+  L1: '初级', L2: '中级', L3: '高级', L4: '专家',
 };
 const levelColor: Record<string, string> = {
   L1: '#595959', L2: '#1d39c4', L3: '#0958d9', L4: '#006d75',
@@ -463,10 +463,10 @@ const EmployeePlaza: React.FC = () => {
             style={{ width: 120 }}
             options={[
               { label: '全部职级', value: 'all' },
-              { label: 'L1 基础', value: 'L1' },
-              { label: 'L2 进阶', value: 'L2' },
-              { label: 'L3 专家', value: 'L3' },
-              { label: 'L4 大师', value: 'L4' },
+              { label: 'L1 初级', value: 'L1' },
+              { label: 'L2 中级', value: 'L2' },
+              { label: 'L3 高级', value: 'L3' },
+              { label: 'L4 专家', value: 'L4' },
             ]}
           />
           <div style={{ flex: 1 }} />
