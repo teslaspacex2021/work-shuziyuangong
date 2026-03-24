@@ -24,10 +24,10 @@ import type { SystemRole } from '../mock/data';
 const { Sider, Content, Header } = Layout;
 
 const roleColorMap: Record<string, string> = {
-  '系统管理员': 'red',
-  '部门经理': 'blue',
-  '人力部门': 'green',
-  '审计': 'purple',
+  '系统专员': 'red',
+  '部门智能体专员': 'blue',
+  '人力专员': 'green',
+  '审计角色': 'purple',
   '普通用户': 'default',
 };
 
@@ -109,7 +109,7 @@ const AdminLayout: React.FC = () => {
 
   const userMenu = {
     items: [
-      { key: 'user', label: '切换到用户端', icon: <RobotOutlined />, onClick: () => navigate('/user/agents') },
+      { key: 'user', label: '切换到用户端', icon: <RobotOutlined />, onClick: () => navigate('/digital-employee/plaza') },
       { key: 'logout', label: '退出登录', icon: <LogoutOutlined /> },
     ],
   };
@@ -175,13 +175,13 @@ const AdminLayout: React.FC = () => {
               size="small"
               value={user.role}
               onChange={(v) => switchRole(v as SystemRole)}
-              style={{ width: 120 }}
+              style={{ width: 140 }}
               options={[
-                { label: '系统管理员', value: '系统管理员' },
-                { label: '部门经理', value: '部门经理' },
-                { label: '人力部门', value: '人力部门' },
-                { label: '审计', value: '审计' },
+                { label: '系统专员', value: '系统专员' },
+                { label: '部门智能体专员', value: '部门智能体专员' },
                 { label: '普通用户', value: '普通用户' },
+                { label: '人力专员', value: '人力专员' },
+                { label: '审计角色', value: '审计角色' },
               ]}
             />
             <Badge count={3} size="small">

@@ -881,71 +881,107 @@ export const chatMessages = [
   { role: 'assistant' as const, content: '您好！我是小翼·客服，很高兴为您服务。请问有什么可以帮您？' },
 ];
 
-export type SystemRole = '系统管理员' | '部门经理' | '人力部门' | '审计' | '普通用户';
+export type SystemRole = '系统专员' | '部门智能体专员' | '普通用户' | '人力专员' | '审计角色';
+
+export type RoleCode = 'SUPER_ADMIN' | 'DEPT_ADMIN' | 'OWNER' | 'HR' | 'AUDITOR';
+
+export const roleCodeMap: Record<SystemRole, RoleCode> = {
+  '系统专员': 'SUPER_ADMIN',
+  '部门智能体专员': 'DEPT_ADMIN',
+  '普通用户': 'OWNER',
+  '人力专员': 'HR',
+  '审计角色': 'AUDITOR',
+};
 
 export interface UserInfo {
   id: string;
   name: string;
   role: SystemRole;
+  roleCode: RoleCode;
   department?: string;
   permissions: string[];
 }
 
 export const rolePermissions: Record<SystemRole, string[]> = {
-  '系统管理员': [
-    'dashboard', 'pending', 'alerts',
-    'employees', 'positions',
-    'onboard', 'transfer', 'demand', 'performance', 'exit',
-    'task-logs', 'feedback',
+  '系统专员': [
+    'dashboard', 'dashboard.view', 'dashboard.export',
+    'alerts', 'alert.view', 'alert.handle',
+    'employees', 'employee.browse', 'employee.create', 'employee.edit', 'employee.config', 'employee.disable',
+    'positions', 'position.manage', 'position.apply',
+    'onboard', 'onboard.view', 'onboard.create', 'onboard.approve',
+    'transfer', 'transfer.view', 'transfer.create', 'transfer.approve',
+    'exit', 'exit.view', 'exit.create', 'exit.approve',
+    'demand', 'demand.view', 'demand.create', 'demand.approve',
+    'performance', 'performance.view', 'performance.initiate', 'performance.evaluate',
+    'task-logs', 'tasklog.view', 'tasklog.export',
+    'feedback', 'feedback.view', 'feedback.handle',
+    'pending',
     'approval:approve', 'approval:reject',
-    'employee:create', 'employee:edit', 'employee:delete',
-    'position:create', 'position:edit', 'position:delete',
-    'performance:initiate', 'performance:evaluate',
     'system:settings',
+    'sensitive:access',
   ],
-  '部门经理': [
-    'dashboard', 'pending', 'alerts',
-    'employees', 'positions',
-    'onboard', 'transfer', 'demand', 'performance', 'exit',
-    'task-logs', 'feedback',
+  '部门智能体专员': [
+    'dashboard', 'dashboard.view', 'dashboard.export',
+    'alerts', 'alert.view', 'alert.handle',
+    'employees', 'employee.browse', 'employee.create', 'employee.edit', 'employee.config', 'employee.disable',
+    'positions', 'position.manage', 'position.apply',
+    'onboard', 'onboard.view', 'onboard.create', 'onboard.approve',
+    'transfer', 'transfer.view', 'transfer.create', 'transfer.approve',
+    'exit', 'exit.view', 'exit.create', 'exit.approve',
+    'demand', 'demand.view', 'demand.create', 'demand.approve',
+    'performance', 'performance.view', 'performance.evaluate',
+    'task-logs', 'tasklog.view',
+    'feedback', 'feedback.view', 'feedback.handle',
+    'pending',
     'approval:approve', 'approval:reject',
-    'employee:edit',
-    'performance:evaluate',
-  ],
-  '人力部门': [
-    'dashboard', 'pending', 'alerts',
-    'employees', 'positions',
-    'onboard', 'transfer', 'demand', 'performance', 'exit',
-    'task-logs', 'feedback',
-    'approval:approve', 'approval:reject',
-    'employee:create', 'employee:edit',
-    'position:create', 'position:edit',
-    'performance:initiate', 'performance:evaluate',
-  ],
-  '审计': [
-    'task-logs', 'schedule',
   ],
   '普通用户': [
-    'dashboard', 'pending',
-    'employees',
-    'onboard', 'performance',
-    'task-logs',
+    'alerts', 'alert.view', 'alert.handle',
+    'employees', 'employee.browse', 'employee.create',
+    'positions', 'position.manage', 'position.apply',
+    'onboard', 'onboard.view', 'onboard.create',
+    'transfer', 'transfer.view', 'transfer.create',
+    'exit', 'exit.view', 'exit.create',
+    'demand', 'demand.view',
+    'performance', 'performance.view',
+    'task-logs', 'tasklog.view',
+    'feedback', 'feedback.view', 'feedback.create',
+    'pending',
+  ],
+  '人力专员': [
+    'dashboard', 'dashboard.view',
+    'employees', 'employee.browse',
+    'onboard', 'onboard.view', 'onboard.create', 'onboard.approve',
+    'transfer', 'transfer.view', 'transfer.approve',
+    'exit', 'exit.view', 'exit.approve',
+    'demand', 'demand.view', 'demand.approve',
+    'performance', 'performance.view', 'performance.initiate', 'performance.evaluate',
+    'task-logs', 'tasklog.view',
+    'feedback', 'feedback.view',
+    'pending',
+    'approval:approve', 'approval:reject',
+  ],
+  '审计角色': [
+    'employees', 'employee.browse',
+    'task-logs', 'tasklog.view', 'tasklog.export',
+    'pending',
   ],
 };
 
 export const currentUser: UserInfo = {
   id: 'U001',
   name: '管理员',
-  role: '系统管理员',
-  permissions: rolePermissions['系统管理员'],
+  role: '系统专员',
+  roleCode: 'SUPER_ADMIN',
+  permissions: rolePermissions['系统专员'],
 };
 
 export const mockUsers: UserInfo[] = [
-  { id: 'U001', name: '管理员', role: '系统管理员', permissions: rolePermissions['系统管理员'] },
-  { id: 'U002', name: '张部长', role: '部门经理', department: '经营分析部', permissions: rolePermissions['部门经理'] },
-  { id: 'U003', name: '李主管', role: '人力部门', department: '人力资源部', permissions: rolePermissions['人力部门'] },
-  { id: 'U004', name: '宇雷', role: '普通用户', department: '客户服务部', permissions: rolePermissions['普通用户'] },
-  { id: 'U005', name: '王芳', role: '审计', department: '审计部', permissions: rolePermissions['审计'] },
+  { id: 'U001', name: '管理员', role: '系统专员', roleCode: 'SUPER_ADMIN', permissions: rolePermissions['系统专员'] },
+  { id: 'U002', name: '张部长', role: '部门智能体专员', roleCode: 'DEPT_ADMIN', department: '经营分析部', permissions: rolePermissions['部门智能体专员'] },
+  { id: 'U003', name: '李主管', role: '人力专员', roleCode: 'HR', department: '人力资源部', permissions: rolePermissions['人力专员'] },
+  { id: 'U004', name: '宇雷', role: '普通用户', roleCode: 'OWNER', department: '客户服务部', permissions: rolePermissions['普通用户'] },
+  { id: 'U005', name: '王芳', role: '审计角色', roleCode: 'AUDITOR', department: '审计部', permissions: rolePermissions['审计角色'] },
 ];
 
 export const orgTree = [

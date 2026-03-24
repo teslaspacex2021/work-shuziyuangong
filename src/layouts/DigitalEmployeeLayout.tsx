@@ -78,7 +78,6 @@ const DigitalEmployeeLayout: React.FC = () => {
         <div style={{ padding: collapsed ? '12px 8px' : '12px 16px' }}>
           <Button
             type="primary"
-            danger
             block
             icon={<PlusOutlined />}
             onClick={handleNewChat}

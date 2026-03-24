@@ -86,7 +86,6 @@ const UserLayout: React.FC = () => {
         <div style={{ padding: '12px 16px' }}>
           <Button
             type="primary"
-            danger
             block
             icon={<PlusOutlined />}
             style={{ borderRadius: 8 }}
