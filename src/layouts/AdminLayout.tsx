@@ -117,7 +117,7 @@ const AdminLayout: React.FC = () => {
 
   const userMenu = {
     items: [
-      { key: 'user', label: '切换到用户端', icon: <RobotOutlined />, onClick: () => navigate('/user/chat') },
+      { key: 'user', label: '切换到用户端', icon: <RobotOutlined />, onClick: () => navigate('/digital-employee/plaza') },
       { key: 'logout', label: '退出登录', icon: <LogoutOutlined /> },
     ],
   };

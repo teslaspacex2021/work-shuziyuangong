@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Layout, Menu, Button, Avatar } from 'antd';
+import { Layout, Menu, Button, Avatar, Tooltip } from 'antd';
 import {
   UserOutlined,
   RobotOutlined,
@@ -22,12 +22,12 @@ const DigitalEmployeeLayout: React.FC = () => {
 
   const menuItems = [
     { key: '/digital-employee/plaza', icon: <TeamOutlined />, label: '员工广场' },
+    { key: '/digital-employee/chat', icon: <MessageOutlined />, label: '对话' },
     { key: '/digital-employee/schedule', icon: <ScheduleOutlined />, label: '定时任务' },
-    { key: '/digital-employee/feedback', icon: <MessageOutlined />, label: '意见反馈' },
   ];
 
   const getSelectedKey = () => {
-    if (location.pathname.startsWith('/digital-employee/chat')) return '/digital-employee/plaza';
+    if (location.pathname.startsWith('/digital-employee/chat')) return '/digital-employee/chat';
     return location.pathname;
   };
 
@@ -38,24 +38,44 @@ const DigitalEmployeeLayout: React.FC = () => {
         collapsible
         collapsed={collapsed}
         trigger={null}
-        style={{ background: '#fff', borderRight: '1px solid #f0f0f0' }}
+        style={{
+          background: 'linear-gradient(180deg, #f8fbff 0%, #ffffff 100%)',
+          borderRight: '1px solid #e8ecf1',
+          boxShadow: '2px 0 8px rgba(0,0,0,0.03)',
+        }}
       >
         <div style={{
-          padding: '16px',
+          padding: collapsed ? '20px 12px' : '20px 16px',
           display: 'flex',
           alignItems: 'center',
           gap: 10,
-          borderBottom: '1px solid #f0f0f0',
+          borderBottom: '1px solid #e8ecf1',
         }}>
-          <RobotOutlined style={{ fontSize: 24, color: '#1677ff' }} />
-          {!collapsed && <span style={{ fontSize: 16, fontWeight: 600 }}>AI 数字员工</span>}
+          <div style={{
+            width: 36, height: 36, borderRadius: 10,
+            background: 'linear-gradient(135deg, #1677ff 0%, #4096ff 100%)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 4px 12px rgba(22,119,255,0.3)',
+            flexShrink: 0,
+          }}>
+            <RobotOutlined style={{ fontSize: 18, color: '#fff' }} />
+          </div>
+          {!collapsed && (
+            <span style={{ fontSize: 16, fontWeight: 700, color: '#1a2332', letterSpacing: -0.3 }}>
+              AI 数字员工
+            </span>
+          )}
         </div>
         <Menu
           mode="inline"
           selectedKeys={[getSelectedKey()]}
           items={menuItems}
           onClick={({ key }) => navigate(key)}
-          style={{ border: 'none', marginTop: 8 }}
+          style={{
+            border: 'none', marginTop: 8,
+            background: 'transparent',
+            fontWeight: 500,
+          }}
         />
       </Sider>
       <Layout>
@@ -65,35 +85,47 @@ const DigitalEmployeeLayout: React.FC = () => {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          borderBottom: '1px solid #f0f0f0',
+          borderBottom: '1px solid #e8ecf1',
           height: 56,
+          boxShadow: '0 1px 4px rgba(0,0,0,0.02)',
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <Button
               type="text"
               icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
               onClick={() => setCollapsed(!collapsed)}
+              style={{ color: '#8c8c8c' }}
             />
-            <Button
-              type="text"
-              icon={<ArrowLeftOutlined />}
-              onClick={() => window.open('/user/chat', '_self')}
-            >
-              返回主页
-            </Button>
+            <Tooltip title="返回天翼云数字人平台">
+              <Button
+                type="text"
+                icon={<ArrowLeftOutlined />}
+                onClick={() => window.open('/user/chat', '_self')}
+                style={{ color: '#8c8c8c' }}
+              >
+                返回主页
+              </Button>
+            </Tooltip>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <Button
-              type="text"
+              type="default"
               icon={<SettingOutlined />}
               onClick={() => navigate('/admin/dashboard')}
+              style={{ borderRadius: 8 }}
             >
               管理后台
             </Button>
-            <Avatar size="small" icon={<UserOutlined />} style={{ background: '#1677ff' }} />
+            <Avatar size={32} icon={<UserOutlined />} style={{
+              background: 'linear-gradient(135deg, #1677ff 0%, #4096ff 100%)',
+              cursor: 'pointer',
+            }} />
           </div>
         </Header>
-        <Content style={{ background: '#f5f5f5', overflow: 'auto' }}>
+        <Content style={{
+          background: 'linear-gradient(180deg, #f0f4f8 0%, #f5f7fa 100%)',
+          overflow: 'auto',
+        }}>
           <Outlet />
         </Content>
       </Layout>

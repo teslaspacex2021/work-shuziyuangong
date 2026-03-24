@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   Avatar, Tag, Button, Input, Tooltip, Badge, Space, Empty,
   Descriptions, Tabs, List, Progress, Divider, message, Modal,
-  Card, Switch, Form, Select, Row, Col,
+  Card, Switch, Form, Select, Row, Col, Upload,
 } from 'antd';
 import {
   SendOutlined, SearchOutlined, InfoCircleOutlined,
@@ -12,12 +12,14 @@ import {
   CloseOutlined, DatabaseOutlined, FileTextOutlined,
   PlusOutlined, ContactsOutlined, ClockCircleOutlined,
   ScheduleOutlined, TeamOutlined, ApartmentOutlined,
+  MessageOutlined, UploadOutlined,
 } from '@ant-design/icons';
 import { useSearchParams } from 'react-router-dom';
 import {
   digitalEmployees, conversations, tasks, skills, knowledgeBases,
   scheduledTasks,
   type ConversationItem, type ScheduledTask,
+  type FeedbackItem,
 } from '../../mock/data';
 
 const { TextArea } = Input;
@@ -92,6 +94,9 @@ const ChatPage: React.FC = () => {
   const [scheduleList, setScheduleList] = useState(scheduledTasks);
   const [addScheduleVisible, setAddScheduleVisible] = useState(false);
   const [scheduleForm] = Form.useForm();
+
+  const [feedbackVisible, setFeedbackVisible] = useState(false);
+  const [feedbackForm] = Form.useForm();
 
   useEffect(() => {
     if (initialEmployeeId && !activeConvIds.includes(initialEmployeeId)) {
@@ -252,6 +257,14 @@ const ChatPage: React.FC = () => {
     });
   };
 
+  const handleFeedbackSubmit = () => {
+    feedbackForm.validateFields().then((values) => {
+      message.success('感谢您的反馈，我们会尽快处理！');
+      feedbackForm.resetFields();
+      setFeedbackVisible(false);
+    });
+  };
+
   const empTasks = selectedEmployee ? tasks.filter((t) => t.assignee === selectedEmployee.id) : [];
   const empSkills = selectedEmployee ? skills.filter((s) => selectedEmployee.skillIds.includes(s.id)) : [];
   const empKnowledge = selectedEmployee ? knowledgeBases.filter((kb) => selectedEmployee.knowledgeIds.includes(kb.id)) : [];
@@ -329,13 +342,9 @@ const ChatPage: React.FC = () => {
                 <Badge dot color={statusColor[emp.status]} offset={[-2, 32]}>
                   <Avatar
                     size={40}
-                    style={{
-                      background: emp.status === 'ACTIVE' ? '#1677ff' : emp.status === 'TRAINING' ? '#722ed1' : '#999',
-                      fontWeight: 600, fontSize: 14, flexShrink: 0,
-                    }}
-                  >
-                    {emp.avatar}
-                  </Avatar>
+                    src={emp.avatar}
+                    style={{ flexShrink: 0 }}
+                  />
                 </Badge>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -376,7 +385,7 @@ const ChatPage: React.FC = () => {
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <Badge dot color={statusColor[selectedEmployee.status]} offset={[-2, 32]}>
-                <Avatar size={36} style={{ background: '#1677ff', fontWeight: 600 }}>{selectedEmployee.avatar}</Avatar>
+                <Avatar size={36} src={selectedEmployee.avatar} />
               </Badge>
               <div>
                 <div style={{ fontWeight: 600, fontSize: 15 }}>{selectedEmployee.name}</div>
@@ -385,14 +394,29 @@ const ChatPage: React.FC = () => {
                 </div>
               </div>
             </div>
-            <Button
-              type="text"
-              icon={<InfoCircleOutlined />}
-              onClick={() => setShowDetail(!showDetail)}
-              style={{ color: showDetail ? '#1677ff' : undefined }}
-            >
-              查看详情
-            </Button>
+            <Space>
+              <Tooltip title="意见反馈">
+                <Button
+                  type="text"
+                  icon={<MessageOutlined />}
+                  onClick={() => {
+                    if (selectedEmployee) {
+                      feedbackForm.setFieldsValue({ employeeId: selectedEmployee.id });
+                    }
+                    setFeedbackVisible(true);
+                  }}
+                  style={{ color: '#8c8c8c' }}
+                />
+              </Tooltip>
+              <Button
+                type="text"
+                icon={<InfoCircleOutlined />}
+                onClick={() => setShowDetail(!showDetail)}
+                style={{ color: showDetail ? '#1677ff' : undefined }}
+              >
+                查看详情
+              </Button>
+            </Space>
           </div>
 
           <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
@@ -428,7 +452,7 @@ const ChatPage: React.FC = () => {
                     }}
                   >
                     {msg.role === 'assistant' && (
-                      <Avatar size={32} style={{ background: '#1677ff', flexShrink: 0 }}><RobotOutlined /></Avatar>
+                      <Avatar size={32} src={selectedEmployee.avatar} style={{ flexShrink: 0 }} />
                     )}
                     <div style={{ maxWidth: '70%' }}>
                       <div style={{
@@ -526,7 +550,7 @@ const ChatPage: React.FC = () => {
                 </div>
 
                 <div style={{ padding: '16px', textAlign: 'center' }}>
-                  <Avatar size={56} style={{ background: '#1677ff', fontSize: 22, fontWeight: 600 }}>{selectedEmployee.avatar}</Avatar>
+                  <Avatar size={56} src={selectedEmployee.avatar} />
                   <div style={{ fontSize: 16, fontWeight: 600, marginTop: 8 }}>{selectedEmployee.name}</div>
                   <Tag color={statusColor[selectedEmployee.status]} style={{ marginTop: 6 }}>{statusLabel[selectedEmployee.status]}</Tag>
                   <p style={{ fontSize: 12, color: '#999', marginTop: 8, lineHeight: 1.6 }}>{selectedEmployee.description}</p>
@@ -787,13 +811,9 @@ const ChatPage: React.FC = () => {
                         <Badge dot color={statusColor[emp.status]} offset={[-2, 32]}>
                           <Avatar
                             size={40}
-                            style={{
-                              background: emp.status === 'ACTIVE' ? '#1677ff' : emp.status === 'TRAINING' ? '#722ed1' : '#999',
-                              fontWeight: 600, fontSize: 14, flexShrink: 0,
-                            }}
-                          >
-                            {emp.avatar}
-                          </Avatar>
+                            src={emp.avatar}
+                            style={{ flexShrink: 0 }}
+                          />
                         </Badge>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -917,6 +937,66 @@ const ChatPage: React.FC = () => {
           </Row>
           <Form.Item name="description" label="任务描述">
             <Input.TextArea rows={2} placeholder="描述该定时任务的执行内容" />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* Feedback Modal */}
+      <Modal
+        title="意见反馈"
+        open={feedbackVisible}
+        onOk={handleFeedbackSubmit}
+        onCancel={() => { feedbackForm.resetFields(); setFeedbackVisible(false); }}
+        okText="提交反馈"
+        width={520}
+      >
+        <Form form={feedbackForm} layout="vertical" style={{ marginTop: 16 }}>
+          <Form.Item name="title" label="反馈标题" rules={[{ required: true, message: '请输入反馈标题' }]}>
+            <Input placeholder="请简要描述您的反馈" />
+          </Form.Item>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="type" label="反馈类型" rules={[{ required: true, message: '请选择反馈类型' }]}>
+                <Select placeholder="选择类型" options={[
+                  { label: '功能建议', value: '功能建议' },
+                  { label: '体验问题', value: '体验问题' },
+                  { label: '错误反馈', value: '错误反馈' },
+                  { label: '其他', value: '其他' },
+                ]} />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="priority" label="优先级" initialValue="中">
+                <Select options={[
+                  { label: '高', value: '高' },
+                  { label: '中', value: '中' },
+                  { label: '低', value: '低' },
+                ]} />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Form.Item name="employeeId" label="关联数字员工">
+            <Select
+              placeholder="选择相关员工（可选）"
+              allowClear
+              options={digitalEmployees.map((e) => ({ label: `${e.name} (${e.department})`, value: e.id }))}
+            />
+          </Form.Item>
+          <Form.Item name="content" label="详细描述" rules={[{ required: true, message: '请输入详细描述' }]}>
+            <Input.TextArea rows={4} placeholder="请描述您遇到的问题或建议..." />
+          </Form.Item>
+          <Form.Item name="screenshots" label="上传截图" valuePropName="fileList" getValueFromEvent={(e: any) => Array.isArray(e) ? e : e?.fileList}>
+            <Upload
+              listType="picture-card"
+              beforeUpload={() => false}
+              maxCount={3}
+              accept="image/*"
+            >
+              <div>
+                <UploadOutlined />
+                <div style={{ marginTop: 4, fontSize: 12 }}>上传截图</div>
+              </div>
+            </Upload>
           </Form.Item>
         </Form>
       </Modal>

@@ -153,10 +153,7 @@ const DigitalEmployeeDirectory: React.FC = () => {
       <Card hoverable style={{ borderRadius: 12, height: '100%' }} styles={{ body: { padding: 20 } }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 12 }}>
           <Badge dot color={statusColor[emp.status]} offset={[-4, 36]}>
-            <Avatar size={44} style={{
-              background: emp.status === 'ACTIVE' ? '#1677ff' : emp.status === 'TRAINING' ? '#722ed1' : '#999',
-              fontSize: 16, fontWeight: 600,
-            }}>{emp.avatar}</Avatar>
+            <Avatar size={44} src={emp.avatar} />
           </Badge>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 15, fontWeight: 600 }}>{emp.name}</div>
@@ -190,10 +187,7 @@ const DigitalEmployeeDirectory: React.FC = () => {
       <div>
         <div style={{ textAlign: 'center', padding: '20px 0' }}>
           <Badge dot color={statusColor[emp.status]} offset={[-6, 56]}>
-            <Avatar size={64} style={{
-              background: emp.status === 'ACTIVE' ? '#1677ff' : emp.status === 'TRAINING' ? '#722ed1' : '#999',
-              fontSize: 24, fontWeight: 600,
-            }}>{emp.avatar}</Avatar>
+            <Avatar size={64} src={emp.avatar} />
           </Badge>
           <div style={{ fontSize: 18, fontWeight: 600, marginTop: 12 }}>{emp.name}</div>
           <div style={{ color: '#999', fontSize: 13, marginTop: 4 }}>{emp.department} · {emp.position}</div>
@@ -318,10 +312,7 @@ const DigitalEmployeeDirectory: React.FC = () => {
                   onMouseLeave={(e) => { if (!isEmpSel) e.currentTarget.style.background = 'transparent'; }}
                 >
                   <Badge dot color={statusColor[emp.status]} offset={[-2, 20]}>
-                    <Avatar size={24} style={{
-                      background: emp.status === 'ACTIVE' ? '#1677ff' : emp.status === 'TRAINING' ? '#722ed1' : '#999',
-                      fontSize: 10, fontWeight: 600,
-                    }}>{emp.avatar}</Avatar>
+                    <Avatar size={24} src={emp.avatar} />
                   </Badge>
                   <span style={{ fontSize: 13, color: '#333' }}>{emp.name}</span>
                 </div>
@@ -383,10 +374,7 @@ const DigitalEmployeeDirectory: React.FC = () => {
                   onMouseLeave={(e) => { if (!isEmpSel) e.currentTarget.style.background = 'transparent'; }}
                 >
                   <Badge dot color={statusColor[emp.status]} offset={[-2, 20]}>
-                    <Avatar size={24} style={{
-                      background: emp.status === 'ACTIVE' ? '#1677ff' : emp.status === 'TRAINING' ? '#722ed1' : '#999',
-                      fontSize: 10, fontWeight: 600,
-                    }}>{emp.avatar}</Avatar>
+                    <Avatar size={24} src={emp.avatar} />
                   </Badge>
                   <span style={{ fontSize: 13, color: '#333' }}>{emp.name}</span>
                 </div>

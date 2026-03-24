@@ -16,7 +16,7 @@ import {
 } from '../../mock/data';
 
 const levelColor: Record<string, string> = {
-  L1: '#C0C0C0', L2: '#6B7B8D', L3: '#1677ff', L4: '#0A1929',
+  L1: '#8c8c8c', L2: '#2f54eb', L3: '#1677ff', L4: '#13c2c2',
 };
 
 const typeIcon: Record<string, React.ReactNode> = {
@@ -40,6 +40,8 @@ const EmployeeManagement: React.FC = () => {
   const [selectedKBIds, setSelectedKBIds] = useState<string[]>([]);
   const [addForm] = Form.useForm();
   const [editForm] = Form.useForm();
+  const [posApplyVisible, setPosApplyVisible] = useState(false);
+  const [posApplyForm] = Form.useForm();
 
   const filtered = employees.filter((e) => {
     const matchSearch = e.name.includes(searchText) || e.id.includes(searchText) || e.department.includes(searchText);
@@ -111,7 +113,7 @@ const EmployeeManagement: React.FC = () => {
       const newEmp: DigitalEmployee = {
         id: nextId,
         name: values.name,
-        avatar: values.name.slice(-1),
+        avatar: values.avatarUrl || `https://api.dicebear.com/7.x/personas/svg?seed=${encodeURIComponent(values.name)}&backgroundColor=b6e3f4`,
         department: values.department,
         position: values.position,
         status: 'TRAINING',
@@ -150,9 +152,7 @@ const EmployeeManagement: React.FC = () => {
       render: (_: unknown, record: DigitalEmployee) => (
         <Space>
           <Badge dot color={record.status === 'ACTIVE' ? '#52c41a' : record.status === 'TRAINING' ? '#1677ff' : '#faad14'} offset={[-2, 32]}>
-            <Avatar style={{ background: record.status === 'ACTIVE' ? '#1677ff' : '#999' }}>
-              {record.avatar}
-            </Avatar>
+            <Avatar src={record.avatar} />
           </Badge>
           <div>
             <div style={{ fontWeight: 500 }}>{record.name}</div>
@@ -194,7 +194,7 @@ const EmployeeManagement: React.FC = () => {
     {
       title: '职级', dataIndex: 'level', key: 'level', width: 80,
       render: (l: string) => (
-        <Tag color={levelColor[l]} style={{ color: l === 'L4' || l === 'L3' ? '#fff' : '#333' }}>{l}</Tag>
+        <Tag color={levelColor[l]} style={{ color: '#fff' }}>{l}</Tag>
       ),
     },
     {
@@ -242,7 +242,7 @@ const EmployeeManagement: React.FC = () => {
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <span style={{ fontWeight: 500 }}>{skill.name}</span>
-              <Tag color={levelColor[skill.level]} style={{ fontSize: 10, color: skill.level === 'L3' || skill.level === 'L4' ? '#fff' : '#333' }}>
+              <Tag color={levelColor[skill.level]} style={{ fontSize: 10, color: '#fff' }}>
                 {skill.level}
               </Tag>
               <Tag style={{ fontSize: 10 }}>{skill.category}</Tag>
@@ -300,7 +300,7 @@ const EmployeeManagement: React.FC = () => {
         </div>
         <Button
           icon={<SolutionOutlined />}
-          onClick={() => navigate('/admin/positions')}
+          onClick={() => setPosApplyVisible(true)}
           style={{ borderRadius: 8 }}
         >
           岗位申请
@@ -430,6 +430,11 @@ const EmployeeManagement: React.FC = () => {
                 <Input type="number" placeholder="默认200万" suffix="tokens" />
               </Form.Item>
             </Col>
+            <Col span={12}>
+              <Form.Item label="头像URL" name="avatarUrl" tooltip="非必填，留空将自动生成">
+                <Input placeholder="可选，输入头像图片地址" />
+              </Form.Item>
+            </Col>
           </Row>
           <Form.Item label="描述" name="description">
             <Input.TextArea rows={3} placeholder="请描述该数字员工的职责和能力" />
@@ -449,7 +454,7 @@ const EmployeeManagement: React.FC = () => {
         {selectedEmployee && (
           <div>
             <div style={{ display: 'flex', gap: 12, marginBottom: 16, padding: 12, background: '#f5f5f5', borderRadius: 8 }}>
-              <Avatar size={48} style={{ background: '#1677ff' }}>{selectedEmployee.avatar}</Avatar>
+              <Avatar size={48} src={selectedEmployee.avatar} />
               <div>
                 <div style={{ fontWeight: 600, fontSize: 15 }}>{selectedEmployee.name}</div>
                 <div style={{ fontSize: 13, color: '#666' }}>{selectedEmployee.department} · {selectedEmployee.position}</div>
@@ -579,9 +584,7 @@ const EmployeeManagement: React.FC = () => {
         {selectedEmployee && (
           <div>
             <div style={{ display: 'flex', gap: 16, marginBottom: 20 }}>
-              <Avatar size={64} style={{ background: '#1677ff', fontSize: 24 }}>
-                {selectedEmployee.avatar}
-              </Avatar>
+              <Avatar size={64} src={selectedEmployee.avatar} />
               <div>
                 <div style={{ fontSize: 18, fontWeight: 600 }}>{selectedEmployee.name}</div>
                 <div style={{ color: '#999', marginTop: 4 }}>{selectedEmployee.description}</div>
@@ -598,7 +601,7 @@ const EmployeeManagement: React.FC = () => {
                 <Tag color={selectedEmployee.status === 'ACTIVE' ? 'success' : selectedEmployee.status === 'TRAINING' ? 'processing' : 'warning'}>{selectedEmployee.status}</Tag>
               </Descriptions.Item>
               <Descriptions.Item label="职级">
-                <Tag color={levelColor[selectedEmployee.level]} style={{ color: selectedEmployee.level === 'L3' || selectedEmployee.level === 'L4' ? '#fff' : '#333' }}>
+                <Tag color={levelColor[selectedEmployee.level]} style={{ color: '#fff' }}>
                   {selectedEmployee.level}
                 </Tag>
               </Descriptions.Item>
@@ -645,6 +648,102 @@ const EmployeeManagement: React.FC = () => {
             </Descriptions>
           </div>
         )}
+      </Modal>
+
+      {/* Position Application Modal */}
+      <Modal
+        title="岗位申请"
+        open={posApplyVisible}
+        onOk={() => {
+          posApplyForm.validateFields().then(() => {
+            message.success('岗位申请已提交，请等待审批');
+            posApplyForm.resetFields();
+            setPosApplyVisible(false);
+          });
+        }}
+        onCancel={() => { posApplyForm.resetFields(); setPosApplyVisible(false); }}
+        okText="提交申请"
+        width={640}
+      >
+        {/* Approval workflow diagram */}
+        <div style={{
+          background: '#f8fafc', borderRadius: 12, padding: '16px 20px',
+          marginBottom: 20, border: '1px solid #e8ecf1',
+        }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: '#1a2332', marginBottom: 12 }}>审批流程</div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0 }}>
+            {[
+              { label: '提交申请', color: '#1677ff' },
+              { label: '部门经理审批', color: '#faad14' },
+              { label: '人力部门审核', color: '#faad14' },
+              { label: '系统管理员确认', color: '#faad14' },
+              { label: '完成创建', color: '#52c41a' },
+            ].map((step, index, arr) => (
+              <React.Fragment key={step.label}>
+                <div style={{ textAlign: 'center', minWidth: 80 }}>
+                  <div style={{
+                    width: 32, height: 32, borderRadius: '50%',
+                    background: step.color, color: '#fff',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    margin: '0 auto 6px', fontSize: 14, fontWeight: 600,
+                  }}>{index + 1}</div>
+                  <div style={{ fontSize: 11, color: '#5a6b7d', lineHeight: 1.3 }}>{step.label}</div>
+                </div>
+                {index < arr.length - 1 && (
+                  <div style={{
+                    flex: 1, height: 2, background: '#e0e6ed',
+                    marginBottom: 18, minWidth: 20,
+                  }} />
+                )}
+              </React.Fragment>
+            ))}
+          </div>
+        </div>
+
+        <Form form={posApplyForm} layout="vertical">
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="positionName" label="岗位名称" rules={[{ required: true, message: '请输入岗位名称' }]}>
+                <Input placeholder="如：智能客服专员" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="department" label="所属部门" rules={[{ required: true, message: '请选择部门' }]}>
+                <Select placeholder="选择部门" options={
+                  Array.from(new Set(digitalEmployees.map((e) => e.department))).map((d) => ({ label: d, value: d }))
+                } />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="level" label="岗位职级" rules={[{ required: true, message: '请选择职级' }]}>
+                <Select placeholder="选择职级" options={[
+                  { label: 'L1 基础', value: 'L1' },
+                  { label: 'L2 进阶', value: 'L2' },
+                  { label: 'L3 专家', value: 'L3' },
+                  { label: 'L4 大师', value: 'L4' },
+                ]} />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="headcount" label="需求人数" rules={[{ required: true, message: '请输入人数' }]}>
+                <Input type="number" min={1} placeholder="请输入人数" />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Form.Item name="requiredSkills" label="技能要求">
+            <Select mode="multiple" placeholder="选择所需技能" options={
+              skills.map((s) => ({ label: s.name, value: s.id }))
+            } />
+          </Form.Item>
+          <Form.Item name="description" label="岗位职责" rules={[{ required: true, message: '请输入岗位职责' }]}>
+            <Input.TextArea rows={3} placeholder="请描述岗位职责和要求..." />
+          </Form.Item>
+          <Form.Item name="reason" label="申请原因" rules={[{ required: true, message: '请输入申请原因' }]}>
+            <Input.TextArea rows={2} placeholder="请说明申请该岗位的原因..." />
+          </Form.Item>
+        </Form>
       </Modal>
     </div>
   );
