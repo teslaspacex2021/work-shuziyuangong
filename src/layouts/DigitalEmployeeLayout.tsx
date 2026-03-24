@@ -10,6 +10,8 @@ import {
   ScheduleOutlined,
   MessageOutlined,
   ArrowLeftOutlined,
+  PlusCircleOutlined,
+  ClockCircleOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 
@@ -21,14 +23,24 @@ const DigitalEmployeeLayout: React.FC = () => {
   const [collapsed, setCollapsed] = useState(false);
 
   const menuItems = [
+    { key: '/digital-employee/new-chat', icon: <PlusCircleOutlined />, label: '新建对话' },
+    { key: '/digital-employee/chat', icon: <ClockCircleOutlined />, label: '对话记录' },
     { key: '/digital-employee/plaza', icon: <TeamOutlined />, label: '员工广场' },
-    { key: '/digital-employee/chat', icon: <MessageOutlined />, label: '对话' },
     { key: '/digital-employee/schedule', icon: <ScheduleOutlined />, label: '定时任务' },
   ];
 
   const getSelectedKey = () => {
     if (location.pathname.startsWith('/digital-employee/chat')) return '/digital-employee/chat';
+    if (location.pathname.startsWith('/digital-employee/new-chat')) return '/digital-employee/new-chat';
     return location.pathname;
+  };
+
+  const handleMenuClick = ({ key }: { key: string }) => {
+    if (key === '/digital-employee/new-chat') {
+      navigate(`/digital-employee/chat?new=${Date.now()}`);
+    } else {
+      navigate(key);
+    }
   };
 
   return (
@@ -70,7 +82,7 @@ const DigitalEmployeeLayout: React.FC = () => {
           mode="inline"
           selectedKeys={[getSelectedKey()]}
           items={menuItems}
-          onClick={({ key }) => navigate(key)}
+          onClick={handleMenuClick}
           style={{
             border: 'none', marginTop: 8,
             background: 'transparent',

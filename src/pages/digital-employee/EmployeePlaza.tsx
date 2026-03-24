@@ -1,14 +1,16 @@
 import React, { useState, useMemo } from 'react';
 import {
   Input, Avatar, Tag, Card, Row, Col, Badge, Select, Empty,
-  Button, Segmented, Tooltip, Drawer, Descriptions, Progress, Rate,
+  Button, Segmented, Tooltip, Drawer, Descriptions, Progress, Rate, Typography,
 } from 'antd';
 import {
   SearchOutlined, ThunderboltOutlined, StarOutlined, StarFilled,
   MessageOutlined, UserOutlined, FilterOutlined,
   TeamOutlined, FireOutlined,
-  IdcardOutlined, EnvironmentOutlined, TrophyOutlined,
+  IdcardOutlined, EnvironmentOutlined, TrophyOutlined, RocketOutlined,
 } from '@ant-design/icons';
+
+const { Title } = Typography;
 import { useNavigate } from 'react-router-dom';
 import { digitalEmployees, skills, knowledgeBases, type DigitalEmployee } from '../../mock/data';
 
@@ -95,6 +97,13 @@ const EmployeePlaza: React.FC = () => {
   };
 
   const activeCount = digitalEmployees.filter((e) => e.status === 'ACTIVE').length;
+
+  const recommendedEmployees = useMemo(() => {
+    return [...digitalEmployees]
+      .filter((e) => e.status === 'ACTIVE')
+      .sort((a, b) => b.heat - a.heat)
+      .slice(0, 4);
+  }, []);
 
   const renderEmployeeCard = (emp: DigitalEmployee) => {
     const rating = Math.min(5, Math.max(0, (emp.likes / (emp.likes + emp.dislikes + 1)) * 5));
@@ -329,6 +338,95 @@ const EmployeePlaza: React.FC = () => {
             <span style={{ color: 'rgba(255,255,255,0.9)' }}>共 {digitalEmployees.length} 名数字员工</span>
           </span>
         </p>
+      </div>
+
+      {/* Recommended Employees */}
+      <div style={{ marginBottom: 24 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+          <div style={{
+            width: 28, height: 28, borderRadius: 8,
+            background: 'linear-gradient(135deg, #ff6b35 0%, #f7931e 100%)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <RocketOutlined style={{ fontSize: 14, color: '#fff' }} />
+          </div>
+          <Title level={5} style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#1a2332' }}>
+            推荐员工
+          </Title>
+          <span style={{ fontSize: 13, color: '#8c99a8', marginLeft: 4 }}>为你精选最受欢迎的数字员工</span>
+        </div>
+        <Row gutter={[14, 14]}>
+          {recommendedEmployees.map((emp) => {
+            const rating = Math.min(5, Math.max(0, (emp.likes / (emp.likes + emp.dislikes + 1)) * 5));
+            return (
+              <Col xs={24} sm={12} lg={6} key={`rec-${emp.id}`}>
+                <Card
+                  hoverable
+                  style={{
+                    borderRadius: 14,
+                    border: '1px solid #e8f0fe',
+                    background: 'linear-gradient(135deg, #fafcff 0%, #f0f5ff 100%)',
+                    overflow: 'hidden',
+                    transition: 'all 0.25s ease',
+                    boxShadow: '0 2px 10px rgba(22,119,255,0.06)',
+                  }}
+                  styles={{ body: { padding: '16px 18px' } }}
+                  onClick={() => openDetail(emp)}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
+                    <div style={{ position: 'relative', flexShrink: 0 }}>
+                      <Badge dot color={statusColor[emp.status]} offset={[-3, 36]}>
+                        <Avatar size={44} src={emp.avatar} style={{ boxShadow: '0 3px 10px rgba(0,0,0,0.12)' }} />
+                      </Badge>
+                      <div style={{
+                        position: 'absolute', top: -6, left: -6,
+                        width: 20, height: 20, borderRadius: '50%',
+                        background: 'linear-gradient(135deg, #ff6b35 0%, #f7931e 100%)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        boxShadow: '0 2px 6px rgba(255,107,53,0.4)',
+                      }}>
+                        <RocketOutlined style={{ fontSize: 10, color: '#fff' }} />
+                      </div>
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                        <span style={{ fontWeight: 600, fontSize: 14, color: '#1a2332' }}>{emp.name}</span>
+                        <Tag style={{
+                          fontSize: 10, borderRadius: 4, margin: 0, lineHeight: '18px',
+                          padding: '0 6px', fontWeight: 600, color: '#fff',
+                          border: 'none', background: levelColor[emp.level],
+                        }}>{emp.level}</Tag>
+                      </div>
+                      <div style={{ fontSize: 11, color: '#7c8fa0', marginTop: 2 }}>
+                        {emp.department} · {emp.position}
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{
+                    fontSize: 12, color: '#5a6b7d', lineHeight: 1.6, marginBottom: 10,
+                    height: 38, overflow: 'hidden', textOverflow: 'ellipsis',
+                    display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+                  }}>{emp.description}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                      <Rate disabled value={rating} allowHalf style={{ fontSize: 11 }} />
+                      <span style={{ fontSize: 11, color: '#b0b8c4' }}>({emp.likes})</span>
+                    </div>
+                    <Button
+                      type="primary"
+                      size="small"
+                      icon={<MessageOutlined />}
+                      onClick={(e) => startChat(emp.id, e)}
+                      style={{ borderRadius: 16, fontSize: 12, height: 28, padding: '0 12px' }}
+                    >
+                      对话
+                    </Button>
+                  </div>
+                </Card>
+              </Col>
+            );
+          })}
+        </Row>
       </div>
 
       {/* Search & Filters */}

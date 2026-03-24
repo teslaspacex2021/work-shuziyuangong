@@ -1,8 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import {
   Card, Table, Tag, Button, Space, Input, Select, message,
+  Modal, Form, InputNumber, Radio,
 } from 'antd';
-import { SearchOutlined, EyeOutlined, SolutionOutlined } from '@ant-design/icons';
+import { SearchOutlined, EyeOutlined, SolutionOutlined, PlusOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { demandRecords, type DemandRecord } from '../../mock/data';
 import ApprovalDetailPage from '../../components/ApprovalDetailPage';
@@ -25,6 +26,8 @@ const DemandManagement: React.FC = () => {
   const [searchText, setSearchText] = useState('');
   const [statusFilter, setStatusFilter] = useState<string | undefined>(undefined);
   const [currentRecord, setCurrentRecord] = useState<DemandRecord | null>(null);
+  const [applyModalOpen, setApplyModalOpen] = useState(false);
+  const [applyForm] = Form.useForm();
 
   const filteredData = useMemo(() => {
     return data.filter((r) => {
@@ -74,6 +77,35 @@ const DemandManagement: React.FC = () => {
       }),
     );
     message.warning('已驳回');
+  };
+
+  const handleApplySubmit = () => {
+    applyForm.validateFields().then((values) => {
+      const newId = `DR-${String(data.length + 1).padStart(4, '0')}`;
+      const today = new Date().toISOString().slice(0, 10);
+      const newRecord: DemandRecord = {
+        id: newId,
+        title: `${values.position}需求申请`,
+        department: values.department,
+        position: values.position,
+        headcount: values.headcount,
+        urgency: values.urgency,
+        reason: values.reason || '业务发展需要',
+        requirements: values.requirements || '待填写',
+        applicant: '当前用户',
+        applyDate: today,
+        status: '待提交',
+        currentStep: 0,
+        approvalSteps: [
+          { step: '部门经理审批', approver: '部门经理', status: '待处理', opinion: '', remark: '' },
+          { step: '人力部门审批', approver: '人力专员', status: '待处理', opinion: '', remark: '' },
+        ],
+      };
+      setData((prev) => [newRecord, ...prev]);
+      message.success('岗位申请已提交');
+      applyForm.resetFields();
+      setApplyModalOpen(false);
+    });
   };
 
   const columns: ColumnsType<DemandRecord> = [
@@ -145,11 +177,67 @@ const DemandManagement: React.FC = () => {
 
   return (
     <div>
-      <h2 style={{ marginBottom: 4, fontSize: 20, fontWeight: 600 }}>
-        <SolutionOutlined style={{ marginRight: 8 }} />
-        需求管理
-      </h2>
-      <p style={{ color: '#999', marginBottom: 20 }}>管理各部门的数字员工需求申请与审批</p>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20 }}>
+        <div>
+          <h2 style={{ marginBottom: 4, fontSize: 20, fontWeight: 600 }}>
+            <SolutionOutlined style={{ marginRight: 8 }} />
+            需求管理
+          </h2>
+          <p style={{ color: '#999', margin: 0 }}>管理各部门的数字员工需求申请与审批</p>
+        </div>
+        <Button
+          type="primary"
+          icon={<PlusOutlined />}
+          onClick={() => setApplyModalOpen(true)}
+          style={{ borderRadius: 8, height: 36, fontWeight: 500 }}
+        >
+          岗位申请
+        </Button>
+      </div>
+
+      <Modal
+        title="新建岗位申请"
+        open={applyModalOpen}
+        onOk={handleApplySubmit}
+        onCancel={() => { setApplyModalOpen(false); applyForm.resetFields(); }}
+        okText="提交申请"
+        cancelText="取消"
+        width={560}
+        okButtonProps={{ style: { borderRadius: 8 } }}
+        cancelButtonProps={{ style: { borderRadius: 8 } }}
+      >
+        <Form form={applyForm} layout="vertical" style={{ marginTop: 8 }}>
+          <Form.Item label="需求岗位" name="position" rules={[{ required: true, message: '请填写需求岗位' }]}>
+            <Input placeholder="请输入岗位名称" />
+          </Form.Item>
+          <Form.Item label="需求部门" name="department" rules={[{ required: true, message: '请选择需求部门' }]}>
+            <Select placeholder="请选择部门" options={[
+              { label: '客户服务部', value: '客户服务部' },
+              { label: '数字化运营部', value: '数字化运营部' },
+              { label: '财务共享中心', value: '财务共享中心' },
+              { label: '数据运营中心', value: '数据运营中心' },
+              { label: '人力资源部', value: '人力资源部' },
+              { label: '综合管理部', value: '综合管理部' },
+              { label: '审计部', value: '审计部' },
+            ]} />
+          </Form.Item>
+          <Form.Item label="需求人数" name="headcount" rules={[{ required: true, message: '请填写需求人数' }]} initialValue={1}>
+            <InputNumber min={1} max={50} style={{ width: '100%' }} />
+          </Form.Item>
+          <Form.Item label="紧急程度" name="urgency" rules={[{ required: true }]} initialValue="普通">
+            <Radio.Group>
+              <Radio value="普通">普通</Radio>
+              <Radio value="紧急">紧急</Radio>
+            </Radio.Group>
+          </Form.Item>
+          <Form.Item label="需求理由" name="reason">
+            <Input.TextArea rows={2} placeholder="请说明申请该岗位的原因" />
+          </Form.Item>
+          <Form.Item label="岗位要求" name="requirements">
+            <Input.TextArea rows={2} placeholder="请描述岗位所需技能和要求" />
+          </Form.Item>
+        </Form>
+      </Modal>
 
       <Card style={{ borderRadius: 12 }}>
         <Space style={{ marginBottom: 16 }} wrap>

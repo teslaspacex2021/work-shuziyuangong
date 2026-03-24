@@ -9,7 +9,6 @@ import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   BellOutlined,
-  AuditOutlined,
   SettingOutlined,
   FileTextOutlined,
   UserSwitchOutlined,
@@ -49,15 +48,9 @@ const AdminLayout: React.FC = () => {
     },
     {
       key: 'alerts-group',
-      label: '预警与待办',
+      label: '预警监控',
       type: 'group' as const,
       children: [
-        {
-          key: '/admin/pending',
-          icon: <AuditOutlined />,
-          label: <span>我的待办 <Badge count={5} size="small" offset={[6, -2]} /></span>,
-          permission: 'pending',
-        },
         {
           key: '/admin/alerts',
           icon: <AlertOutlined />,
@@ -191,8 +184,8 @@ const AdminLayout: React.FC = () => {
                 { label: '普通用户', value: '普通用户' },
               ]}
             />
-            <Badge count={8} size="small">
-              <BellOutlined style={{ fontSize: 16, cursor: 'pointer' }} onClick={() => navigate('/admin/pending')} />
+            <Badge count={3} size="small">
+              <BellOutlined style={{ fontSize: 16, cursor: 'pointer' }} onClick={() => navigate('/admin/alerts')} />
             </Badge>
             <Dropdown menu={userMenu} placement="bottomRight">
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
