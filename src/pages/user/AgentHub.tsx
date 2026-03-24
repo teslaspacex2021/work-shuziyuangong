@@ -1,21 +1,12 @@
 import React, { useState, useMemo } from 'react';
 import {
-  Input, Avatar, Tag, Card, Row, Col, Badge, Empty,
-  Tabs, Select, Tooltip, Rate,
+  Input, Avatar, Tag, Card, Row, Col, Empty, Rate,
 } from 'antd';
 import {
-  SearchOutlined, ThunderboltOutlined, StarOutlined, StarFilled,
+  SearchOutlined, ThunderboltOutlined,
   MessageOutlined, UserOutlined,
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
-import { digitalEmployees, type DigitalEmployee } from '../../mock/data';
-
-const statusColor: Record<string, string> = {
-  ACTIVE: '#52c41a', TRAINING: '#1677ff', SUSPENDED: '#faad14', TERMINATED: '#ff4d4f',
-};
-const statusLabel: Record<string, string> = {
-  ACTIVE: '在线', TRAINING: '训练中', SUSPENDED: '已暂停', TERMINATED: '已停用',
-};
 
 const mockAgents = [
   { id: 'a1', name: '个人助手', desc: '智能个人助手，帮助处理日常工作事务、日程管理、邮件处理等。', tags: ['日程管理', '邮件处理', '工作汇报'], users: 1560, sessions: 42, tokens: 8900, rating: 4.5 },
@@ -28,99 +19,12 @@ const mockAgents = [
 
 const AgentHub: React.FC = () => {
   const navigate = useNavigate();
-  const [mainTab, setMainTab] = useState('agents');
   const [searchText, setSearchText] = useState('');
-  const [deptFilter, setDeptFilter] = useState<string>('全部部门');
-  const [subTab, setSubTab] = useState('all');
-  const [favorites, setFavorites] = useState<Set<string>>(new Set(['DE-001', 'DE-004']));
-
-  const deptOptions = useMemo(() => {
-    const depts = new Set(digitalEmployees.map((e) => e.department));
-    return ['全部部门', ...Array.from(depts)];
-  }, []);
-
-  const filteredEmployees = useMemo(() => {
-    let list = [...digitalEmployees];
-    if (searchText) {
-      list = list.filter((e) => e.name.includes(searchText) || e.position.includes(searchText) || e.department.includes(searchText));
-    }
-    if (deptFilter !== '全部部门') {
-      list = list.filter((e) => e.department === deptFilter);
-    }
-    if (subTab === 'hot') {
-      list = list.sort((a, b) => b.tokensUsed - a.tokensUsed);
-    }
-    if (subTab === 'favorites') {
-      list = list.filter((e) => favorites.has(e.id));
-    }
-    return list;
-  }, [searchText, deptFilter, subTab, favorites]);
 
   const filteredAgents = useMemo(() => {
     if (!searchText) return mockAgents;
     return mockAgents.filter((a) => a.name.includes(searchText) || a.desc.includes(searchText));
   }, [searchText]);
-
-  const toggleFav = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setFavorites((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
-
-  const renderEmployeeCard = (emp: DigitalEmployee) => (
-    <Col xs={24} sm={12} lg={8} xl={6} key={emp.id}>
-      <Card
-        hoverable
-        style={{ borderRadius: 12, height: '100%' }}
-        styles={{ body: { padding: '20px 16px 16px' } }}
-        onClick={() => navigate(`/user/chat?employeeId=${emp.id}`)}
-      >
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 12 }}>
-          <Badge dot color={statusColor[emp.status]} offset={[-4, 36]}>
-            <Avatar size={44} style={{ background: emp.status === 'ACTIVE' ? '#1677ff' : '#722ed1', fontWeight: 600, fontSize: 16, flexShrink: 0 }}>
-              {emp.avatar}
-            </Avatar>
-          </Badge>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontWeight: 600, fontSize: 15 }}>{emp.name}</span>
-              <Tooltip title={favorites.has(emp.id) ? '取消收藏' : '收藏'}>
-                {favorites.has(emp.id) ? (
-                  <StarFilled style={{ color: '#faad14', cursor: 'pointer' }} onClick={(e) => toggleFav(emp.id, e)} />
-                ) : (
-                  <StarOutlined style={{ color: '#d9d9d9', cursor: 'pointer' }} onClick={(e) => toggleFav(emp.id, e)} />
-                )}
-              </Tooltip>
-            </div>
-            <div style={{ fontSize: 12, color: '#999' }}>{emp.department} · {emp.position}</div>
-          </div>
-          <Tag color={statusColor[emp.status]} style={{ fontSize: 11, flexShrink: 0 }}>{statusLabel[emp.status]}</Tag>
-        </div>
-
-        <p style={{ fontSize: 13, color: '#666', lineHeight: 1.6, margin: '0 0 12px', height: 42, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-          {emp.description}
-        </p>
-
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 12 }}>
-          {emp.skills.slice(0, 3).map((s) => (
-            <Tag key={s} color="blue" style={{ fontSize: 11, margin: 0 }}>{s}</Tag>
-          ))}
-          {emp.skills.length > 3 && <Tag style={{ fontSize: 11, margin: 0 }}>+{emp.skills.length - 3}</Tag>}
-        </div>
-
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #f0f0f0', paddingTop: 10, fontSize: 12, color: '#999' }}>
-          <span><UserOutlined /> {Math.floor(emp.tokensUsed / 10000)}</span>
-          <span><MessageOutlined /> {Math.floor(emp.tokensUsed / 50000)}</span>
-          <span>完成率 {emp.taskCompleteRate}%</span>
-          <span><ThunderboltOutlined style={{ color: '#fa8c16' }} /> {(emp.tokensUsed / 10000).toFixed(0)}万</span>
-        </div>
-      </Card>
-    </Col>
-  );
 
   const renderAgentCard = (agent: typeof mockAgents[0]) => (
     <Col xs={24} sm={12} lg={8} xl={6} key={agent.id}>
@@ -155,77 +59,28 @@ const AgentHub: React.FC = () => {
 
   return (
     <div style={{ padding: 24 }}>
-      <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 4 }}>
-        {mainTab === 'agents' ? '智能体中心' : 'AI 数字员工'}
-      </h2>
+      <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 4 }}>智能体中心</h2>
       <p style={{ color: '#666', marginBottom: 20, fontSize: 14 }}>
-        {mainTab === 'agents'
-          ? '选择一个智能体开始协作，提升工作效率。'
-          : '选择一个数字员工开始协作，他们将根据您的问题自动调用合适的技能和知识来高效处理任务'}
+        选择一个智能体开始协作，提升工作效率。
       </p>
 
       <div style={{ display: 'flex', gap: 16, marginBottom: 20, alignItems: 'center', flexWrap: 'wrap' }}>
         <Input
-          placeholder="搜索数字员工名称、岗位..."
+          placeholder="搜索智能体名称、描述..."
           prefix={<SearchOutlined />}
           value={searchText}
           onChange={(e) => setSearchText(e.target.value)}
           allowClear
           style={{ width: 280, borderRadius: 8 }}
         />
-        {mainTab === 'employees' && (
-          <Select
-            value={deptFilter}
-            onChange={setDeptFilter}
-            style={{ width: 160 }}
-            options={deptOptions.map((d) => ({ label: d, value: d }))}
-          />
-        )}
       </div>
 
-      <Tabs
-        activeKey={mainTab}
-        onChange={(k) => { setMainTab(k); setSearchText(''); }}
-        items={[
-          {
-            key: 'agents',
-            label: '智能体',
-            children: (
-              <Row gutter={[16, 16]} style={{ marginTop: 8 }}>
-                {filteredAgents.map(renderAgentCard)}
-                {filteredAgents.length === 0 && (
-                  <Col span={24}><Empty description="暂无匹配的智能体" /></Col>
-                )}
-              </Row>
-            ),
-          },
-          {
-            key: 'employees',
-            label: `数字员工 (${digitalEmployees.length})`,
-            children: (
-              <>
-                <Tabs
-                  activeKey={subTab}
-                  onChange={setSubTab}
-                  size="small"
-                  style={{ marginBottom: 8 }}
-                  items={[
-                    { key: 'all', label: `全部 (${digitalEmployees.length})` },
-                    { key: 'hot', label: '热门排行' },
-                    { key: 'favorites', label: `我的收藏 (${favorites.size})` },
-                  ]}
-                />
-                <Row gutter={[16, 16]}>
-                  {filteredEmployees.map(renderEmployeeCard)}
-                  {filteredEmployees.length === 0 && (
-                    <Col span={24}><Empty description="暂无匹配的数字员工" /></Col>
-                  )}
-                </Row>
-              </>
-            ),
-          },
-        ]}
-      />
+      <Row gutter={[16, 16]} style={{ marginTop: 8 }}>
+        {filteredAgents.map(renderAgentCard)}
+        {filteredAgents.length === 0 && (
+          <Col span={24}><Empty description="暂无匹配的智能体" /></Col>
+        )}
+      </Row>
     </div>
   );
 };

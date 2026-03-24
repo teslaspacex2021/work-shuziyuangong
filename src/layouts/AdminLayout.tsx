@@ -94,7 +94,14 @@ const AdminLayout: React.FC = () => {
       type: 'group' as const,
       children: [
         { key: '/admin/task-logs', icon: <FileTextOutlined />, label: '任务调度日志', permission: 'task-logs' },
-        { key: '/admin/schedule', icon: <ScheduleOutlined />, label: '调度配置', permission: 'schedule' },
+      ],
+    },
+    {
+      key: 'feedback-group',
+      label: '用户服务',
+      type: 'group' as const,
+      children: [
+        { key: '/admin/feedback', icon: <AlertOutlined />, label: '意见反馈', permission: 'feedback' },
       ],
     },
   ];

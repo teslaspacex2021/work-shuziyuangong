@@ -838,6 +838,34 @@ export const efficiencyReport = {
   roi: '1:4.5',
 };
 
+export interface FeedbackItem {
+  id: string;
+  userId: string;
+  userName: string;
+  department: string;
+  employeeId: string;
+  employeeName: string;
+  type: '功能建议' | '体验问题' | '错误反馈' | '其他';
+  title: string;
+  content: string;
+  status: '待处理' | '处理中' | '已解决' | '已关闭';
+  priority: '高' | '中' | '低';
+  createTime: string;
+  updateTime: string;
+  reply?: string;
+}
+
+export const feedbackList: FeedbackItem[] = [
+  { id: 'FB001', userId: 'U004', userName: '宇雷', department: '客户服务部', employeeId: 'DE-2026001', employeeName: '小翼·客服', type: '功能建议', title: '希望增加多语言客服能力', content: '目前小翼·客服只支持中文，建议增加英文和日文客服能力，以应对海外客户咨询。', status: '处理中', priority: '高', createTime: '2026-03-20 10:30', updateTime: '2026-03-21 09:00', reply: '已收到建议，正在评估多语言模型接入方案。' },
+  { id: 'FB002', userId: 'U002', userName: '张部长', department: '经营分析部', employeeId: 'DE-2026010', employeeName: '小翼·经分', type: '错误反馈', title: '经营报告数据图表显示异常', content: '使用小翼·经分生成的2月经营报告中，柱状图数据与表格数据不一致，疑似计算错误。', status: '已解决', priority: '高', createTime: '2026-03-18 14:20', updateTime: '2026-03-19 16:00', reply: '已定位问题为数据聚合逻辑错误，已修复并重新生成报告。' },
+  { id: 'FB003', userId: 'U004', userName: '宇雷', department: '客户服务部', employeeId: 'DE-2026001', employeeName: '小翼·客服', type: '体验问题', title: '工单处理响应速度变慢', content: '最近一周小翼·客服处理工单的平均响应时间从2.3秒增加到5.8秒，影响客户体验。', status: '处理中', priority: '高', createTime: '2026-03-22 09:15', updateTime: '2026-03-22 11:00' },
+  { id: 'FB004', userId: 'U003', userName: '李主管', department: '人力资源部', employeeId: 'DE-2026005', employeeName: '小翼·HR', type: '功能建议', title: '增加面试评价自动汇总功能', content: '目前面试评价需要手动汇总，建议增加面试反馈自动整理和候选人排名功能。', status: '待处理', priority: '中', createTime: '2026-03-21 16:45', updateTime: '2026-03-21 16:45' },
+  { id: 'FB005', userId: 'U002', userName: '张部长', department: '经营分析部', employeeId: 'DE-2026003', employeeName: '小翼·营销', type: '体验问题', title: '营销文案生成质量需优化', content: '小翼·营销生成的文案偶尔会出现重复内容和逻辑不通顺的情况，建议优化内容质量。', status: '待处理', priority: '中', createTime: '2026-03-23 10:00', updateTime: '2026-03-23 10:00' },
+  { id: 'FB006', userId: 'U005', userName: '王芳', department: '审计部', employeeId: 'DE-2026004', employeeName: '小翼·审计', type: '功能建议', title: '支持审计底稿模板自定义', content: '不同审计项目需要不同格式的底稿，希望能支持自定义底稿模板配置。', status: '已解决', priority: '中', createTime: '2026-03-15 11:30', updateTime: '2026-03-17 14:00', reply: '已新增底稿模板管理功能，可在审计助手技能配置中设置。' },
+  { id: 'FB007', userId: 'U004', userName: '宇雷', department: '客户服务部', employeeId: 'DE-2026006', employeeName: '小翼·财务', type: '其他', title: '报销审核规则更新建议', content: '近期公司报销制度有更新，建议尽快更新小翼·财务的审核规则库。', status: '已关闭', priority: '低', createTime: '2026-03-10 09:00', updateTime: '2026-03-12 10:00', reply: '已更新财务制度知识库，新规则已生效。' },
+  { id: 'FB008', userId: 'U003', userName: '李主管', department: '人力资源部', employeeId: 'DE-2026008', employeeName: '小翼·商机', type: '错误反馈', title: '商机线索重复推送', content: '小翼·商机连续两天推送了相同的商机线索，存在去重逻辑问题。', status: '待处理', priority: '高', createTime: '2026-03-24 08:30', updateTime: '2026-03-24 08:30' },
+];
+
 export const chatMessages = [
   { role: 'assistant' as const, content: '您好！我是小翼·客服，很高兴为您服务。请问有什么可以帮您？' },
 ];
@@ -857,7 +885,7 @@ export const rolePermissions: Record<SystemRole, string[]> = {
     'dashboard', 'pending', 'alerts',
     'employees', 'positions',
     'onboard', 'transfer', 'demand', 'performance', 'exit',
-    'task-logs', 'schedule',
+    'task-logs', 'feedback',
     'approval:approve', 'approval:reject',
     'employee:create', 'employee:edit', 'employee:delete',
     'position:create', 'position:edit', 'position:delete',
@@ -868,7 +896,7 @@ export const rolePermissions: Record<SystemRole, string[]> = {
     'dashboard', 'pending', 'alerts',
     'employees', 'positions',
     'onboard', 'transfer', 'demand', 'performance', 'exit',
-    'task-logs',
+    'task-logs', 'feedback',
     'approval:approve', 'approval:reject',
     'employee:edit',
     'performance:evaluate',
@@ -877,7 +905,7 @@ export const rolePermissions: Record<SystemRole, string[]> = {
     'dashboard', 'pending', 'alerts',
     'employees', 'positions',
     'onboard', 'transfer', 'demand', 'performance', 'exit',
-    'task-logs', 'schedule',
+    'task-logs', 'feedback',
     'approval:approve', 'approval:reject',
     'employee:create', 'employee:edit',
     'position:create', 'position:edit',

@@ -5,10 +5,15 @@ import zhCN from 'antd/locale/zh_CN';
 import { PermissionProvider } from './contexts/PermissionContext';
 import UserLayout from './layouts/UserLayout';
 import AdminLayout from './layouts/AdminLayout';
+import DigitalEmployeeLayout from './layouts/DigitalEmployeeLayout';
 
 import DigitalEmployeeDirectory from './pages/user/DigitalEmployeeDirectory';
 import ChatPage from './pages/user/ChatPage';
 import AgentHub from './pages/user/AgentHub';
+
+import EmployeePlaza from './pages/digital-employee/EmployeePlaza';
+import EmployeeSchedule from './pages/digital-employee/EmployeeSchedule';
+import UserFeedback from './pages/digital-employee/UserFeedback';
 
 import Dashboard from './pages/admin/Dashboard';
 import PendingTasks from './pages/admin/PendingTasks';
@@ -21,6 +26,7 @@ import DemandManagement from './pages/admin/DemandManagement';
 import PerformanceManagement from './pages/admin/PerformanceManagement';
 import ExitManagement from './pages/admin/ExitManagement';
 import TaskLogs from './pages/admin/TaskLogs';
+import AdminFeedbackList from './pages/admin/AdminFeedbackList';
 
 function App() {
   return (
@@ -56,6 +62,16 @@ function App() {
               <Route path="*" element={<ChatPage />} />
             </Route>
 
+            {/* AI Digital Employee Portal (independent) */}
+            <Route path="/digital-employee" element={<DigitalEmployeeLayout />}>
+              <Route index element={<Navigate to="/digital-employee/plaza" replace />} />
+              <Route path="plaza" element={<EmployeePlaza />} />
+              <Route path="schedule" element={<EmployeeSchedule />} />
+              <Route path="feedback" element={<UserFeedback />} />
+              <Route path="chat" element={<ChatPage />} />
+              <Route path="*" element={<EmployeePlaza />} />
+            </Route>
+
             {/* Admin Portal */}
             <Route path="/admin" element={<AdminLayout />}>
               <Route index element={<Navigate to="/admin/dashboard" replace />} />
@@ -70,7 +86,7 @@ function App() {
               <Route path="performance" element={<PerformanceManagement />} />
               <Route path="exit" element={<ExitManagement />} />
               <Route path="task-logs" element={<TaskLogs />} />
-              <Route path="schedule" element={<TaskLogs />} />
+              <Route path="feedback" element={<AdminFeedbackList />} />
               <Route path="*" element={<Dashboard />} />
             </Route>
           </Routes>

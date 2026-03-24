@@ -32,7 +32,7 @@ const UserLayout: React.FC = () => {
     { key: '/user/agents', icon: <AppstoreOutlined />, label: '更多智能体' },
     { type: 'divider' as const },
     { key: '/user/knowledge', icon: <BookOutlined />, label: '知识中心' },
-    { key: '/user/digital-employee', icon: <RobotOutlined />, label: 'AI数字员工' },
+    { key: 'digital-employee-link', icon: <RobotOutlined />, label: 'AI数字员工' },
     {
       key: 'knowledge-ops',
       icon: <FundProjectionScreenOutlined />,
@@ -46,16 +46,15 @@ const UserLayout: React.FC = () => {
   ];
 
   const getSelectedKey = () => {
-    if (location.pathname === '/user/digital-employee') return '/user/digital-employee';
     if (location.pathname === '/user/agents') return '/user/agents';
     if (location.pathname.startsWith('/user/chat')) return '/user/chat';
-    if (location.pathname.startsWith('/user/digital-employees')) return '/user/digital-employee';
+    if (location.pathname.startsWith('/user/digital-employees')) return 'digital-employee-link';
     return location.pathname;
   };
 
   const handleMenuClick = (key: string) => {
-    if (key === '/user/digital-employee') {
-      navigate('/user/chat');
+    if (key === 'digital-employee-link') {
+      window.open('/digital-employee/plaza', '_blank');
       return;
     }
     if (['/user/match', '/user/marketing', '/user/opportunity', '/user/knowledge', '/user/recent', '/user/knowledge-ops/overview', '/user/knowledge-ops/content'].includes(key)) {

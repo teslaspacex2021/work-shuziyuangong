@@ -7,8 +7,9 @@ import {
   PlusOutlined, SearchOutlined, SettingOutlined, TeamOutlined,
   ThunderboltOutlined, DatabaseOutlined, FileTextOutlined,
   BookOutlined, InfoCircleOutlined, SyncOutlined, EditOutlined,
-  CheckCircleOutlined, ExperimentOutlined,
+  CheckCircleOutlined, ExperimentOutlined, SolutionOutlined,
 } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
 import {
   digitalEmployees, skills, knowledgeBases, positions,
   type DigitalEmployee, type Skill, type KnowledgeBase,
@@ -25,6 +26,7 @@ const typeIcon: Record<string, React.ReactNode> = {
 };
 
 const EmployeeManagement: React.FC = () => {
+  const navigate = useNavigate();
   const [employees, setEmployees] = useState(digitalEmployees);
   const [searchText, setSearchText] = useState('');
   const [statusFilter, setStatusFilter] = useState<string | undefined>(undefined);
@@ -289,10 +291,21 @@ const EmployeeManagement: React.FC = () => {
 
   return (
     <div>
-      <h2 style={{ marginBottom: 20, fontSize: 20, fontWeight: 600 }}>员工管理</h2>
-      <p style={{ color: '#666', marginBottom: 20, marginTop: -12 }}>
-        管理数字员工信息，配置技能与知识资源，全面掌控数字员工能力。
-      </p>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
+        <div>
+          <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 4 }}>员工管理</h2>
+          <p style={{ color: '#666', margin: 0 }}>
+            管理数字员工信息，配置技能与知识资源，全面掌控数字员工能力。
+          </p>
+        </div>
+        <Button
+          icon={<SolutionOutlined />}
+          onClick={() => navigate('/admin/positions')}
+          style={{ borderRadius: 8 }}
+        >
+          岗位申请
+        </Button>
+      </div>
 
       <Row gutter={16} style={{ marginBottom: 20 }}>
         <Col span={5}>
