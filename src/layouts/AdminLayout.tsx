@@ -11,11 +11,9 @@ import {
   BellOutlined,
   SettingOutlined,
   FileTextOutlined,
-  UserSwitchOutlined,
-  TrophyOutlined,
   LogoutOutlined,
-  SwapOutlined,
-  SolutionOutlined,
+  AuditOutlined,
+  TagOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { usePermission } from '../contexts/PermissionContext';
@@ -65,21 +63,12 @@ const AdminLayout: React.FC = () => {
       type: 'group' as const,
       children: [
         { key: '/admin/employees', icon: <TeamOutlined />, label: '员工管理', permission: 'employees' },
+        { key: '/admin/approval-records', icon: <AuditOutlined />, label: '审批记录', permission: 'employees' },
         { key: '/admin/positions', icon: <SettingOutlined />, label: '岗位设置', permission: 'positions' },
+        { key: '/admin/position-types', icon: <TagOutlined />, label: '岗位类型配置', permission: 'positions' },
       ],
     },
-    {
-      key: 'hr-mgmt',
-      label: '人事管理',
-      type: 'group' as const,
-      children: [
-        { key: '/admin/onboard', icon: <UserSwitchOutlined />, label: '入职管理', permission: 'onboard' },
-        { key: '/admin/transfer', icon: <SwapOutlined />, label: '调动管理', permission: 'transfer' },
-        { key: '/admin/demand', icon: <SolutionOutlined />, label: '需求管理', permission: 'demand' },
-        { key: '/admin/performance', icon: <TrophyOutlined />, label: '绩效管理', permission: 'performance' },
-        { key: '/admin/exit', icon: <LogoutOutlined />, label: '退出管理', permission: 'exit' },
-      ],
-    },
+    // 人事管理菜单已隐藏
     {
       key: 'logs-group',
       label: '任务日志',
@@ -109,7 +98,7 @@ const AdminLayout: React.FC = () => {
 
   const userMenu = {
     items: [
-      { key: 'user', label: '切换到用户端', icon: <RobotOutlined />, onClick: () => navigate('/digital-employee/plaza') },
+      { key: 'user', label: '切换到用户端', icon: <RobotOutlined />, onClick: () => navigate('/digital-employee/chat') },
       { key: 'logout', label: '退出登录', icon: <LogoutOutlined /> },
     ],
   };

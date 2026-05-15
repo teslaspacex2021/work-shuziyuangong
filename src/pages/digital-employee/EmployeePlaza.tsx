@@ -1,18 +1,19 @@
 import React, { useState, useMemo } from 'react';
 import {
-  Input, Avatar, Tag, Card, Row, Col, Badge, Select, Empty,
-  Button, Segmented, Tooltip, Drawer, Descriptions, Progress, Rate, Typography,
+  Input, Avatar, Tag, Card, Row, Col, Badge, Empty,
+  Button, Tooltip, Drawer, Descriptions, Progress, Rate, Typography,
 } from 'antd';
 import {
   SearchOutlined, ThunderboltOutlined, StarOutlined, StarFilled,
-  MessageOutlined, UserOutlined, FilterOutlined,
+  MessageOutlined, UserOutlined,
   TeamOutlined, FireOutlined,
   IdcardOutlined, EnvironmentOutlined, TrophyOutlined, RocketOutlined,
+  CrownOutlined, ClockCircleOutlined,
 } from '@ant-design/icons';
 
 const { Title } = Typography;
 import { useNavigate } from 'react-router-dom';
-import { digitalEmployees, skills, knowledgeBases, type DigitalEmployee } from '../../mock/data';
+import { digitalEmployees, positions, skills, knowledgeBases, type DigitalEmployee } from '../../mock/data';
 
 const statusColor: Record<string, string> = {
   ACTIVE: '#52c41a', TRAINING: '#1677ff', SUSPENDED: '#faad14', TERMINATED: '#ff4d4f',
@@ -24,32 +25,60 @@ const levelLabel: Record<string, string> = {
   L1: '初级', L2: '中级', L3: '高级', L4: '专家',
 };
 const levelColor: Record<string, string> = {
-  L1: '#595959', L2: '#1d39c4', L3: '#0958d9', L4: '#006d75',
+  L1: '#8c8c8c', L2: '#1d39c4', L3: '#0958d9', L4: '#006d75',
+};
+
+const positionToCategoryMap: Record<string, string> = {};
+positions.forEach((p) => {
+  positionToCategoryMap[p.name] = p.category;
+});
+positionToCategoryMap['智能综合助理'] = '综合类';
+
+const categoryOrder = ['全部', '综合类', '服务类', '技术类', '运营类', '合规类', '管理类', '财务类', '分析类'];
+
+const categoryIconColors: Record<string, string> = {
+  '全部': '#1677ff',
+  '综合类': '#722ed1',
+  '服务类': '#13c2c2',
+  '技术类': '#2f54eb',
+  '运营类': '#fa541c',
+  '合规类': '#52c41a',
+  '管理类': '#eb2f96',
+  '财务类': '#faad14',
+  '分析类': '#1890ff',
 };
 
 const EmployeePlaza: React.FC = () => {
   const navigate = useNavigate();
   const [searchText, setSearchText] = useState('');
-  const [deptFilter, setDeptFilter] = useState<string>('all');
-  const [posFilter, setPosFilter] = useState<string>('all');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [levelFilter, setLevelFilter] = useState<string>('all');
-  const [sortBy, setSortBy] = useState<string>('热度优先');
+  const [categoryFilter, setCategoryFilter] = useState<string>('全部');
+  const [posFilter, setPosFilter] = useState<string>('全部');
   const [favorites, setFavorites] = useState<Set<string>>(new Set(['DE-2026001', 'DE-2026004']));
   const [detailOpen, setDetailOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<DigitalEmployee | null>(null);
-  const [viewMode, setViewMode] = useState<string>('card');
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
 
-  const deptOptions = useMemo(() => {
-    const depts = new Set(digitalEmployees.map((e) => e.department));
-    return [{ label: '全部部门', value: 'all' }, ...Array.from(depts).map((d) => ({ label: d, value: d }))];
+  const allCategories = useMemo(() => {
+    const cats = new Set<string>();
+    digitalEmployees.forEach((e) => {
+      const cat = positionToCategoryMap[e.position] || '其他';
+      cats.add(cat);
+    });
+    return categoryOrder.filter((c) => c === '全部' || cats.has(c));
   }, []);
 
-  const posOptions = useMemo(() => {
-    const positions = new Set(digitalEmployees.map((e) => e.position));
-    return [{ label: '全部岗位', value: 'all' }, ...Array.from(positions).map((p) => ({ label: p, value: p }))];
-  }, []);
+  const positionsForCategory = useMemo(() => {
+    if (categoryFilter === '全部') {
+      const allPos = new Set(digitalEmployees.map((e) => e.position));
+      return ['全部', ...Array.from(allPos)];
+    }
+    const posSet = new Set<string>();
+    digitalEmployees.forEach((e) => {
+      const cat = positionToCategoryMap[e.position] || '其他';
+      if (cat === categoryFilter) posSet.add(e.position);
+    });
+    return ['全部', ...Array.from(posSet)];
+  }, [categoryFilter]);
 
   const filteredEmployees = useMemo(() => {
     let list = [...digitalEmployees];
@@ -63,19 +92,15 @@ const EmployeePlaza: React.FC = () => {
         e.skills.some((s) => s.toLowerCase().includes(q))
       );
     }
-    if (deptFilter !== 'all') list = list.filter((e) => e.department === deptFilter);
-    if (posFilter !== 'all') list = list.filter((e) => e.position === posFilter);
-    if (statusFilter !== 'all') list = list.filter((e) => e.status === statusFilter);
-    if (levelFilter !== 'all') list = list.filter((e) => e.level === levelFilter);
-
-    switch (sortBy) {
-      case '热度优先': list.sort((a, b) => b.heat - a.heat); break;
-      case '完成率': list.sort((a, b) => b.taskCompleteRate - a.taskCompleteRate); break;
-      case '最近活跃': break;
-      case '好评度': list.sort((a, b) => (b.likes - b.dislikes) - (a.likes - a.dislikes)); break;
+    if (categoryFilter !== '全部') {
+      list = list.filter((e) => (positionToCategoryMap[e.position] || '其他') === categoryFilter);
     }
+    if (posFilter !== '全部') {
+      list = list.filter((e) => e.position === posFilter);
+    }
+    list.sort((a, b) => b.heat - a.heat);
     return list;
-  }, [searchText, deptFilter, posFilter, statusFilter, levelFilter, sortBy]);
+  }, [searchText, categoryFilter, posFilter]);
 
   const toggleFav = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -98,16 +123,61 @@ const EmployeePlaza: React.FC = () => {
 
   const activeCount = digitalEmployees.filter((e) => e.status === 'ACTIVE').length;
 
-  const recommendedEmployees = useMemo(() => {
-    return [...digitalEmployees]
-      .filter((e) => e.status === 'ACTIVE')
-      .sort((a, b) => b.heat - a.heat)
-      .slice(0, 4);
-  }, []);
+  const recommended = useMemo(() =>
+    [...digitalEmployees].filter((e) => e.status === 'ACTIVE').sort((a, b) => {
+      const rA = a.likes / (a.likes + a.dislikes + 1);
+      const rB = b.likes / (b.likes + b.dislikes + 1);
+      return rB - rA;
+    }).slice(0, 3),
+  []);
+
+  const popular = useMemo(() =>
+    [...digitalEmployees].sort((a, b) => b.heat - a.heat).slice(0, 3),
+  []);
+
+  const newest = useMemo(() =>
+    [...digitalEmployees].sort((a, b) => b.onboardDate.localeCompare(a.onboardDate)).slice(0, 3),
+  []);
+
+  const handleCategoryChange = (cat: string) => {
+    setCategoryFilter(cat);
+    setPosFilter('全部');
+  };
+
+  const renderMiniItem = (emp: DigitalEmployee, index: number) => (
+    <div
+      key={emp.id}
+      style={{
+        display: 'flex', alignItems: 'center', gap: 10, padding: '10px 0',
+        borderBottom: index < 2 ? '1px solid #f5f5f5' : 'none',
+        cursor: 'pointer', transition: 'background 0.2s',
+      }}
+      onClick={() => openDetail(emp)}
+    >
+      <div style={{
+        width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
+        background: index === 0 ? '#ff4d4f' : index === 1 ? '#fa8c16' : '#fadb14',
+        color: index < 2 ? '#fff' : '#8c6e00',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: 12, fontWeight: 700,
+      }}>
+        {index + 1}
+      </div>
+      <Avatar size={36} src={emp.avatar} style={{ flexShrink: 0, boxShadow: '0 2px 6px rgba(0,0,0,0.08)' }} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{
+          fontWeight: 600, fontSize: 13, color: '#1a2332',
+          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+        }}>{emp.name}</div>
+        <div style={{ fontSize: 11, color: '#8c99a8', marginTop: 1 }}>{emp.position}</div>
+      </div>
+    </div>
+  );
 
   const renderEmployeeCard = (emp: DigitalEmployee) => {
     const rating = Math.min(5, Math.max(0, (emp.likes / (emp.likes + emp.dislikes + 1)) * 5));
     const isHovered = hoveredCard === emp.id;
+    const cat = positionToCategoryMap[emp.position] || '其他';
     return (
       <Col xs={24} sm={12} lg={8} xl={6} key={emp.id}>
         <div
@@ -118,69 +188,57 @@ const EmployeePlaza: React.FC = () => {
           <Card
             hoverable
             style={{
-              borderRadius: 16, height: '100%', overflow: 'hidden',
-              border: isHovered ? '1px solid #91caff' : '1px solid #f0f0f0',
-              transition: 'all 0.35s cubic-bezier(0.4,0,0.2,1)',
-              transform: isHovered ? 'translateY(-4px)' : 'translateY(0)',
+              borderRadius: 14, height: '100%', overflow: 'hidden',
+              border: isHovered ? '1px solid rgba(22,119,255,0.3)' : '1px solid #f0f0f0',
+              transition: 'all 0.3s cubic-bezier(0.4,0,0.2,1)',
+              transform: isHovered ? 'translateY(-3px)' : 'translateY(0)',
               boxShadow: isHovered
-                ? '0 12px 32px rgba(22,119,255,0.12), 0 4px 12px rgba(0,0,0,0.06)'
-                : '0 2px 8px rgba(0,0,0,0.04)',
+                ? '0 8px 24px rgba(22,119,255,0.1), 0 2px 8px rgba(0,0,0,0.04)'
+                : '0 1px 4px rgba(0,0,0,0.04)',
             }}
             styles={{ body: { padding: 0 } }}
             onClick={() => openDetail(emp)}
           >
-            <div style={{
-              background: emp.status === 'ACTIVE'
-                ? 'linear-gradient(135deg, #e8f4fd 0%, #f0f5ff 50%, #f6f9ff 100%)'
-                : emp.status === 'TRAINING'
-                  ? 'linear-gradient(135deg, #f3ecff 0%, #f9f5ff 50%, #fdf9ff 100%)'
-                  : 'linear-gradient(135deg, #f5f5f5 0%, #fafafa 100%)',
-              padding: '20px 20px 16px',
-              position: 'relative',
-            }}>
+            <div style={{ padding: '18px 18px 14px' }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-                <Badge dot color={statusColor[emp.status]} offset={[-4, 40]}>
-                  <Avatar size={48} src={emp.avatar} style={{
-                    flexShrink: 0,
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.12)',
-                  }} />
-                </Badge>
+                <div style={{ position: 'relative', flexShrink: 0 }}>
+                  <Badge dot color={statusColor[emp.status]} offset={[-3, 38]}>
+                    <Avatar size={46} src={emp.avatar} style={{ boxShadow: '0 3px 10px rgba(0,0,0,0.1)' }} />
+                  </Badge>
+                </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span style={{ fontWeight: 600, fontSize: 16, color: '#1a2332' }}>{emp.name}</span>
-                    <Tag style={{
-                      fontSize: 11, borderRadius: 4, margin: 0, lineHeight: '20px',
-                      padding: '0 8px', fontWeight: 600, color: '#fff',
-                      letterSpacing: 0.5, border: 'none',
-                      background: levelColor[emp.level],
-                    }}>{emp.level} {levelLabel[emp.level]}</Tag>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                    <span style={{ fontWeight: 700, fontSize: 15, color: '#1a2332' }}>{emp.name}</span>
+                    <Tooltip title={favorites.has(emp.id) ? '取消收藏' : '收藏'}>
+                      {favorites.has(emp.id) ? (
+                        <StarFilled style={{ color: '#faad14', cursor: 'pointer', fontSize: 15 }} onClick={(e) => toggleFav(emp.id, e)} />
+                      ) : (
+                        <StarOutlined style={{ color: '#d0d5dc', cursor: 'pointer', fontSize: 15 }} onClick={(e) => toggleFav(emp.id, e)} />
+                      )}
+                    </Tooltip>
                   </div>
-                  <div style={{ fontSize: 12, color: '#5a6b7d', marginTop: 4 }}>
-                    <EnvironmentOutlined style={{ marginRight: 4, color: '#91a7c0' }} />{emp.department}
-                  </div>
-                  <div style={{ fontSize: 12, color: '#5a6b7d', marginTop: 2 }}>
-                    <IdcardOutlined style={{ marginRight: 4, color: '#91a7c0' }} />{emp.position}
+                  <div style={{ fontSize: 12, color: '#6b7c93', display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <IdcardOutlined style={{ fontSize: 11, color: '#a0aec0' }} />
+                    <span>{emp.position}</span>
                   </div>
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                  <Tooltip title={favorites.has(emp.id) ? '取消收藏' : '收藏'}>
-                    {favorites.has(emp.id) ? (
-                      <StarFilled style={{ color: '#faad14', cursor: 'pointer', fontSize: 18 }} onClick={(e) => toggleFav(emp.id, e)} />
-                    ) : (
-                      <StarOutlined style={{ color: '#c0c8d0', cursor: 'pointer', fontSize: 18 }} onClick={(e) => toggleFav(emp.id, e)} />
-                    )}
-                  </Tooltip>
-                  <Tag color={statusColor[emp.status]} style={{ fontSize: 10, margin: 0, textAlign: 'center' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+                  <Tag style={{
+                    fontSize: 10, borderRadius: 4, margin: 0, lineHeight: '18px',
+                    padding: '0 6px', fontWeight: 600, color: '#fff',
+                    border: 'none', background: levelColor[emp.level],
+                  }}>{emp.level} {levelLabel[emp.level]}</Tag>
+                  <Tag color={statusColor[emp.status]} style={{ fontSize: 10, margin: 0, borderRadius: 4 }}>
                     {statusLabel[emp.status]}
                   </Tag>
                 </div>
               </div>
             </div>
 
-            <div style={{ padding: '12px 20px 16px' }}>
+            <div style={{ padding: '0 18px 16px' }}>
               <p style={{
-                fontSize: 13, color: '#5a6b7d', lineHeight: 1.7, margin: '0 0 12px',
-                height: 44, overflow: 'hidden', textOverflow: 'ellipsis',
+                fontSize: 12.5, color: '#6b7c93', lineHeight: 1.7, margin: '0 0 10px',
+                height: 42, overflow: 'hidden', textOverflow: 'ellipsis',
                 display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
               }}>{emp.description}</p>
 
@@ -188,59 +246,61 @@ const EmployeePlaza: React.FC = () => {
                 {emp.skills.slice(0, 3).map((s) => (
                   <Tag key={s} style={{
                     fontSize: 11, margin: 0, borderRadius: 4,
-                    background: '#eef3ff', color: '#3d6cd4', border: 'none',
+                    background: '#f0f5ff', color: '#3d6cd4', border: 'none',
+                    lineHeight: '20px', padding: '0 6px',
                   }}>{s}</Tag>
                 ))}
                 {emp.skills.length > 3 && <Tag style={{
                   fontSize: 11, margin: 0, borderRadius: 4,
                   background: '#f5f5f5', color: '#8c8c8c', border: 'none',
+                  lineHeight: '20px', padding: '0 6px',
                 }}>+{emp.skills.length - 3}</Tag>}
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 10 }}>
-                <Rate disabled defaultValue={rating} allowHalf style={{ fontSize: 12 }} />
-                <span style={{ fontSize: 11, color: '#b0b8c4' }}>({emp.likes})</span>
               </div>
 
               <div style={{
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                borderTop: '1px solid #f0f3f6', paddingTop: 12, fontSize: 12, color: '#8c99a8',
+                borderTop: '1px solid #f5f5f5', paddingTop: 10, fontSize: 12, color: '#8c99a8',
               }}>
-                <Tooltip title="使用人数">
-                  <span><UserOutlined /> {Math.floor(emp.heat / 10)}</span>
-                </Tooltip>
-                <Tooltip title="完成率">
-                  <span><TrophyOutlined style={{ color: '#52c41a' }} /> {emp.taskCompleteRate}%</span>
-                </Tooltip>
-                <Tooltip title="Token消耗">
-                  <span><ThunderboltOutlined style={{ color: '#fa8c16' }} /> {(emp.tokensUsed / 10000).toFixed(0)}万</span>
-                </Tooltip>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <FireOutlined style={{ color: '#fa541c', fontSize: 12 }} />
+                  <span>{(emp.heat / 100).toFixed(1)}k</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <UserOutlined style={{ fontSize: 11 }} />
+                  <span>{Math.floor(emp.heat / 10)}</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <TrophyOutlined style={{ color: '#52c41a', fontSize: 12 }} />
+                  <span>{emp.taskCompleteRate}%</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <StarFilled style={{ color: '#faad14', fontSize: 11 }} />
+                  <span>{emp.likes}</span>
+                </div>
               </div>
             </div>
           </Card>
 
-          {/* Hover overlay with chat button */}
           <div style={{
             position: 'absolute', bottom: 0, left: 0, right: 0,
-            background: 'linear-gradient(0deg, rgba(22,119,255,0.95) 0%, rgba(22,119,255,0.85) 60%, transparent 100%)',
-            borderRadius: '0 0 16px 16px',
-            padding: '40px 20px 16px',
+            background: 'linear-gradient(0deg, rgba(22,119,255,0.92) 0%, rgba(22,119,255,0.8) 50%, transparent 100%)',
+            borderRadius: '0 0 14px 14px',
+            padding: '36px 18px 14px',
             display: 'flex', justifyContent: 'center',
             opacity: isHovered ? 1 : 0,
-            transform: isHovered ? 'translateY(0)' : 'translateY(8px)',
-            transition: 'all 0.3s cubic-bezier(0.4,0,0.2,1)',
+            transform: isHovered ? 'translateY(0)' : 'translateY(6px)',
+            transition: 'all 0.25s cubic-bezier(0.4,0,0.2,1)',
             pointerEvents: isHovered ? 'auto' : 'none',
           }}>
             <Button
               type="primary"
-              size="large"
               icon={<MessageOutlined />}
               onClick={(e) => startChat(emp.id, e)}
               style={{
-                borderRadius: 24, padding: '0 32px', height: 40,
+                borderRadius: 20, padding: '0 28px', height: 36,
                 background: '#fff', color: '#1677ff', border: 'none',
-                fontWeight: 600, fontSize: 14,
-                boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
+                fontWeight: 600, fontSize: 13,
+                boxShadow: '0 4px 14px rgba(0,0,0,0.12)',
               }}
             >
               发起对话
@@ -251,261 +311,198 @@ const EmployeePlaza: React.FC = () => {
     );
   };
 
-  const renderListItem = (emp: DigitalEmployee) => (
-    <Card
-      key={emp.id}
-      hoverable
-      style={{
-        borderRadius: 12, marginBottom: 12,
-        border: '1px solid #f0f3f6',
-        transition: 'all 0.25s ease',
-      }}
-      styles={{ body: { padding: '16px 20px' } }}
-      onClick={() => openDetail(emp)}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-        <Badge dot color={statusColor[emp.status]} offset={[-4, 36]}>
-          <Avatar size={48} src={emp.avatar} />
-        </Badge>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontWeight: 600, fontSize: 15, color: '#1a2332' }}>{emp.name}</span>
-            <Tag color={statusColor[emp.status]} style={{ fontSize: 10 }}>{statusLabel[emp.status]}</Tag>
-            <Tag style={{
-              fontSize: 11, fontWeight: 600, color: '#fff',
-              padding: '0 8px', letterSpacing: 0.5, border: 'none',
-              background: levelColor[emp.level],
-            }}>{emp.level} {levelLabel[emp.level]}</Tag>
-          </div>
-          <div style={{ fontSize: 12, color: '#5a6b7d', marginTop: 4 }}>
-            {emp.department} · {emp.position} · 归属人：{emp.owner}
-          </div>
-          <div style={{ fontSize: 13, color: '#8c99a8', marginTop: 4 }}>{emp.description}</div>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexShrink: 0 }}>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 18, fontWeight: 600, color: '#1677ff' }}>{emp.taskCompleteRate}%</div>
-            <div style={{ fontSize: 11, color: '#b0b8c4' }}>完成率</div>
-          </div>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 18, fontWeight: 600, color: '#fa8c16' }}>{(emp.tokensUsed / 10000).toFixed(0)}万</div>
-            <div style={{ fontSize: 11, color: '#b0b8c4' }}>Tokens</div>
-          </div>
-          <Button
-            type="primary"
-            icon={<MessageOutlined />}
-            onClick={(e) => startChat(emp.id, e)}
-            style={{ borderRadius: 8 }}
-          >
-            发起对话
-          </Button>
-        </div>
-      </div>
-    </Card>
-  );
-
   return (
-    <div style={{ padding: 24, maxWidth: 1600, margin: '0 auto' }}>
-      {/* Hero header */}
+    <div style={{ padding: '20px 24px', maxWidth: 1600, margin: '0 auto', background: '#f8f9fb', minHeight: '100vh' }}>
+      {/* Header */}
       <div style={{
-        marginBottom: 24,
-        padding: '28px 32px',
-        background: 'linear-gradient(135deg, #1a3a5c 0%, #1e4d7e 40%, #2064a2 100%)',
-        borderRadius: 16,
-        position: 'relative',
-        overflow: 'hidden',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        marginBottom: 20,
       }}>
-        <div style={{
-          position: 'absolute', top: -40, right: -20, width: 200, height: 200,
-          borderRadius: '50%', background: 'rgba(255,255,255,0.04)',
-        }} />
-        <div style={{
-          position: 'absolute', bottom: -60, right: 120, width: 160, height: 160,
-          borderRadius: '50%', background: 'rgba(255,255,255,0.03)',
-        }} />
-        <h2 style={{
-          fontSize: 26, fontWeight: 700, marginBottom: 8, color: '#fff',
-          display: 'flex', alignItems: 'center', gap: 10, position: 'relative',
-        }}>
-          <TeamOutlined />
-          数字员工广场
-        </h2>
-        <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: 14, margin: 0, position: 'relative' }}>
-          浏览和发现AI数字员工，查看员工能力档案，选择合适的数字员工开始协作
-          <span style={{ marginLeft: 20 }}>
-            <Badge color="#52c41a" text={<span style={{ fontSize: 13, color: 'rgba(255,255,255,0.9)' }}>在线 {activeCount} 人</span>} />
-            <span style={{ margin: '0 12px', color: 'rgba(255,255,255,0.3)' }}>|</span>
-            <span style={{ color: 'rgba(255,255,255,0.9)' }}>共 {digitalEmployees.length} 名数字员工</span>
-          </span>
-        </p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <TeamOutlined style={{ fontSize: 22, color: '#1677ff' }} />
+          <span style={{ fontSize: 20, fontWeight: 700, color: '#1a2332' }}>数字员工广场</span>
+          <Badge color="#52c41a" text={<span style={{ fontSize: 12, color: '#52c41a' }}>在线 {activeCount} 人</span>} />
+          <span style={{ fontSize: 12, color: '#b0b8c4' }}>共 {digitalEmployees.length} 名数字员工</span>
+        </div>
+        <Input
+          placeholder="搜索数字员工名称、岗位、技能..."
+          prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
+          value={searchText}
+          onChange={(e) => setSearchText(e.target.value)}
+          allowClear
+          style={{ width: 280, borderRadius: 8, borderColor: '#e0e4ea' }}
+        />
       </div>
 
-      {/* Recommended Employees */}
-      <div style={{ marginBottom: 24 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-          <div style={{
-            width: 28, height: 28, borderRadius: 8,
-            background: 'linear-gradient(135deg, #ff6b35 0%, #f7931e 100%)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
-            <RocketOutlined style={{ fontSize: 14, color: '#fff' }} />
-          </div>
-          <Title level={5} style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#1a2332' }}>
-            推荐员工
-          </Title>
-          <span style={{ fontSize: 13, color: '#8c99a8', marginLeft: 4 }}>为你精选最受欢迎的数字员工</span>
-        </div>
-        <Row gutter={[14, 14]}>
-          {recommendedEmployees.map((emp) => {
-            const rating = Math.min(5, Math.max(0, (emp.likes / (emp.likes + emp.dislikes + 1)) * 5));
+      {/* Top 3-Column Recommendation Section */}
+      <Row gutter={16} style={{ marginBottom: 24 }}>
+        {/* 为你推荐 */}
+        <Col xs={24} md={8}>
+          <Card style={{
+            borderRadius: 14, border: 'none', height: '100%',
+            background: 'linear-gradient(145deg, #fff7f0 0%, #fff 60%)',
+            boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
+          }} styles={{ body: { padding: '16px 20px' } }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+              <div style={{
+                width: 32, height: 32, borderRadius: 10,
+                background: 'linear-gradient(135deg, #ff6b35 0%, #ff9a5c 100%)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                boxShadow: '0 3px 8px rgba(255,107,53,0.3)',
+              }}>
+                <RocketOutlined style={{ fontSize: 15, color: '#fff' }} />
+              </div>
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: '#1a2332', lineHeight: 1.2 }}>为你推荐</div>
+                <div style={{ fontSize: 11, color: '#b0b8c4' }}>Personal Picks</div>
+              </div>
+            </div>
+            {recommended.map((emp, i) => renderMiniItem(emp, i))}
+          </Card>
+        </Col>
+
+        {/* 热门精选 */}
+        <Col xs={24} md={8}>
+          <Card style={{
+            borderRadius: 14, border: 'none', height: '100%',
+            background: 'linear-gradient(145deg, #fff5f5 0%, #fff 60%)',
+            boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
+          }} styles={{ body: { padding: '16px 20px' } }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+              <div style={{
+                width: 32, height: 32, borderRadius: 10,
+                background: 'linear-gradient(135deg, #ff4d4f 0%, #ff7875 100%)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                boxShadow: '0 3px 8px rgba(255,77,79,0.3)',
+              }}>
+                <FireOutlined style={{ fontSize: 15, color: '#fff' }} />
+              </div>
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: '#1a2332', lineHeight: 1.2 }}>热门精选</div>
+                <div style={{ fontSize: 11, color: '#b0b8c4' }}>Popular Now</div>
+              </div>
+            </div>
+            {popular.map((emp, i) => renderMiniItem(emp, i))}
+          </Card>
+        </Col>
+
+        {/* 最近上新 */}
+        <Col xs={24} md={8}>
+          <Card style={{
+            borderRadius: 14, border: 'none', height: '100%',
+            background: 'linear-gradient(145deg, #f0f5ff 0%, #fff 60%)',
+            boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
+          }} styles={{ body: { padding: '16px 20px' } }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+              <div style={{
+                width: 32, height: 32, borderRadius: 10,
+                background: 'linear-gradient(135deg, #1677ff 0%, #4096ff 100%)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                boxShadow: '0 3px 8px rgba(22,119,255,0.3)',
+              }}>
+                <ClockCircleOutlined style={{ fontSize: 15, color: '#fff' }} />
+              </div>
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: '#1a2332', lineHeight: 1.2 }}>最近上新</div>
+                <div style={{ fontSize: 11, color: '#b0b8c4' }}>Fresh Releases</div>
+              </div>
+            </div>
+            {newest.map((emp, i) => renderMiniItem(emp, i))}
+          </Card>
+        </Col>
+      </Row>
+
+      {/* Two-Level Tab Navigation */}
+      <div style={{
+        background: '#fff', borderRadius: 14, padding: '16px 20px 0',
+        marginBottom: 20, boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
+      }}>
+        {/* Level 1: Category Tabs */}
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 0, flexWrap: 'wrap',
+          borderBottom: '1px solid #f0f0f0', paddingBottom: 12, marginBottom: 12,
+        }}>
+          {allCategories.map((cat) => {
+            const isActive = categoryFilter === cat;
             return (
-              <Col xs={24} sm={12} lg={6} key={`rec-${emp.id}`}>
-                <Card
-                  hoverable
-                  style={{
-                    borderRadius: 14,
-                    border: '1px solid #e8f0fe',
-                    background: 'linear-gradient(135deg, #fafcff 0%, #f0f5ff 100%)',
-                    overflow: 'hidden',
-                    transition: 'all 0.25s ease',
-                    boxShadow: '0 2px 10px rgba(22,119,255,0.06)',
-                  }}
-                  styles={{ body: { padding: '16px 18px' } }}
-                  onClick={() => openDetail(emp)}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
-                    <div style={{ position: 'relative', flexShrink: 0 }}>
-                      <Badge dot color={statusColor[emp.status]} offset={[-3, 36]}>
-                        <Avatar size={44} src={emp.avatar} style={{ boxShadow: '0 3px 10px rgba(0,0,0,0.12)' }} />
-                      </Badge>
-                      <div style={{
-                        position: 'absolute', top: -6, left: -6,
-                        width: 20, height: 20, borderRadius: '50%',
-                        background: 'linear-gradient(135deg, #ff6b35 0%, #f7931e 100%)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        boxShadow: '0 2px 6px rgba(255,107,53,0.4)',
-                      }}>
-                        <RocketOutlined style={{ fontSize: 10, color: '#fff' }} />
-                      </div>
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                        <span style={{ fontWeight: 600, fontSize: 14, color: '#1a2332' }}>{emp.name}</span>
-                        <Tag style={{
-                          fontSize: 10, borderRadius: 4, margin: 0, lineHeight: '18px',
-                          padding: '0 6px', fontWeight: 600, color: '#fff',
-                          border: 'none', background: levelColor[emp.level],
-                        }}>{emp.level}</Tag>
-                      </div>
-                      <div style={{ fontSize: 11, color: '#7c8fa0', marginTop: 2 }}>
-                        {emp.department} · {emp.position}
-                      </div>
-                    </div>
-                  </div>
-                  <div style={{
-                    fontSize: 12, color: '#5a6b7d', lineHeight: 1.6, marginBottom: 10,
-                    height: 38, overflow: 'hidden', textOverflow: 'ellipsis',
-                    display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
-                  }}>{emp.description}</div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                      <Rate disabled value={rating} allowHalf style={{ fontSize: 11 }} />
-                      <span style={{ fontSize: 11, color: '#b0b8c4' }}>({emp.likes})</span>
-                    </div>
-                    <Button
-                      type="primary"
-                      size="small"
-                      icon={<MessageOutlined />}
-                      onClick={(e) => startChat(emp.id, e)}
-                      style={{ borderRadius: 16, fontSize: 12, height: 28, padding: '0 12px' }}
-                    >
-                      对话
-                    </Button>
-                  </div>
-                </Card>
-              </Col>
+              <div
+                key={cat}
+                onClick={() => handleCategoryChange(cat)}
+                style={{
+                  padding: '6px 18px',
+                  borderRadius: 6,
+                  cursor: 'pointer',
+                  fontSize: 14,
+                  fontWeight: isActive ? 600 : 400,
+                  color: isActive ? '#fff' : '#4a5568',
+                  background: isActive ? (categoryIconColors[cat] || '#1677ff') : 'transparent',
+                  transition: 'all 0.2s ease',
+                  userSelect: 'none',
+                }}
+              >
+                {cat}
+              </div>
             );
           })}
-        </Row>
+        </div>
+
+        {/* Level 2: Position Sub-tabs */}
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 0, flexWrap: 'wrap',
+          paddingBottom: 14,
+        }}>
+          {positionsForCategory.map((pos) => {
+            const isActive = posFilter === pos;
+            return (
+              <div
+                key={pos}
+                onClick={() => setPosFilter(pos)}
+                style={{
+                  padding: '4px 14px',
+                  borderRadius: 4,
+                  cursor: 'pointer',
+                  fontSize: 13,
+                  fontWeight: isActive ? 600 : 400,
+                  color: isActive ? '#1677ff' : '#6b7c93',
+                  background: isActive ? '#f0f5ff' : 'transparent',
+                  transition: 'all 0.2s ease',
+                  userSelect: 'none',
+                }}
+              >
+                {pos}
+              </div>
+            );
+          })}
+        </div>
       </div>
 
-      {/* Search & Filters */}
-      <Card
-        style={{ borderRadius: 12, marginBottom: 20, border: '1px solid #e8ecf1' }}
-        styles={{ body: { padding: '14px 20px' } }}
-      >
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-          <Input
-            placeholder="搜索数字员工名称、岗位、技能、部门..."
-            prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
-            value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
-            allowClear
-            style={{ width: 320, borderRadius: 8, borderColor: '#d9dfe6' }}
-            size="large"
-          />
-          <Select value={deptFilter} onChange={setDeptFilter} style={{ width: 150 }} options={deptOptions} />
-          <Select value={posFilter} onChange={setPosFilter} style={{ width: 160 }} options={posOptions} />
-          <Select
-            value={statusFilter}
-            onChange={setStatusFilter}
-            style={{ width: 120 }}
-            options={[
-              { label: '全部状态', value: 'all' },
-              { label: '在线', value: 'ACTIVE' },
-              { label: '训练中', value: 'TRAINING' },
-              { label: '已暂停', value: 'SUSPENDED' },
-            ]}
-          />
-          <Select
-            value={levelFilter}
-            onChange={setLevelFilter}
-            style={{ width: 120 }}
-            options={[
-              { label: '全部职级', value: 'all' },
-              { label: 'L1 初级', value: 'L1' },
-              { label: 'L2 中级', value: 'L2' },
-              { label: 'L3 高级', value: 'L3' },
-              { label: 'L4 专家', value: 'L4' },
-            ]}
-          />
-          <div style={{ flex: 1 }} />
-          <FilterOutlined style={{ color: '#b0b8c4' }} />
-          <Select value={sortBy} onChange={setSortBy} style={{ width: 120 }} options={[
-            { label: '热度优先', value: '热度优先' },
-            { label: '完成率', value: '完成率' },
-            { label: '好评度', value: '好评度' },
-            { label: '最近活跃', value: '最近活跃' },
-          ]} />
-          <Segmented
-            value={viewMode}
-            onChange={setViewMode}
-            options={[
-              { label: '卡片', value: 'card' },
-              { label: '列表', value: 'list' },
-            ]}
-          />
-        </div>
-      </Card>
-
-      <div style={{ marginBottom: 12, color: '#8c99a8', fontSize: 13 }}>
-        <FireOutlined style={{ color: '#fa8c16', marginRight: 4 }} />
-        找到 {filteredEmployees.length} 名数字员工
+      {/* Results Count */}
+      <div style={{ marginBottom: 14, color: '#8c99a8', fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
+        <FireOutlined style={{ color: '#fa8c16' }} />
+        找到 <span style={{ fontWeight: 600, color: '#1a2332' }}>{filteredEmployees.length}</span> 名数字员工
+        {categoryFilter !== '全部' && (
+          <Tag
+            closable
+            onClose={() => handleCategoryChange('全部')}
+            style={{ marginLeft: 8, borderRadius: 4, fontSize: 12 }}
+          >{categoryFilter}</Tag>
+        )}
+        {posFilter !== '全部' && (
+          <Tag
+            closable
+            onClose={() => setPosFilter('全部')}
+            style={{ borderRadius: 4, fontSize: 12 }}
+          >{posFilter}</Tag>
+        )}
       </div>
 
-      {viewMode === 'card' ? (
-        <Row gutter={[16, 16]}>
-          {filteredEmployees.map(renderEmployeeCard)}
-          {filteredEmployees.length === 0 && (
-            <Col span={24}><Empty description="暂无匹配的数字员工" style={{ padding: 60 }} /></Col>
-          )}
-        </Row>
-      ) : (
-        <div>
-          {filteredEmployees.map(renderListItem)}
-          {filteredEmployees.length === 0 && <Empty description="暂无匹配的数字员工" style={{ padding: 60 }} />}
-        </div>
-      )}
+      {/* Employee Card Grid */}
+      <Row gutter={[16, 16]}>
+        {filteredEmployees.map(renderEmployeeCard)}
+        {filteredEmployees.length === 0 && (
+          <Col span={24}><Empty description="暂无匹配的数字员工" style={{ padding: 60 }} /></Col>
+        )}
+      </Row>
 
       {/* Employee Detail Drawer */}
       <Drawer
@@ -520,9 +517,9 @@ const EmployeePlaza: React.FC = () => {
           const emp = selectedEmployee;
           const empSkills = skills.filter((s) => emp.skillIds.includes(s.id));
           const empKBs = knowledgeBases.filter((kb) => emp.knowledgeIds.includes(kb.id));
+          const cat = positionToCategoryMap[emp.position] || '其他';
           return (
             <div>
-              {/* Detail Header */}
               <div style={{
                 background: 'linear-gradient(135deg, #1a3a5c 0%, #2064a2 100%)',
                 padding: '32px 24px 24px',
@@ -537,6 +534,12 @@ const EmployeePlaza: React.FC = () => {
                 <div style={{ fontSize: 22, fontWeight: 700, marginTop: 14, color: '#fff' }}>{emp.name}</div>
                 <div style={{ color: 'rgba(255,255,255,0.7)', marginTop: 6, fontSize: 13 }}>
                   {emp.department} · {emp.position}
+                </div>
+                <div style={{ marginTop: 6 }}>
+                  <Tag style={{
+                    fontSize: 11, color: 'rgba(255,255,255,0.85)',
+                    background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: 4,
+                  }}>{cat}</Tag>
                 </div>
                 <div style={{ marginTop: 10, display: 'flex', justifyContent: 'center', gap: 6 }}>
                   <Tag color={statusColor[emp.status]}>{statusLabel[emp.status]}</Tag>
@@ -559,7 +562,6 @@ const EmployeePlaza: React.FC = () => {
                 </Button>
               </div>
 
-              {/* Detail Body */}
               <div style={{ padding: '16px 24px 24px' }}>
                 <Card size="small" style={{ borderRadius: 12, marginBottom: 16, background: '#f8fafc', border: 'none' }}>
                   <p style={{ fontSize: 13, color: '#5a6b7d', lineHeight: 1.8, margin: 0 }}>{emp.description}</p>
@@ -571,6 +573,7 @@ const EmployeePlaza: React.FC = () => {
                     <Descriptions.Item label="职级"><Tag color="blue">{emp.level}</Tag></Descriptions.Item>
                     <Descriptions.Item label="部门">{emp.department}</Descriptions.Item>
                     <Descriptions.Item label="岗位">{emp.position}</Descriptions.Item>
+                    <Descriptions.Item label="岗位性质"><Tag color={categoryIconColors[cat]}>{cat}</Tag></Descriptions.Item>
                     <Descriptions.Item label="归属人">{emp.owner}</Descriptions.Item>
                     <Descriptions.Item label="身份类型"><Tag color={emp.ownerType === '自有' ? 'blue' : 'orange'}>{emp.ownerType}</Tag></Descriptions.Item>
                     <Descriptions.Item label="入职日期">{emp.onboardDate}</Descriptions.Item>

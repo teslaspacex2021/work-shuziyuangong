@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Layout, Menu, Button, Avatar } from 'antd';
+import { Layout, Menu, Button, Avatar, Badge } from 'antd';
 import {
   UserOutlined,
   TeamOutlined,
@@ -7,7 +7,6 @@ import {
   PlusOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
-  SettingOutlined,
   AppstoreOutlined,
   BookOutlined,
   BulbOutlined,
@@ -25,14 +24,14 @@ const UserLayout: React.FC = () => {
   const [collapsed, setCollapsed] = useState(false);
 
   const menuItems = [
-    { key: '/user/chat', icon: <UserOutlined />, label: '个人助手' },
+    { key: '/user/chat', icon: <UserOutlined />, label: '个人助手', disabled: true },
     { key: '/user/match', icon: <TeamOutlined />, label: '人岗匹配' },
     { key: '/user/marketing', icon: <BulbOutlined />, label: '营销智能体' },
     { key: '/user/opportunity', icon: <AimOutlined />, label: '翼达（商机挖掘）' },
-    { key: '/user/agents', icon: <AppstoreOutlined />, label: '更多智能体' },
+    { key: '/user/agents', icon: <AppstoreOutlined />, label: 'Agent World' },
     { type: 'divider' as const },
     { key: '/user/knowledge', icon: <BookOutlined />, label: '知识中心' },
-    { key: 'digital-employee-link', icon: <RobotOutlined />, label: 'AI数字员工' },
+    { key: 'digital-employee-link', icon: <RobotOutlined />, label: <span>AI数字员工 <Badge count={6} size="small" offset={[6, -2]} /></span> },
     {
       key: 'knowledge-ops',
       icon: <FundProjectionScreenOutlined />,
@@ -42,7 +41,7 @@ const UserLayout: React.FC = () => {
         { key: '/user/knowledge-ops/content', label: '内容管理' },
       ],
     },
-    { key: '/user/recent', icon: <HistoryOutlined />, label: '最近对话' },
+    { key: '/user/recent', icon: <HistoryOutlined />, label: '最近对话', disabled: true },
   ];
 
   const getSelectedKey = () => {
@@ -53,11 +52,12 @@ const UserLayout: React.FC = () => {
   };
 
   const handleMenuClick = (key: string) => {
+    if (key === '/user/chat' || key === '/user/recent') return;
     if (key === 'digital-employee-link') {
-      window.open('/digital-employee/plaza', '_blank');
+      window.open('/digital-employee/chat', '_blank');
       return;
     }
-    if (['/user/match', '/user/marketing', '/user/opportunity', '/user/knowledge', '/user/recent', '/user/knowledge-ops/overview', '/user/knowledge-ops/content'].includes(key)) {
+    if (['/user/match', '/user/marketing', '/user/opportunity', '/user/knowledge', '/user/knowledge-ops/overview', '/user/knowledge-ops/content'].includes(key)) {
       navigate('/user/agents');
       return;
     }
@@ -118,13 +118,6 @@ const UserLayout: React.FC = () => {
             onClick={() => setCollapsed(!collapsed)}
           />
           <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-            <Button
-              type="text"
-              icon={<SettingOutlined />}
-              onClick={() => navigate('/admin/dashboard')}
-            >
-              管理后台
-            </Button>
             <Avatar size="small" icon={<UserOutlined />} style={{ background: '#e4393c' }} />
           </div>
         </Header>

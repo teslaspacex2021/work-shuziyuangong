@@ -12,9 +12,9 @@ import {
   CloseOutlined, DatabaseOutlined, FileTextOutlined,
   PlusOutlined, ContactsOutlined, ClockCircleOutlined,
   ScheduleOutlined, TeamOutlined, ApartmentOutlined,
-  MessageOutlined, UploadOutlined,
+  MessageOutlined, UploadOutlined, IdcardOutlined,
 } from '@ant-design/icons';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useLocation } from 'react-router-dom';
 import {
   digitalEmployees, conversations, tasks, skills, knowledgeBases,
   scheduledTasks,
@@ -71,9 +71,20 @@ interface PositionNode {
   employees: typeof digitalEmployees;
 }
 
+const empStatusColor: Record<string, string> = {
+  ACTIVE: '#52c41a', TRAINING: '#1677ff', SUSPENDED: '#faad14', TERMINATED: '#ff4d4f',
+};
+const empStatusLabel: Record<string, string> = {
+  ACTIVE: '在线', TRAINING: '训练中', SUSPENDED: '已暂停', TERMINATED: '已停用',
+};
+
 const ChatPage: React.FC = () => {
   const [searchParams] = useSearchParams();
+  const location = useLocation();
+  const isUserLayout = location.pathname.startsWith('/user/');
   const initialEmployeeId = searchParams.get('employeeId') || '';
+  const isNewChat = searchParams.get('newChat') === '1';
+  const initialMsg = searchParams.get('msg') || '';
 
   const [selectedConvId, setSelectedConvId] = useState<string>(initialEmployeeId);
   const [convSearchText, setConvSearchText] = useState('');
@@ -97,15 +108,31 @@ const ChatPage: React.FC = () => {
   const [feedbackVisible, setFeedbackVisible] = useState(false);
   const [feedbackForm] = Form.useForm();
 
+  const [summonEmployeeVisible, setSummonEmployeeVisible] = useState(false);
+  const [summonSearch, setSummonSearch] = useState('');
+
   useEffect(() => {
     if (initialEmployeeId && !activeConvIds.includes(initialEmployeeId)) {
       setActiveConvIds((prev) => [initialEmployeeId, ...prev]);
     }
   }, [initialEmployeeId]);
 
+  useEffect(() => {
+    if (!isUserLayout && isNewChat && initialEmployeeId) {
+      setSelectedConvId(initialEmployeeId);
+    }
+  }, [isNewChat, initialEmployeeId, isUserLayout]);
+
+  const isDigitalEmployeeNewChat = !isUserLayout && isNewChat;
+  const isNewConversationMode = (isUserLayout && !initialEmployeeId && !selectedConvId) || isDigitalEmployeeNewChat;
+
+  const activeEmployeeId = (isDigitalEmployeeNewChat && initialEmployeeId)
+    ? initialEmployeeId
+    : selectedConvId;
+
   const selectedEmployee = useMemo(
-    () => digitalEmployees.find((e) => e.id === selectedConvId) || null,
-    [selectedConvId],
+    () => digitalEmployees.find((e) => e.id === activeEmployeeId) || null,
+    [activeEmployeeId],
   );
 
   const allConversations = useMemo(() => {
@@ -126,21 +153,50 @@ const ChatPage: React.FC = () => {
   }, [convSearchText, allConversations]);
 
   const currentMessages = useMemo(() => {
-    return chatHistories[selectedConvId] || [];
-  }, [chatHistories, selectedConvId]);
+    return chatHistories[activeEmployeeId] || [];
+  }, [chatHistories, activeEmployeeId]);
 
   useEffect(() => {
-    if (selectedConvId && selectedEmployee && !chatHistories[selectedConvId]) {
+    if (activeEmployeeId && selectedEmployee && !chatHistories[activeEmployeeId]) {
       setChatHistories((prev) => ({
         ...prev,
-        [selectedConvId]: [{
+        [activeEmployeeId]: [{
           role: 'assistant',
           content: `您好！我是 **${selectedEmployee.name}**，${selectedEmployee.description}\n\n请问有什么可以帮您？`,
           time: new Date().toLocaleTimeString(),
         }],
       }));
     }
-  }, [selectedConvId, selectedEmployee, chatHistories]);
+  }, [activeEmployeeId, selectedEmployee, chatHistories]);
+
+  const [initialMsgSent, setInitialMsgSent] = useState(false);
+  useEffect(() => {
+    if (initialMsg && activeEmployeeId && selectedEmployee && !initialMsgSent && chatHistories[activeEmployeeId]) {
+      setInitialMsgSent(true);
+      const userMsg: ChatMsg = {
+        role: 'user',
+        content: initialMsg,
+        time: new Date().toLocaleTimeString(),
+      };
+      setChatHistories((prev) => ({
+        ...prev,
+        [activeEmployeeId]: [...(prev[activeEmployeeId] || []), userMsg],
+      }));
+      setTimeout(() => {
+        const resp = mockResponses[Math.floor(Math.random() * mockResponses.length)];
+        const usedSkills = selectedEmployee.skills.slice(0, Math.floor(Math.random() * 2) + 1);
+        setChatHistories((prev) => ({
+          ...prev,
+          [activeEmployeeId]: [...(prev[activeEmployeeId] || []), {
+            role: 'assistant' as const,
+            content: resp,
+            time: new Date().toLocaleTimeString(),
+            usedSkills,
+          }],
+        }));
+      }, 1000 + Math.random() * 500);
+    }
+  }, [initialMsg, activeEmployeeId, selectedEmployee, chatHistories, initialMsgSent]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -200,7 +256,7 @@ const ChatPage: React.FC = () => {
   };
 
   const handleSend = () => {
-    if (!inputValue.trim() || loading || !selectedConvId || !selectedEmployee) return;
+    if (!inputValue.trim() || loading || !activeEmployeeId || !selectedEmployee) return;
     const userMsg: ChatMsg = {
       role: 'user',
       content: inputValue.trim(),
@@ -208,12 +264,12 @@ const ChatPage: React.FC = () => {
     };
     setChatHistories((prev) => ({
       ...prev,
-      [selectedConvId]: [...(prev[selectedConvId] || []), userMsg],
+      [activeEmployeeId]: [...(prev[activeEmployeeId] || []), userMsg],
     }));
     setInputValue('');
     setLoading(true);
 
-    const empId = selectedConvId;
+    const empId = activeEmployeeId;
     setTimeout(() => {
       const resp = mockResponses[Math.floor(Math.random() * mockResponses.length)];
       const emp = digitalEmployees.find((e) => e.id === empId);
@@ -268,6 +324,16 @@ const ChatPage: React.FC = () => {
   const empSkills = selectedEmployee ? skills.filter((s) => selectedEmployee.skillIds.includes(s.id)) : [];
   const empKnowledge = selectedEmployee ? knowledgeBases.filter((kb) => selectedEmployee.knowledgeIds.includes(kb.id)) : [];
 
+  const summonFilteredEmployees = useMemo(() => {
+    if (!summonSearch) return digitalEmployees;
+    const q = summonSearch.toLowerCase();
+    return digitalEmployees.filter((e) =>
+      e.name.toLowerCase().includes(q) ||
+      e.position.toLowerCase().includes(q) ||
+      e.department.toLowerCase().includes(q)
+    );
+  }, [summonSearch]);
+
   const selectedNodeEmployees = useMemo(() => {
     if (!selectedTreeNode) return [];
     if (contactsTab === 'dept') {
@@ -280,7 +346,8 @@ const ChatPage: React.FC = () => {
 
   return (
     <div style={{ display: 'flex', height: 'calc(100vh - 56px)', background: '#f5f5f5' }}>
-      {/* Left Panel - Conversation List */}
+      {/* Left Panel - Conversation List (hidden in new conversation mode from user layout) */}
+      {!isNewConversationMode && (
       <div style={{
         width: 280, background: '#fff', borderRight: '1px solid #f0f0f0',
         display: 'flex', flexDirection: 'column', flexShrink: 0,
@@ -365,14 +432,153 @@ const ChatPage: React.FC = () => {
           })}
         </div>
       </div>
+      )}
 
       {/* Right Panel - Chat Area */}
-      {!selectedConvId || !selectedEmployee ? (
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fff' }}>
-          <Empty
-            image={<RobotOutlined style={{ fontSize: 64, color: '#d9d9d9' }} />}
-            description={<span style={{ color: '#999', fontSize: 15 }}>选择一个对话开始聊天</span>}
-          />
+      {!activeEmployeeId || !selectedEmployee ? (
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#fff' }}>
+          {/* Welcome Interface */}
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 24px 0' }}>
+            <div style={{ textAlign: 'center', marginBottom: 32 }}>
+              <div style={{ fontSize: 48, fontWeight: 800, color: isUserLayout ? '#e4393c' : '#1677ff', marginBottom: 4, lineHeight: 1.2 }}>
+                Hi
+              </div>
+              <div style={{ fontSize: 28, fontWeight: 700, color: isUserLayout ? '#e4393c' : '#1677ff', marginBottom: 8 }}>
+                {isUserLayout ? '我是天翼云数字人' : '我是您的AI数字员工'}
+              </div>
+              <div style={{ fontSize: 15, color: '#666' }}>{isUserLayout ? '请问有什么可以帮您的吗？' : '请选择一位数字员工开始对话吧'}</div>
+            </div>
+
+            {/* Suggested Questions */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'center', marginBottom: 32, maxWidth: 700 }}>
+              {(isUserLayout
+                ? ['要如何销售？', '公司对于软考有什么政策', '天翼云科技公司英文名称', '部门业务通知单 与 工作联系单 的区别']
+                : ['帮我处理今日待办工作', '生成本周工作总结', '分析最近的业务数据', '查看最新的知识更新']
+              ).map((q) => (
+                <div
+                  key={q}
+                  onClick={() => setInputValue(q)}
+                  style={{
+                    padding: '8px 16px', borderRadius: 20, border: '1px solid #e8e8e8',
+                    background: '#fff', fontSize: 14, color: '#333', cursor: 'pointer',
+                    transition: 'all 0.2s',
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#1677ff'; e.currentTarget.style.color = '#1677ff'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#e8e8e8'; e.currentTarget.style.color = '#333'; }}
+                >
+                  {q}
+                </div>
+              ))}
+              <div style={{ padding: '8px 16px', fontSize: 14, color: '#1677ff', cursor: 'pointer' }}>
+                ↻ 换一换
+              </div>
+            </div>
+
+            {/* Input Area */}
+            <div style={{ width: '100%', maxWidth: 700, marginBottom: 24 }}>
+              <div style={{
+                border: '1px solid #e8e8e8', borderRadius: 12, padding: '12px 16px',
+                background: '#fff', boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+              }}>
+                <Input
+                  placeholder="请输入指令或问题和我对话吧"
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  variant="borderless"
+                  style={{ fontSize: 15, marginBottom: 8 }}
+                  suffix={
+                    <Button
+                      type="primary"
+                      shape="circle"
+                      icon={<SendOutlined />}
+                      size="small"
+                      style={{ background: '#333' }}
+                    />
+                  }
+                />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Tooltip title="上传文件">
+                    <Button type="text" icon={<PaperClipOutlined />} size="small" style={{ color: '#999' }} />
+                  </Tooltip>
+                  <Button
+                    size="small"
+                    style={{ borderRadius: 6, borderColor: '#ff4d4f', color: '#ff4d4f', fontWeight: 500 }}
+                    icon={<ThunderboltOutlined />}
+                  >
+                    深度思考
+                  </Button>
+                  <Button
+                    size="small"
+                    style={{ borderRadius: 6, borderColor: '#52c41a', color: '#52c41a', fontWeight: 500 }}
+                    icon={<SearchOutlined />}
+                  >
+                    全网搜索
+                  </Button>
+                  <Button
+                    size="small"
+                    type="dashed"
+                    icon={<RobotOutlined />}
+                    onClick={() => setSummonEmployeeVisible(true)}
+                    style={{ borderRadius: 6, color: '#1677ff', borderColor: '#1677ff', fontWeight: 500 }}
+                  >
+                    {isUserLayout ? '唤起数字员工' : '选择数字员工'}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom Shortcuts */}
+          <div style={{
+            borderTop: '1px solid #f0f0f0', padding: '12px 24px',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, flexWrap: 'wrap',
+          }}>
+            {isUserLayout ? (
+              <>
+                {[
+                  { icon: '🎯', name: '惠企优才' },
+                  { icon: '📖', name: '企业知识问答' },
+                  { icon: '📊', name: '数据运营智能体' },
+                  { icon: '💰', name: '价值经营' },
+                  { icon: '✍️', name: '办公写作助手' },
+                ].map((agent) => (
+                  <Button
+                    key={agent.name}
+                    type="text"
+                    style={{ borderRadius: 8, fontSize: 13, color: '#333', border: '1px solid #f0f0f0', padding: '4px 12px', height: 32 }}
+                  >
+                    {agent.icon} {agent.name}
+                  </Button>
+                ))}
+                <Button
+                  type="text"
+                  style={{ borderRadius: 8, fontSize: 13, color: '#333', border: '1px solid #f0f0f0', padding: '4px 12px', height: 32 }}
+                >
+                  <RobotOutlined /> 更多
+                </Button>
+              </>
+            ) : (
+              <>
+                {digitalEmployees.filter(e => e.status === 'ACTIVE').slice(0, 5).map((emp) => (
+                  <Button
+                    key={emp.id}
+                    type="text"
+                    style={{ borderRadius: 8, fontSize: 13, color: '#333', border: '1px solid #f0f0f0', padding: '4px 12px', height: 32 }}
+                    onClick={() => startChatWithEmployee(emp.id)}
+                  >
+                    <RobotOutlined /> {emp.name}
+                  </Button>
+                ))}
+                <Button
+                  type="text"
+                  style={{ borderRadius: 8, fontSize: 13, color: '#333', border: '1px solid #f0f0f0', padding: '4px 12px', height: 32 }}
+                  onClick={() => setSummonEmployeeVisible(true)}
+                >
+                  <RobotOutlined /> 更多
+                </Button>
+              </>
+            )}
+          </div>
         </div>
       ) : (
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
@@ -517,6 +723,16 @@ const ChatPage: React.FC = () => {
 
               {/* Input Bar */}
               <div style={{ background: '#fff', padding: '12px 20px 16px', borderTop: '1px solid #f0f0f0' }}>
+                <div style={{ marginBottom: 8 }}>
+                  <Button
+                    type="dashed"
+                    icon={<RobotOutlined />}
+                    onClick={() => setSummonEmployeeVisible(true)}
+                    style={{ borderRadius: 8, color: '#1677ff', borderColor: '#1677ff' }}
+                  >
+                    {isUserLayout ? `当前：${selectedEmployee?.name || '选择数字员工'}` : (selectedEmployee?.name || '选择数字员工')}
+                  </Button>
+                </div>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
                   <Tooltip title="上传文件"><Button type="text" icon={<PaperClipOutlined />} /></Tooltip>
                   <TextArea
@@ -998,6 +1214,70 @@ const ChatPage: React.FC = () => {
             </Upload>
           </Form.Item>
         </Form>
+      </Modal>
+
+      {/* Summon Digital Employee Modal */}
+      <Modal
+        title={<span><RobotOutlined style={{ marginRight: 8 }} />选择数字员工</span>}
+        open={summonEmployeeVisible}
+        onCancel={() => { setSummonEmployeeVisible(false); setSummonSearch(''); }}
+        footer={null}
+        width={800}
+        styles={{ body: { padding: '16px 24px' } }}
+      >
+        <Input
+          placeholder="搜索数字员工名称、岗位、部门..."
+          prefix={<SearchOutlined />}
+          value={summonSearch}
+          onChange={(e) => setSummonSearch(e.target.value)}
+          allowClear
+          style={{ marginBottom: 16, borderRadius: 8 }}
+        />
+        <div style={{ maxHeight: 460, overflow: 'auto' }}>
+          <Row gutter={[12, 12]}>
+            {summonFilteredEmployees.map((emp) => (
+              <Col key={emp.id} xs={24} sm={12} md={8}>
+                <Card
+                  size="small"
+                  hoverable
+                  style={{ borderRadius: 10 }}
+                  styles={{ body: { padding: '14px 16px' } }}
+                  onClick={() => {
+                    startChatWithEmployee(emp.id);
+                    setSummonEmployeeVisible(false);
+                    setSummonSearch('');
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <Badge dot color={empStatusColor[emp.status]} offset={[-2, 32]}>
+                      <Avatar size={40} src={emp.avatar} style={{ flexShrink: 0 }} />
+                    </Badge>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ fontWeight: 600, fontSize: 14 }}>{emp.name}</span>
+                        <Tag
+                          color={empStatusColor[emp.status]}
+                          style={{ fontSize: 10, lineHeight: '16px', padding: '0 4px', margin: 0, borderRadius: 4 }}
+                        >
+                          {empStatusLabel[emp.status]}
+                        </Tag>
+                      </div>
+                      <div style={{ fontSize: 12, color: '#999', marginTop: 2, display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <IdcardOutlined style={{ fontSize: 11 }} />
+                        {emp.department} · {emp.position}
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              </Col>
+            ))}
+            {summonFilteredEmployees.length === 0 && (
+              <Col span={24}>
+                <Empty description="暂无匹配的数字员工" style={{ padding: 40 }} />
+              </Col>
+            )}
+          </Row>
+        </div>
       </Modal>
     </div>
   );

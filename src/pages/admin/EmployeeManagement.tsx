@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import {
   Card, Table, Tag, Button, Space, Avatar, Modal, Form, Input, Select,
   Row, Col, Statistic, Descriptions, Checkbox, Badge, message, Tabs, Progress,
+  InputNumber, Tooltip,
 } from 'antd';
 import {
   PlusOutlined, SearchOutlined, SettingOutlined, TeamOutlined,
@@ -16,6 +17,14 @@ import {
 
 const levelColor: Record<string, string> = {
   L1: '#8c8c8c', L2: '#2f54eb', L3: '#1677ff', L4: '#13c2c2',
+};
+
+const statusLabelMap: Record<string, string> = {
+  ACTIVE: '在线', TRAINING: '训练中', SUSPENDED: '已暂停', TERMINATED: '已停用',
+};
+
+const statusColorMap: Record<string, string> = {
+  ACTIVE: 'success', TRAINING: 'processing', SUSPENDED: 'warning', TERMINATED: 'error',
 };
 
 const typeIcon: Record<string, React.ReactNode> = {
@@ -52,6 +61,14 @@ const EmployeeManagement: React.FC = () => {
 
   const nextId = `DE-${new Date().getFullYear()}${String(employees.length + 1).padStart(3, '0')}`;
 
+  const handleStatusChange = (empId: string, newStatus: DigitalEmployee['status']) => {
+    setEmployees((prev) =>
+      prev.map((e) => e.id === empId ? { ...e, status: newStatus } : e),
+    );
+    const label = statusLabelMap[newStatus];
+    message.success(`员工运行状态已变更为「${label}」`);
+  };
+
   const openConfig = (emp: DigitalEmployee, tab: string = 'skills') => {
     setSelectedEmployee(emp);
     setSelectedSkillIds([...emp.skillIds]);
@@ -70,7 +87,7 @@ const EmployeeManagement: React.FC = () => {
           : e,
       ),
     );
-    message.success(`已为 ${selectedEmployee.name} 更新配置`);
+    message.success(`已为 ${selectedEmployee.name} 提交配置变更审批`);
     setConfigVisible(false);
   };
 
@@ -81,12 +98,16 @@ const EmployeeManagement: React.FC = () => {
 
   const openEdit = (emp: DigitalEmployee) => {
     setSelectedEmployee(emp);
+    const pos = positions.find((p) => p.name === emp.position);
     editForm.setFieldsValue({
       name: emp.name,
       department: emp.department,
       position: emp.position,
+      positionCategory: pos?.category || '',
       owner: emp.owner,
       ownerType: emp.ownerType,
+      level: emp.level,
+      status: emp.status,
       tokensQuota: emp.tokensQuota,
       description: emp.description,
     });
@@ -120,7 +141,7 @@ const EmployeeManagement: React.FC = () => {
         skillIds: [],
         knowledgeIds: [],
         description: values.description || '',
-        level: 'L1',
+        level: values.level || 'L1',
         tokensQuota: Number(values.tokensQuota) || 2000000,
         tokensUsed: 0,
         taskCompleteRate: 0,
@@ -196,8 +217,7 @@ const EmployeeManagement: React.FC = () => {
     {
       title: '运行状态', dataIndex: 'status', key: 'status', width: 100,
       render: (s: string) => {
-        const color = s === 'ACTIVE' ? 'success' : s === 'TRAINING' ? 'processing' : s === 'SUSPENDED' ? 'warning' : 'error';
-        return <Tag color={color}>{s}</Tag>;
+        return <Tag color={statusColorMap[s]}>{statusLabelMap[s] || s}</Tag>;
       },
     },
     {
@@ -206,18 +226,34 @@ const EmployeeManagement: React.FC = () => {
     },
     { title: '最近活跃', dataIndex: 'lastActive', key: 'lastActive', width: 100 },
     {
-      title: '操作', key: 'action', width: 200, fixed: 'right' as const,
+      title: '操作', key: 'action', width: 160, fixed: 'right' as const,
       render: (_: unknown, record: DigitalEmployee) => (
-        <Space>
-          <Button type="primary" size="small" icon={<SettingOutlined />} onClick={() => openConfig(record)}>
-            配置
-          </Button>
+        <Space size={4}>
+          <Tooltip title="配置">
+            <Button type="primary" size="small" icon={<SettingOutlined />} onClick={() => openConfig(record)} />
+          </Tooltip>
           {record.employmentStatus === '在职' && (
-            <Button size="small" icon={<EditOutlined />} onClick={() => openEdit(record)}>
-              编辑
-            </Button>
+            <Tooltip title="编辑">
+              <Button size="small" icon={<EditOutlined />} onClick={() => openEdit(record)} />
+            </Tooltip>
           )}
-          <Button type="link" size="small" onClick={() => showDetail(record)}>详情</Button>
+          {record.employmentStatus === '在职' && (
+            <Select
+              size="small"
+              value={record.status}
+              style={{ width: 80 }}
+              onChange={(val) => handleStatusChange(record.id, val)}
+              options={[
+                { value: 'ACTIVE', label: '在线' },
+                { value: 'TRAINING', label: '训练中' },
+                { value: 'SUSPENDED', label: '已暂停' },
+                { value: 'TERMINATED', label: '已停用' },
+              ]}
+            />
+          )}
+          <Tooltip title="详情">
+            <Button type="text" size="small" icon={<InfoCircleOutlined />} onClick={() => showDetail(record)} />
+          </Tooltip>
         </Space>
       ),
     },
@@ -307,12 +343,12 @@ const EmployeeManagement: React.FC = () => {
         </Col>
         <Col span={5}>
           <Card style={{ borderRadius: 12 }}>
-            <Statistic title="ACTIVE" value={activeCount} prefix={<CheckCircleOutlined style={{ color: '#1677ff' }} />} valueStyle={{ color: '#1677ff' }} />
+            <Statistic title="在线" value={activeCount} prefix={<CheckCircleOutlined style={{ color: '#1677ff' }} />} valueStyle={{ color: '#1677ff' }} />
           </Card>
         </Col>
         <Col span={5}>
           <Card style={{ borderRadius: 12 }}>
-            <Statistic title="TRAINING" value={trainingCount} prefix={<ExperimentOutlined style={{ color: '#722ed1' }} />} valueStyle={{ color: '#722ed1' }} />
+            <Statistic title="训练中" value={trainingCount} prefix={<ExperimentOutlined style={{ color: '#722ed1' }} />} valueStyle={{ color: '#722ed1' }} />
           </Card>
         </Col>
         <Col span={4}>
@@ -369,9 +405,9 @@ const EmployeeManagement: React.FC = () => {
         onCancel={() => { addForm.resetFields(); setAddVisible(false); }}
         onOk={handleAddEmployee}
         okText="提交"
-        width={640}
+        width={720}
       >
-        <Form form={addForm} layout="vertical" initialValues={{ id: nextId }}>
+        <Form form={addForm} layout="vertical" initialValues={{ id: nextId, level: 'L1', tokensQuota: 2000000 }}>
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item label="员工名称" name="name" rules={[{ required: true, message: '请输入员工名称' }]}>
@@ -381,6 +417,38 @@ const EmployeeManagement: React.FC = () => {
             <Col span={12}>
               <Form.Item label="工号（自动生成）" name="id">
                 <Input disabled style={{ fontFamily: 'monospace' }} />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row gutter={16}>
+            <Col span={8}>
+              <Form.Item label="岗位" name="position" rules={[{ required: true, message: '请选择岗位' }]}>
+                <Select
+                  placeholder="请选择岗位"
+                  options={positions.filter((p) => p.status === '启用').map((p) => ({ value: p.name, label: `${p.name}（${p.department}）` }))}
+                />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item label="岗位类别" name="positionCategory">
+                <Select
+                  placeholder="请选择岗位类别"
+                  options={[
+                    { value: '综合类', label: '综合类' },
+                    { value: '服务类', label: '服务类' },
+                    { value: '技术类', label: '技术类' },
+                    { value: '运营类', label: '运营类' },
+                    { value: '合规类', label: '合规类' },
+                    { value: '管理类', label: '管理类' },
+                    { value: '财务类', label: '财务类' },
+                    { value: '分析类', label: '分析类' },
+                  ]}
+                />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item label="部门" name="department" rules={[{ required: true, message: '请输入部门' }]}>
+                <Input placeholder="请输入所属部门" />
               </Form.Item>
             </Col>
           </Row>
@@ -397,34 +465,36 @@ const EmployeeManagement: React.FC = () => {
             </Col>
           </Row>
           <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item label="岗位" name="position" rules={[{ required: true, message: '请选择岗位' }]}>
-                <Select
-                  placeholder="请选择岗位"
-                  options={positions.filter((p) => p.status === '启用').map((p) => ({ value: p.name, label: `${p.name}（${p.department}）` }))}
+            <Col span={8}>
+              <Form.Item label="职级" name="level" rules={[{ required: true, message: '请选择职级' }]}>
+                <Select options={[
+                  { value: 'L1', label: 'L1 初级' },
+                  { value: 'L2', label: 'L2 中级' },
+                  { value: 'L3', label: 'L3 高级' },
+                  { value: 'L4', label: 'L4 专家' },
+                ]} />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item label="Tokens配额" name="tokensQuota" rules={[{ required: true, message: '请输入配额' }]}>
+                <InputNumber
+                  style={{ width: '100%' }}
+                  placeholder="默认200万"
+                  min={100000}
+                  step={500000}
+                  formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                  addonAfter="tokens"
                 />
               </Form.Item>
             </Col>
-            <Col span={12}>
-              <Form.Item label="部门" name="department" rules={[{ required: true, message: '请输入部门' }]}>
-                <Input placeholder="请输入所属部门" />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item label="Tokens配额" name="tokensQuota">
-                <Input type="number" placeholder="默认200万" suffix="tokens" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
+            <Col span={8}>
               <Form.Item label="头像URL" name="avatarUrl" tooltip="非必填，留空将自动生成">
-                <Input placeholder="可选，输入头像图片地址" />
+                <Input placeholder="可选，输入头像地址" />
               </Form.Item>
             </Col>
           </Row>
-          <Form.Item label="描述" name="description">
-            <Input.TextArea rows={3} placeholder="请描述该数字员工的职责和能力" />
+          <Form.Item label="员工描述" name="description" rules={[{ required: true, message: '请描述该数字员工的职责和能力' }]}>
+            <Input.TextArea rows={3} placeholder="请描述该数字员工的职责、能力和适用场景" />
           </Form.Item>
         </Form>
       </Modal>
@@ -435,7 +505,7 @@ const EmployeeManagement: React.FC = () => {
         open={configVisible}
         onCancel={() => setConfigVisible(false)}
         onOk={saveConfig}
-        okText="保存配置"
+        okText="提交审批"
         width={720}
       >
         {selectedEmployee && (
@@ -513,7 +583,7 @@ const EmployeeManagement: React.FC = () => {
         onCancel={() => setEditVisible(false)}
         onOk={handleEdit}
         okText="提交审批"
-        width={600}
+        width={720}
       >
         <Form form={editForm} layout="vertical" style={{ marginTop: 16 }}>
           <Row gutter={16}>
@@ -532,30 +602,75 @@ const EmployeeManagement: React.FC = () => {
             <Col span={12}>
               <Form.Item label="岗位" name="position" rules={[{ required: true }]}>
                 <Select
-                  options={positions.filter((p) => p.status === '启用').map((p) => ({ value: p.name, label: p.name }))}
+                  options={positions.filter((p) => p.status === '启用').map((p) => ({ value: p.name, label: `${p.name}（${p.department}）` }))}
                 />
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item label="所属自然人" name="owner" rules={[{ required: true }]}>
-                <Input />
+              <Form.Item label="岗位类别" name="positionCategory">
+                <Select
+                  placeholder="请选择岗位类别"
+                  options={[
+                    { value: '综合类', label: '综合类' },
+                    { value: '服务类', label: '服务类' },
+                    { value: '技术类', label: '技术类' },
+                    { value: '运营类', label: '运营类' },
+                    { value: '合规类', label: '合规类' },
+                    { value: '管理类', label: '管理类' },
+                    { value: '财务类', label: '财务类' },
+                    { value: '分析类', label: '分析类' },
+                  ]}
+                />
               </Form.Item>
             </Col>
           </Row>
           <Row gutter={16}>
             <Col span={12}>
+              <Form.Item label="所属自然人" name="owner" rules={[{ required: true }]}>
+                <Input />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
               <Form.Item label="身份类型" name="ownerType">
                 <Select options={[{ value: '自有', label: '自有' }, { value: '外包', label: '外包' }]} />
               </Form.Item>
             </Col>
-            <Col span={12}>
+          </Row>
+          <Row gutter={16}>
+            <Col span={8}>
+              <Form.Item label="职级" name="level">
+                <Select options={[
+                  { value: 'L1', label: 'L1 初级' },
+                  { value: 'L2', label: 'L2 中级' },
+                  { value: 'L3', label: 'L3 高级' },
+                  { value: 'L4', label: 'L4 专家' },
+                ]} />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item label="运行状态" name="status">
+                <Select options={[
+                  { value: 'ACTIVE', label: '在线' },
+                  { value: 'TRAINING', label: '训练中' },
+                  { value: 'SUSPENDED', label: '已暂停' },
+                  { value: 'TERMINATED', label: '已停用' },
+                ]} />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
               <Form.Item label="Tokens配额" name="tokensQuota">
-                <Input type="number" suffix="tokens" />
+                <InputNumber
+                  style={{ width: '100%' }}
+                  min={100000}
+                  step={500000}
+                  formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                  addonAfter="tokens"
+                />
               </Form.Item>
             </Col>
           </Row>
           <Form.Item label="描述" name="description">
-            <Input.TextArea rows={3} />
+            <Input.TextArea rows={3} placeholder="描述该数字员工的职责和能力" />
           </Form.Item>
         </Form>
       </Modal>
@@ -585,7 +700,7 @@ const EmployeeManagement: React.FC = () => {
                 <Tag color={selectedEmployee.employmentStatus === '在职' ? 'green' : 'default'}>{selectedEmployee.employmentStatus}</Tag>
               </Descriptions.Item>
               <Descriptions.Item label="运行状态">
-                <Tag color={selectedEmployee.status === 'ACTIVE' ? 'success' : selectedEmployee.status === 'TRAINING' ? 'processing' : 'warning'}>{selectedEmployee.status}</Tag>
+                <Tag color={statusColorMap[selectedEmployee.status]}>{statusLabelMap[selectedEmployee.status]}</Tag>
               </Descriptions.Item>
               <Descriptions.Item label="职级">
                 <Tag color={levelColor[selectedEmployee.level]} style={{ color: '#fff' }}>

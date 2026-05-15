@@ -1,11 +1,12 @@
 import React, { useState, useMemo } from 'react';
 import {
   Card, Table, Tag, Button, Space, Modal, Form, Input, Select, InputNumber,
-  Row, Col, Statistic, message,
+  Row, Col, Statistic, message, Radio, Tooltip,
 } from 'antd';
 import {
-  SearchOutlined, PlusOutlined, EditOutlined,
+  SearchOutlined, PlusOutlined, EditOutlined, DeleteOutlined,
   AppstoreOutlined, CheckCircleOutlined, StopOutlined, TeamOutlined,
+  ExclamationCircleFilled, SwapOutlined, PauseCircleOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { positions, type PositionItem } from '../../mock/data';
@@ -18,6 +19,7 @@ const categoryColors: Record<string, string> = {
   '管理类': 'purple',
   '财务类': 'gold',
   '分析类': 'magenta',
+  '综合类': 'default',
 };
 
 const allSkillOptions = [
@@ -33,6 +35,8 @@ const departmentOptions = [
   '人力资源部', '财务共享中心', 'IT运维部', '综合管理部', '经营分析部', '法务部',
 ];
 
+const categoryOptions = ['服务类', '技术类', '运营类', '合规类', '管理类', '财务类', '分析类', '综合类'];
+
 const PositionSettings: React.FC = () => {
   const [data, setData] = useState<PositionItem[]>(positions);
   const [searchText, setSearchText] = useState('');
@@ -41,6 +45,11 @@ const PositionSettings: React.FC = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [editingItem, setEditingItem] = useState<PositionItem | null>(null);
   const [form] = Form.useForm();
+
+  const [suspendModalVisible, setSuspendModalVisible] = useState(false);
+  const [suspendTarget, setSuspendTarget] = useState<PositionItem | null>(null);
+  const [suspendAction, setSuspendAction] = useState<'migrate' | 'suspend'>('suspend');
+  const [migrateTarget, setMigrateTarget] = useState<string | undefined>(undefined);
 
   const filteredData = useMemo(() => {
     return data.filter((p) => {
@@ -68,9 +77,88 @@ const PositionSettings: React.FC = () => {
   };
 
   const handleToggleStatus = (record: PositionItem) => {
-    const newStatus = record.status === '启用' ? '停用' : '启用';
-    setData((prev) => prev.map((p) => (p.id === record.id ? { ...p, status: newStatus } : p)));
-    message.success(`已${newStatus}岗位：${record.name}`);
+    if (record.status === '停用') {
+      setData((prev) => prev.map((p) => (p.id === record.id ? { ...p, status: '启用' } : p)));
+      message.success(`已启用岗位：${record.name}`);
+      return;
+    }
+
+    if (record.employeeCount > 0) {
+      setSuspendTarget(record);
+      setSuspendAction('suspend');
+      setMigrateTarget(undefined);
+      setSuspendModalVisible(true);
+    } else {
+      setData((prev) => prev.map((p) => (p.id === record.id ? { ...p, status: '停用' } : p)));
+      message.success(`已停用岗位：${record.name}`);
+    }
+  };
+
+  const handleSuspendConfirm = () => {
+    if (!suspendTarget) return;
+
+    if (suspendAction === 'migrate' && !migrateTarget) {
+      message.warning('请选择迁移目标岗位');
+      return;
+    }
+
+    if (suspendAction === 'migrate') {
+      const targetPos = data.find((p) => p.id === migrateTarget);
+      setData((prev) => prev.map((p) => {
+        if (p.id === suspendTarget.id) return { ...p, status: '停用' as const, employeeCount: 0 };
+        if (p.id === migrateTarget) return { ...p, employeeCount: p.employeeCount + suspendTarget.employeeCount };
+        return p;
+      }));
+      message.success(`已停用「${suspendTarget.name}」，${suspendTarget.employeeCount} 位员工已迁移至「${targetPos?.name}」，调岗审批已发起`);
+    } else {
+      setData((prev) => prev.map((p) => (p.id === suspendTarget.id ? { ...p, status: '停用' as const } : p)));
+      message.success(`已停用「${suspendTarget.name}」，${suspendTarget.employeeCount} 位关联员工已暂停（SUSPENDED），审批已发起`);
+    }
+
+    setSuspendModalVisible(false);
+    setSuspendTarget(null);
+  };
+
+  const handleDelete = (record: PositionItem) => {
+    if (record.employeeCount > 0 && record.status === '启用') {
+      Modal.warning({
+        title: '无法删除',
+        icon: <ExclamationCircleFilled />,
+        content: (
+          <div>
+            <p>该岗位下仍有 <strong>{record.employeeCount}</strong> 位在职数字员工，请先完成人员迁移后再删除。</p>
+            <p style={{ color: '#999', fontSize: 13 }}>
+              建议先停用该岗位（选择迁移方案），待员工全部迁出后再执行删除操作。
+            </p>
+          </div>
+        ),
+        okText: '知道了',
+      });
+      return;
+    }
+
+    Modal.confirm({
+      title: '确认删除岗位',
+      icon: <ExclamationCircleFilled />,
+      content: (
+        <div>
+          <p>确定要删除岗位 <strong>「{record.name}」</strong> 吗？</p>
+          {record.employeeCount > 0 && record.status === '停用' && (
+            <p style={{ color: '#999', fontSize: 13 }}>
+              该岗位下有 {record.employeeCount} 位已暂停/离职员工，历史数据中岗位名称将保留为快照。
+            </p>
+          )}
+          <p style={{ color: '#999', fontSize: 13 }}>此操作需要审批确认。</p>
+        </div>
+      ),
+      okText: '确认删除',
+      okButtonProps: { danger: true },
+      cancelText: '取消',
+      onOk() {
+        setData((prev) => prev.filter((p) => p.id !== record.id));
+        message.success(`岗位「${record.name}」删除审批已发起`);
+      },
+    });
   };
 
   const handleSubmit = () => {
@@ -95,6 +183,13 @@ const PositionSettings: React.FC = () => {
       form.resetFields();
     });
   };
+
+  const migrateOptions = useMemo(() => {
+    if (!suspendTarget) return [];
+    return data
+      .filter((p) => p.id !== suspendTarget.id && p.status === '启用')
+      .map((p) => ({ label: `${p.name}（${p.department}，在岗 ${p.employeeCount}/${p.maxEmployeeCount}）`, value: p.id }));
+  }, [data, suspendTarget]);
 
   const columns: ColumnsType<PositionItem> = [
     { title: '岗位ID', dataIndex: 'id', key: 'id', width: 100 },
@@ -133,10 +228,14 @@ const PositionSettings: React.FC = () => {
       ),
     },
     {
-      title: '操作', key: 'action', width: 180, fixed: 'right',
+      title: '操作', key: 'action', width: 200, fixed: 'right',
       render: (_, record) => (
         <Space size="small">
-          <Button type="link" size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)}>编辑</Button>
+          <Tooltip title="编辑">
+            <Button type="link" size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)}>
+              编辑
+            </Button>
+          </Tooltip>
           <Button
             type="link"
             size="small"
@@ -145,6 +244,11 @@ const PositionSettings: React.FC = () => {
           >
             {record.status === '启用' ? '停用' : '启用'}
           </Button>
+          <Tooltip title="删除">
+            <Button type="link" size="small" danger icon={<DeleteOutlined />} onClick={() => handleDelete(record)}>
+              删除
+            </Button>
+          </Tooltip>
         </Space>
       ),
     },
@@ -216,11 +320,12 @@ const PositionSettings: React.FC = () => {
           columns={columns}
           dataSource={filteredData}
           rowKey="id"
-          scroll={{ x: 1300 }}
+          scroll={{ x: 1400 }}
           pagination={{ pageSize: 10, showTotal: (total) => `共 ${total} 条` }}
         />
       </Card>
 
+      {/* Add/Edit Modal */}
       <Modal
         title={editingItem ? '编辑岗位' : '新增岗位'}
         open={modalVisible}
@@ -239,7 +344,7 @@ const PositionSettings: React.FC = () => {
           <Form.Item name="category" label="岗位分类" rules={[{ required: true, message: '请选择岗位分类' }]}>
             <Select
               placeholder="请选择分类"
-              options={['服务类', '技术类', '运营类', '合规类', '管理类', '财务类', '分析类'].map((c) => ({ label: c, value: c }))}
+              options={categoryOptions.map((c) => ({ label: c, value: c }))}
             />
           </Form.Item>
           <Form.Item name="level" label="等级要求" rules={[{ required: true, message: '请输入等级要求' }]}>
@@ -259,6 +364,82 @@ const PositionSettings: React.FC = () => {
             <Input.TextArea rows={3} placeholder="请输入岗位描述" />
           </Form.Item>
         </Form>
+      </Modal>
+
+      {/* Suspend/Migrate Confirmation Modal */}
+      <Modal
+        title={
+          <Space>
+            <ExclamationCircleFilled style={{ color: '#faad14' }} />
+            <span>停用岗位 — {suspendTarget?.name}</span>
+          </Space>
+        }
+        open={suspendModalVisible}
+        onOk={handleSuspendConfirm}
+        onCancel={() => { setSuspendModalVisible(false); setSuspendTarget(null); }}
+        okText="提交审批"
+        cancelText="取消"
+        width={560}
+      >
+        {suspendTarget && (
+          <div style={{ marginTop: 16 }}>
+            <div style={{
+              background: '#fff7e6', border: '1px solid #ffd591', borderRadius: 8,
+              padding: '12px 16px', marginBottom: 16,
+            }}>
+              <p style={{ margin: 0, fontWeight: 500, color: '#d48806' }}>
+                该岗位下有 <strong>{suspendTarget.employeeCount}</strong> 位在职数字员工
+              </p>
+              <p style={{ margin: '4px 0 0', color: '#666', fontSize: 13 }}>
+                停用前请选择员工的处理方案：
+              </p>
+            </div>
+
+            <Radio.Group
+              value={suspendAction}
+              onChange={(e) => { setSuspendAction(e.target.value); setMigrateTarget(undefined); }}
+              style={{ width: '100%' }}
+            >
+              <Space direction="vertical" style={{ width: '100%' }}>
+                <Radio value="migrate" style={{ width: '100%' }}>
+                  <div>
+                    <div style={{ fontWeight: 500 }}>
+                      <SwapOutlined style={{ marginRight: 6, color: '#1677ff' }} />
+                      方案A：迁移至其他岗位
+                    </div>
+                    <div style={{ fontSize: 12, color: '#999', marginLeft: 22 }}>
+                      关联员工将走调岗流程，迁移至选定的目标岗位
+                    </div>
+                  </div>
+                </Radio>
+
+                {suspendAction === 'migrate' && (
+                  <div style={{ paddingLeft: 24, marginBottom: 8 }}>
+                    <Select
+                      placeholder="请选择迁移目标岗位"
+                      style={{ width: '100%' }}
+                      value={migrateTarget}
+                      onChange={setMigrateTarget}
+                      options={migrateOptions}
+                    />
+                  </div>
+                )}
+
+                <Radio value="suspend" style={{ width: '100%' }}>
+                  <div>
+                    <div style={{ fontWeight: 500 }}>
+                      <PauseCircleOutlined style={{ marginRight: 6, color: '#faad14' }} />
+                      方案B：暂停关联员工
+                    </div>
+                    <div style={{ fontSize: 12, color: '#999', marginLeft: 22 }}>
+                      关联员工运行状态将变更为"已暂停"（SUSPENDED）
+                    </div>
+                  </div>
+                </Radio>
+              </Space>
+            </Radio.Group>
+          </div>
+        )}
       </Modal>
     </div>
   );

@@ -11,8 +11,8 @@ import DigitalEmployeeDirectory from './pages/user/DigitalEmployeeDirectory';
 import ChatPage from './pages/user/ChatPage';
 import AgentHub from './pages/user/AgentHub';
 
-import EmployeePlaza from './pages/digital-employee/EmployeePlaza';
 import EmployeeSchedule from './pages/digital-employee/EmployeeSchedule';
+import NewChatPage from './pages/digital-employee/NewChatPage';
 import UserFeedback from './pages/digital-employee/UserFeedback';
 
 import Dashboard from './pages/admin/Dashboard';
@@ -27,6 +27,8 @@ import PerformanceManagement from './pages/admin/PerformanceManagement';
 import ExitManagement from './pages/admin/ExitManagement';
 import TaskLogs from './pages/admin/TaskLogs';
 import AdminFeedbackList from './pages/admin/AdminFeedbackList';
+import ApprovalRecords from './pages/admin/ApprovalRecords';
+import PositionTypeConfig from './pages/admin/PositionTypeConfig';
 
 function App() {
   return (
@@ -64,12 +66,12 @@ function App() {
 
             {/* AI Digital Employee Portal (independent) */}
             <Route path="/digital-employee" element={<DigitalEmployeeLayout />}>
-              <Route index element={<Navigate to="/digital-employee/plaza" replace />} />
-              <Route path="plaza" element={<EmployeePlaza />} />
+              <Route index element={<Navigate to="/digital-employee/new-chat" replace />} />
+              <Route path="new-chat" element={<NewChatPage />} />
               <Route path="schedule" element={<EmployeeSchedule />} />
               <Route path="feedback" element={<UserFeedback />} />
               <Route path="chat" element={<ChatPage />} />
-              <Route path="*" element={<EmployeePlaza />} />
+              <Route path="*" element={<ChatPage />} />
             </Route>
 
             {/* Admin Portal */}
@@ -79,7 +81,9 @@ function App() {
               <Route path="pending" element={<PendingTasks />} />
               <Route path="alerts" element={<AlertsWarning />} />
               <Route path="employees" element={<EmployeeManagement />} />
+              <Route path="approval-records" element={<ApprovalRecords />} />
               <Route path="positions" element={<PositionSettings />} />
+              <Route path="position-types" element={<PositionTypeConfig />} />
               <Route path="onboard" element={<OnboardManagement />} />
               <Route path="transfer" element={<TransferManagement />} />
               <Route path="demand" element={<DemandManagement />} />

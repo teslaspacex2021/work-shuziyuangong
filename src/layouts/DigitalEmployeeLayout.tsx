@@ -6,7 +6,6 @@ import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   SettingOutlined,
-  TeamOutlined,
   ScheduleOutlined,
   ArrowLeftOutlined,
   PlusOutlined,
@@ -23,21 +22,27 @@ const DigitalEmployeeLayout: React.FC = () => {
 
   const menuItems = [
     { key: '/digital-employee/chat', icon: <ClockCircleOutlined />, label: '对话记录' },
-    { key: '/digital-employee/plaza', icon: <TeamOutlined />, label: '员工广场' },
     { key: '/digital-employee/schedule', icon: <ScheduleOutlined />, label: '定时任务' },
+    { type: 'divider' as const },
+    { key: '/admin/dashboard', icon: <SettingOutlined />, label: '管理后台' },
   ];
 
   const getSelectedKey = () => {
     if (location.pathname.startsWith('/digital-employee/chat')) return '/digital-employee/chat';
+    if (location.pathname === '/digital-employee/new-chat') return '';
     return location.pathname;
   };
 
   const handleMenuClick = ({ key }: { key: string }) => {
+    if (key === '/admin/dashboard') {
+      window.open('/admin/dashboard', '_blank');
+      return;
+    }
     navigate(key);
   };
 
   const handleNewChat = () => {
-    navigate('/digital-employee/chat?employeeId=DE-2026000');
+    navigate('/digital-employee/new-chat');
   };
 
   return (
@@ -116,7 +121,7 @@ const DigitalEmployeeLayout: React.FC = () => {
               onClick={() => setCollapsed(!collapsed)}
               style={{ color: '#8c8c8c' }}
             />
-            <Tooltip title="返回天翼云数字人平台">
+            <Tooltip title="返回数字员工平台">
               <Button
                 type="text"
                 icon={<ArrowLeftOutlined />}
@@ -128,14 +133,6 @@ const DigitalEmployeeLayout: React.FC = () => {
             </Tooltip>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <Button
-              type="default"
-              icon={<SettingOutlined />}
-              onClick={() => navigate('/admin/dashboard')}
-              style={{ borderRadius: 8 }}
-            >
-              管理后台
-            </Button>
             <Avatar size={32} icon={<UserOutlined />} style={{
               background: 'linear-gradient(135deg, #1677ff 0%, #4096ff 100%)',
               cursor: 'pointer',

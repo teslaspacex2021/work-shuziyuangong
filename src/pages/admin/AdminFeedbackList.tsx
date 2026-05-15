@@ -5,7 +5,7 @@ import {
 } from 'antd';
 import {
   MessageOutlined, CheckCircleOutlined, ClockCircleOutlined,
-  ExclamationCircleOutlined, SearchOutlined,
+  SearchOutlined,
 } from '@ant-design/icons';
 import { feedbackList, type FeedbackItem } from '../../mock/data';
 
@@ -17,7 +17,6 @@ const typeColor: Record<string, string> = {
 };
 const statusColor: Record<string, string> = {
   '待处理': 'default',
-  '处理中': 'processing',
   '已解决': 'success',
   '已关闭': 'default',
 };
@@ -45,8 +44,8 @@ const AdminFeedbackList: React.FC = () => {
   });
 
   const pendingCount = feedbacks.filter((f) => f.status === '待处理').length;
-  const processingCount = feedbacks.filter((f) => f.status === '处理中').length;
   const resolvedCount = feedbacks.filter((f) => f.status === '已解决').length;
+  const closedCount = feedbacks.filter((f) => f.status === '已关闭').length;
 
   const handleReply = () => {
     replyForm.validateFields().then((values) => {
@@ -59,7 +58,7 @@ const AdminFeedbackList: React.FC = () => {
             : f
         ),
       );
-      message.success('回复成功');
+      message.success('处理成功');
       replyForm.resetFields();
       setReplyVisible(false);
     });
@@ -107,13 +106,13 @@ const AdminFeedbackList: React.FC = () => {
           <Button type="link" size="small" onClick={() => { setSelectedFeedback(record); setDetailVisible(true); }}>
             详情
           </Button>
-          {(record.status === '待处理' || record.status === '处理中') && (
+          {record.status === '待处理' && (
             <Button type="link" size="small" onClick={() => {
               setSelectedFeedback(record);
               replyForm.setFieldsValue({ status: '已解决', reply: record.reply || '' });
               setReplyVisible(true);
             }}>
-              回复
+              处理
             </Button>
           )}
         </Space>
@@ -129,22 +128,17 @@ const AdminFeedbackList: React.FC = () => {
       </p>
 
       <Row gutter={16} style={{ marginBottom: 20 }}>
-        <Col span={6}>
+        <Col span={8}>
           <Card style={{ borderRadius: 12 }}>
             <Statistic title="反馈总数" value={feedbacks.length} prefix={<MessageOutlined />} />
           </Card>
         </Col>
-        <Col span={6}>
+        <Col span={8}>
           <Card style={{ borderRadius: 12 }}>
             <Statistic title="待处理" value={pendingCount} prefix={<ClockCircleOutlined style={{ color: '#faad14' }} />} valueStyle={{ color: '#faad14' }} />
           </Card>
         </Col>
-        <Col span={6}>
-          <Card style={{ borderRadius: 12 }}>
-            <Statistic title="处理中" value={processingCount} prefix={<ExclamationCircleOutlined style={{ color: '#1677ff' }} />} valueStyle={{ color: '#1677ff' }} />
-          </Card>
-        </Col>
-        <Col span={6}>
+        <Col span={8}>
           <Card style={{ borderRadius: 12 }}>
             <Statistic title="已解决" value={resolvedCount} prefix={<CheckCircleOutlined style={{ color: '#52c41a' }} />} valueStyle={{ color: '#52c41a' }} />
           </Card>
@@ -174,7 +168,6 @@ const AdminFeedbackList: React.FC = () => {
             <Select value={statusFilter} onChange={setStatusFilter} style={{ width: 120 }} options={[
               { label: '全部状态', value: 'all' },
               { label: '待处理', value: '待处理' },
-              { label: '处理中', value: '处理中' },
               { label: '已解决', value: '已解决' },
               { label: '已关闭', value: '已关闭' },
             ]} />
@@ -192,11 +185,11 @@ const AdminFeedbackList: React.FC = () => {
       </Card>
 
       <Modal
-        title={`回复反馈 - ${selectedFeedback?.title}`}
+        title={`处理反馈 - ${selectedFeedback?.title}`}
         open={replyVisible}
         onCancel={() => { replyForm.resetFields(); setReplyVisible(false); }}
         onOk={handleReply}
-        okText="提交回复"
+        okText="提交"
         width={560}
       >
         {selectedFeedback && (
@@ -211,7 +204,6 @@ const AdminFeedbackList: React.FC = () => {
             <Form form={replyForm} layout="vertical">
               <Form.Item label="处理状态" name="status" rules={[{ required: true }]}>
                 <Select options={[
-                  { label: '处理中', value: '处理中' },
                   { label: '已解决', value: '已解决' },
                   { label: '已关闭', value: '已关闭' },
                 ]} />
