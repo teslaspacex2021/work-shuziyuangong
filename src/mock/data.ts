@@ -859,7 +859,7 @@ export interface FeedbackItem {
   type: '功能建议' | '体验问题' | '错误反馈' | '其他';
   title: string;
   content: string;
-  status: '待处理' | '已解决' | '已关闭';
+  status: '待处理' | '处理中' | '已解决' | '已关闭';
   priority: '高' | '中' | '低';
   createTime: string;
   updateTime: string;

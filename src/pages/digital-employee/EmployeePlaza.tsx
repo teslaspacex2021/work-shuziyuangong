@@ -1,17 +1,15 @@
 import React, { useState, useMemo } from 'react';
 import {
   Input, Avatar, Tag, Card, Row, Col, Badge, Empty,
-  Button, Tooltip, Drawer, Descriptions, Progress, Rate, Typography,
+  Button, Tooltip, Drawer, Descriptions, Progress,
 } from 'antd';
 import {
   SearchOutlined, ThunderboltOutlined, StarOutlined, StarFilled,
   MessageOutlined, UserOutlined,
   TeamOutlined, FireOutlined,
-  IdcardOutlined, EnvironmentOutlined, TrophyOutlined, RocketOutlined,
-  CrownOutlined, ClockCircleOutlined,
+  IdcardOutlined, TrophyOutlined, RocketOutlined,
+  ClockCircleOutlined,
 } from '@ant-design/icons';
-
-const { Title } = Typography;
 import { useNavigate } from 'react-router-dom';
 import { digitalEmployees, positions, skills, knowledgeBases, type DigitalEmployee } from '../../mock/data';
 
@@ -175,9 +173,7 @@ const EmployeePlaza: React.FC = () => {
   );
 
   const renderEmployeeCard = (emp: DigitalEmployee) => {
-    const rating = Math.min(5, Math.max(0, (emp.likes / (emp.likes + emp.dislikes + 1)) * 5));
     const isHovered = hoveredCard === emp.id;
-    const cat = positionToCategoryMap[emp.position] || '其他';
     return (
       <Col xs={24} sm={12} lg={8} xl={6} key={emp.id}>
         <div

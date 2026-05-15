@@ -17,6 +17,7 @@ const typeColor: Record<string, string> = {
 };
 const statusColor: Record<string, string> = {
   '待处理': 'default',
+  '处理中': 'processing',
   '已解决': 'success',
   '已关闭': 'default',
 };
@@ -45,7 +46,6 @@ const AdminFeedbackList: React.FC = () => {
 
   const pendingCount = feedbacks.filter((f) => f.status === '待处理').length;
   const resolvedCount = feedbacks.filter((f) => f.status === '已解决').length;
-  const closedCount = feedbacks.filter((f) => f.status === '已关闭').length;
 
   const handleReply = () => {
     replyForm.validateFields().then((values) => {

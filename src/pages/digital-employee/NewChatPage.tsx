@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import {
-  Input, Button, Tooltip, Modal, Space, Avatar, Badge, Tag,
-  Card, Row, Col, Empty, message,
+  Input, Button, Tooltip, Modal, Avatar, Badge, Tag,
+  Card, Row, Col, Empty,
 } from 'antd';
 import {
   SendOutlined, SearchOutlined, PaperClipOutlined,
