@@ -4,7 +4,7 @@ import {
   Row, Col, Statistic, message, Radio, Result,
 } from 'antd';
 import {
-  SearchOutlined, PlusOutlined,
+  SearchOutlined,
   AppstoreOutlined, CheckCircleOutlined, StopOutlined, TeamOutlined,
   ExclamationCircleFilled, SwapOutlined, PauseCircleOutlined, LinkOutlined,
 } from '@ant-design/icons';
@@ -200,7 +200,6 @@ const PositionSettings: React.FC = () => {
               options={departmentOptions.map((d) => ({ label: d, value: d }))}
             />
           </Space>
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => setOaVisible(true)}>新增岗位</Button>
         </div>
 
         <Table

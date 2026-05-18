@@ -5,7 +5,7 @@ import {
   Tooltip, Result,
 } from 'antd';
 import {
-  PlusOutlined, SearchOutlined, SettingOutlined, TeamOutlined,
+  SearchOutlined, SettingOutlined, TeamOutlined,
   ThunderboltOutlined, DatabaseOutlined, FileTextOutlined,
   BookOutlined, InfoCircleOutlined, SyncOutlined,
   CheckCircleOutlined, ExperimentOutlined, LinkOutlined,
@@ -288,9 +288,6 @@ const EmployeeManagement: React.FC = () => {
                 { label: '离职', value: '离职' },
               ]}
             />
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => setOaVisible(true)}>
-              新增员工
-            </Button>
           </Space>
         }
       >
