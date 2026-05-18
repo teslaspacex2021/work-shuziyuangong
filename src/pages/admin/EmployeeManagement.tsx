@@ -1,17 +1,17 @@
 import React, { useState } from 'react';
 import {
-  Card, Table, Tag, Button, Space, Avatar, Modal, Form, Input, Select,
+  Card, Table, Tag, Button, Space, Avatar, Modal, Input, Select,
   Row, Col, Statistic, Descriptions, Checkbox, Badge, message, Tabs, Progress,
-  InputNumber, Tooltip,
+  Tooltip, Result,
 } from 'antd';
 import {
   PlusOutlined, SearchOutlined, SettingOutlined, TeamOutlined,
   ThunderboltOutlined, DatabaseOutlined, FileTextOutlined,
-  BookOutlined, InfoCircleOutlined, SyncOutlined, EditOutlined,
-  CheckCircleOutlined, ExperimentOutlined,
+  BookOutlined, InfoCircleOutlined, SyncOutlined,
+  CheckCircleOutlined, ExperimentOutlined, LinkOutlined,
 } from '@ant-design/icons';
 import {
-  digitalEmployees, skills, knowledgeBases, positions,
+  digitalEmployees, skills, knowledgeBases,
   type DigitalEmployee, type Skill, type KnowledgeBase,
 } from '../../mock/data';
 
@@ -37,16 +37,13 @@ const EmployeeManagement: React.FC = () => {
   const [employees, setEmployees] = useState(digitalEmployees);
   const [searchText, setSearchText] = useState('');
   const [statusFilter, setStatusFilter] = useState<string | undefined>(undefined);
-  const [addVisible, setAddVisible] = useState(false);
+  const [oaVisible, setOaVisible] = useState(false);
   const [configVisible, setConfigVisible] = useState(false);
   const [configTab, setConfigTab] = useState('skills');
   const [detailVisible, setDetailVisible] = useState(false);
-  const [editVisible, setEditVisible] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<DigitalEmployee | null>(null);
   const [selectedSkillIds, setSelectedSkillIds] = useState<string[]>([]);
   const [selectedKBIds, setSelectedKBIds] = useState<string[]>([]);
-  const [addForm] = Form.useForm();
-  const [editForm] = Form.useForm();
 
   const filtered = employees.filter((e) => {
     const matchSearch = e.name.includes(searchText) || e.id.includes(searchText) || e.department.includes(searchText);
@@ -58,16 +55,6 @@ const EmployeeManagement: React.FC = () => {
   const activeCount = employees.filter((e) => e.status === 'ACTIVE').length;
   const trainingCount = employees.filter((e) => e.status === 'TRAINING').length;
   const inServiceCount = employees.filter((e) => e.employmentStatus === '在职').length;
-
-  const nextId = `DE-${new Date().getFullYear()}${String(employees.length + 1).padStart(3, '0')}`;
-
-  const handleStatusChange = (empId: string, newStatus: DigitalEmployee['status']) => {
-    setEmployees((prev) =>
-      prev.map((e) => e.id === empId ? { ...e, status: newStatus } : e),
-    );
-    const label = statusLabelMap[newStatus];
-    message.success(`员工运行状态已变更为「${label}」`);
-  };
 
   const openConfig = (emp: DigitalEmployee, tab: string = 'skills') => {
     setSelectedEmployee(emp);
@@ -96,68 +83,6 @@ const EmployeeManagement: React.FC = () => {
     setDetailVisible(true);
   };
 
-  const openEdit = (emp: DigitalEmployee) => {
-    setSelectedEmployee(emp);
-    const pos = positions.find((p) => p.name === emp.position);
-    editForm.setFieldsValue({
-      name: emp.name,
-      department: emp.department,
-      position: emp.position,
-      positionCategory: pos?.category || '',
-      owner: emp.owner,
-      ownerType: emp.ownerType,
-      level: emp.level,
-      status: emp.status,
-      tokensQuota: emp.tokensQuota,
-      description: emp.description,
-    });
-    setEditVisible(true);
-  };
-
-  const handleEdit = () => {
-    editForm.validateFields().then((values) => {
-      if (!selectedEmployee) return;
-      setEmployees((prev) =>
-        prev.map((e) => e.id === selectedEmployee.id ? { ...e, ...values } : e),
-      );
-      message.success('员工信息已更新，变更审批已发起');
-      setEditVisible(false);
-    });
-  };
-
-  const handleAddEmployee = () => {
-    addForm.validateFields().then((values) => {
-      const newEmp: DigitalEmployee = {
-        id: nextId,
-        name: values.name,
-        avatar: values.avatarUrl || `https://api.dicebear.com/7.x/personas/svg?seed=${encodeURIComponent(values.name)}&backgroundColor=b6e3f4`,
-        department: values.department,
-        position: values.position,
-        status: 'TRAINING',
-        employmentStatus: '在职',
-        owner: values.owner,
-        ownerType: values.ownerType,
-        skills: [],
-        skillIds: [],
-        knowledgeIds: [],
-        description: values.description || '',
-        level: values.level || 'L1',
-        tokensQuota: Number(values.tokensQuota) || 2000000,
-        tokensUsed: 0,
-        taskCompleteRate: 0,
-        lastActive: '-',
-        onboardDate: new Date().toISOString().slice(0, 10),
-        relatedAgents: [],
-        likes: 0,
-        dislikes: 0,
-        heat: 0,
-      };
-      setEmployees((prev) => [...prev, newEmp]);
-      message.success('新增员工成功，入职流程已发起');
-      addForm.resetFields();
-      setAddVisible(false);
-    });
-  };
 
   const columns = [
     {
@@ -226,31 +151,12 @@ const EmployeeManagement: React.FC = () => {
     },
     { title: '最近活跃', dataIndex: 'lastActive', key: 'lastActive', width: 100 },
     {
-      title: '操作', key: 'action', width: 160, fixed: 'right' as const,
+      title: '操作', key: 'action', width: 120, fixed: 'right' as const,
       render: (_: unknown, record: DigitalEmployee) => (
         <Space size={4}>
           <Tooltip title="配置">
             <Button type="primary" size="small" icon={<SettingOutlined />} onClick={() => openConfig(record)} />
           </Tooltip>
-          {record.employmentStatus === '在职' && (
-            <Tooltip title="编辑">
-              <Button size="small" icon={<EditOutlined />} onClick={() => openEdit(record)} />
-            </Tooltip>
-          )}
-          {record.employmentStatus === '在职' && (
-            <Select
-              size="small"
-              value={record.status}
-              style={{ width: 80 }}
-              onChange={(val) => handleStatusChange(record.id, val)}
-              options={[
-                { value: 'ACTIVE', label: '在线' },
-                { value: 'TRAINING', label: '训练中' },
-                { value: 'SUSPENDED', label: '已暂停' },
-                { value: 'TERMINATED', label: '已停用' },
-              ]}
-            />
-          )}
           <Tooltip title="详情">
             <Button type="text" size="small" icon={<InfoCircleOutlined />} onClick={() => showDetail(record)} />
           </Tooltip>
@@ -382,7 +288,7 @@ const EmployeeManagement: React.FC = () => {
                 { label: '离职', value: '离职' },
               ]}
             />
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => { addForm.setFieldsValue({ id: nextId }); setAddVisible(true); }}>
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => setOaVisible(true)}>
               新增员工
             </Button>
           </Space>
@@ -398,105 +304,32 @@ const EmployeeManagement: React.FC = () => {
         />
       </Card>
 
-      {/* Add Employee Modal */}
+      {/* OA申请提示 Modal */}
       <Modal
-        title="新增数字员工"
-        open={addVisible}
-        onCancel={() => { addForm.resetFields(); setAddVisible(false); }}
-        onOk={handleAddEmployee}
-        okText="提交"
-        width={720}
+        open={oaVisible}
+        onCancel={() => setOaVisible(false)}
+        footer={null}
+        width={480}
+        centered
       >
-        <Form form={addForm} layout="vertical" initialValues={{ id: nextId, level: 'L1', tokensQuota: 2000000 }}>
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item label="员工名称" name="name" rules={[{ required: true, message: '请输入员工名称' }]}>
-                <Input placeholder="例：小翼·xxx" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item label="工号（自动生成）" name="id">
-                <Input disabled style={{ fontFamily: 'monospace' }} />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Row gutter={16}>
-            <Col span={8}>
-              <Form.Item label="岗位" name="position" rules={[{ required: true, message: '请选择岗位' }]}>
-                <Select
-                  placeholder="请选择岗位"
-                  options={positions.filter((p) => p.status === '启用').map((p) => ({ value: p.name, label: `${p.name}（${p.department}）` }))}
-                />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item label="岗位类别" name="positionCategory">
-                <Select
-                  placeholder="请选择岗位类别"
-                  options={[
-                    { value: '综合类', label: '综合类' },
-                    { value: '服务类', label: '服务类' },
-                    { value: '技术类', label: '技术类' },
-                    { value: '运营类', label: '运营类' },
-                    { value: '合规类', label: '合规类' },
-                    { value: '管理类', label: '管理类' },
-                    { value: '财务类', label: '财务类' },
-                    { value: '分析类', label: '分析类' },
-                  ]}
-                />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item label="部门" name="department" rules={[{ required: true, message: '请输入部门' }]}>
-                <Input placeholder="请输入所属部门" />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item label="所属自然人" name="owner" rules={[{ required: true, message: '请输入归属人姓名' }]}>
-                <Input placeholder="请输入归属人姓名" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item label="身份类型" name="ownerType" rules={[{ required: true, message: '请选择身份类型' }]}>
-                <Select options={[{ value: '自有', label: '自有' }, { value: '外包', label: '外包' }]} placeholder="请选择" />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Row gutter={16}>
-            <Col span={8}>
-              <Form.Item label="职级" name="level" rules={[{ required: true, message: '请选择职级' }]}>
-                <Select options={[
-                  { value: 'L1', label: 'L1 初级' },
-                  { value: 'L2', label: 'L2 中级' },
-                  { value: 'L3', label: 'L3 高级' },
-                  { value: 'L4', label: 'L4 专家' },
-                ]} />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item label="Tokens配额" name="tokensQuota" rules={[{ required: true, message: '请输入配额' }]}>
-                <InputNumber
-                  style={{ width: '100%' }}
-                  placeholder="默认200万"
-                  min={100000}
-                  step={500000}
-                  formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                  addonAfter="tokens"
-                />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item label="头像URL" name="avatarUrl" tooltip="非必填，留空将自动生成">
-                <Input placeholder="可选，输入头像地址" />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Form.Item label="员工描述" name="description" rules={[{ required: true, message: '请描述该数字员工的职责和能力' }]}>
-            <Input.TextArea rows={3} placeholder="请描述该数字员工的职责、能力和适用场景" />
-          </Form.Item>
-        </Form>
+        <Result
+          status="info"
+          title="请前往 OA 系统申请"
+          subTitle="新增数字员工需通过 OA 系统提交申请，经上级审批后由系统管理员统一创建。"
+          extra={[
+            <Button
+              type="primary"
+              key="oa"
+              icon={<LinkOutlined />}
+              href="https://oa.example.com/apply/digital-employee"
+              target="_blank"
+              onClick={() => setOaVisible(false)}
+            >
+              前往 OA 申请入口
+            </Button>,
+            <Button key="cancel" onClick={() => setOaVisible(false)}>取消</Button>,
+          ]}
+        />
       </Modal>
 
       {/* Unified Config Modal with Tabs */}
@@ -576,104 +409,6 @@ const EmployeeManagement: React.FC = () => {
         )}
       </Modal>
 
-      {/* Edit Employee Modal */}
-      <Modal
-        title={`编辑员工信息 — ${selectedEmployee?.name}`}
-        open={editVisible}
-        onCancel={() => setEditVisible(false)}
-        onOk={handleEdit}
-        okText="提交审批"
-        width={720}
-      >
-        <Form form={editForm} layout="vertical" style={{ marginTop: 16 }}>
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item label="员工名称" name="name" rules={[{ required: true }]}>
-                <Input />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item label="部门" name="department" rules={[{ required: true }]}>
-                <Input />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item label="岗位" name="position" rules={[{ required: true }]}>
-                <Select
-                  options={positions.filter((p) => p.status === '启用').map((p) => ({ value: p.name, label: `${p.name}（${p.department}）` }))}
-                />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item label="岗位类别" name="positionCategory">
-                <Select
-                  placeholder="请选择岗位类别"
-                  options={[
-                    { value: '综合类', label: '综合类' },
-                    { value: '服务类', label: '服务类' },
-                    { value: '技术类', label: '技术类' },
-                    { value: '运营类', label: '运营类' },
-                    { value: '合规类', label: '合规类' },
-                    { value: '管理类', label: '管理类' },
-                    { value: '财务类', label: '财务类' },
-                    { value: '分析类', label: '分析类' },
-                  ]}
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item label="所属自然人" name="owner" rules={[{ required: true }]}>
-                <Input />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item label="身份类型" name="ownerType">
-                <Select options={[{ value: '自有', label: '自有' }, { value: '外包', label: '外包' }]} />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Row gutter={16}>
-            <Col span={8}>
-              <Form.Item label="职级" name="level">
-                <Select options={[
-                  { value: 'L1', label: 'L1 初级' },
-                  { value: 'L2', label: 'L2 中级' },
-                  { value: 'L3', label: 'L3 高级' },
-                  { value: 'L4', label: 'L4 专家' },
-                ]} />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item label="运行状态" name="status">
-                <Select options={[
-                  { value: 'ACTIVE', label: '在线' },
-                  { value: 'TRAINING', label: '训练中' },
-                  { value: 'SUSPENDED', label: '已暂停' },
-                  { value: 'TERMINATED', label: '已停用' },
-                ]} />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item label="Tokens配额" name="tokensQuota">
-                <InputNumber
-                  style={{ width: '100%' }}
-                  min={100000}
-                  step={500000}
-                  formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                  addonAfter="tokens"
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Form.Item label="描述" name="description">
-            <Input.TextArea rows={3} placeholder="描述该数字员工的职责和能力" />
-          </Form.Item>
-        </Form>
-      </Modal>
 
       {/* Detail Modal - includes OnDuty info */}
       <Modal

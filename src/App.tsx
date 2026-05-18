@@ -53,7 +53,7 @@ function App() {
       <PermissionProvider>
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<Navigate to="/user/agents" replace />} />
+            <Route path="/" element={<Navigate to="/digital-employee/chat" replace />} />
 
             {/* User Portal */}
             <Route path="/user" element={<UserLayout />}>
@@ -66,7 +66,7 @@ function App() {
 
             {/* AI Digital Employee Portal (independent) */}
             <Route path="/digital-employee" element={<DigitalEmployeeLayout />}>
-              <Route index element={<Navigate to="/digital-employee/new-chat" replace />} />
+              <Route index element={<Navigate to="/digital-employee/chat" replace />} />
               <Route path="new-chat" element={<NewChatPage />} />
               <Route path="schedule" element={<EmployeeSchedule />} />
               <Route path="feedback" element={<UserFeedback />} />

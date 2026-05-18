@@ -24,11 +24,6 @@ const statusTagColor: Record<string, string> = {
   '已失败': 'error',
 };
 
-const priorityColor: Record<string, string> = {
-  '高': 'red',
-  '中': 'orange',
-  '低': 'blue',
-};
 
 const allDepartments = [...new Set(taskLogs.map((t) => t.department))];
 
@@ -82,10 +77,6 @@ const TaskLogs: React.FC = () => {
     },
     {
       title: '部门', dataIndex: 'department', key: 'department', width: 120,
-    },
-    {
-      title: '优先级', dataIndex: 'priority', key: 'priority', width: 80,
-      render: (p: string) => <Tag color={priorityColor[p]}>{p}</Tag>,
     },
     {
       title: '状态', dataIndex: 'status', key: 'status', width: 90,
@@ -227,9 +218,6 @@ const TaskLogs: React.FC = () => {
                 <Tag color="processing">{selectedLog.agentName}</Tag>
               </Descriptions.Item>
               <Descriptions.Item label="部门">{selectedLog.department}</Descriptions.Item>
-              <Descriptions.Item label="优先级">
-                <Tag color={priorityColor[selectedLog.priority]}>{selectedLog.priority}</Tag>
-              </Descriptions.Item>
               <Descriptions.Item label="创建时间">{selectedLog.createTime}</Descriptions.Item>
               {selectedLog.finishTime && (
                 <Descriptions.Item label="完成时间">{selectedLog.finishTime}</Descriptions.Item>

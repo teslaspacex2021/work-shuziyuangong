@@ -20,7 +20,6 @@ interface ApprovalRecord {
   applicant: string;
   approver: string;
   status: '待审批' | '已通过' | '已拒绝' | '审批中';
-  priority: '高' | '中' | '低';
   createTime: string;
   updateTime: string;
   description: string;
@@ -31,89 +30,89 @@ const mockApprovalRecords: ApprovalRecord[] = [
   {
     id: 'APR-001', title: '小翼·客服 新增情感分析技能', type: '技能新增',
     employeeId: 'DE-2026001', employeeName: '小翼·客服', department: '客户服务部',
-    applicant: '宇雷', approver: '管理员', status: '已通过', priority: '高',
+    applicant: '宇雷', approver: '张经理', status: '已通过',
     createTime: '2026-05-10 09:30:00', updateTime: '2026-05-10 14:20:00',
     description: '申请为小翼·客服增加情感分析技能，提升客户服务质量',
     steps: [
-      { name: '技术评审', status: '通过', operator: '技术主管', time: '2026-05-10 10:15:00', remark: '技能兼容性验证通过' },
-      { name: '系统管理员确认', status: '通过', operator: '管理员', time: '2026-05-10 14:20:00', remark: '审批通过，技能已绑定' },
+      { name: '发起申请', status: '通过', operator: '宇雷', time: '2026-05-10 09:30:00', remark: '已提交申请' },
+      { name: '上级经理审批', status: '通过', operator: '张经理', time: '2026-05-10 14:20:00', remark: '审批通过，技能已绑定' },
     ],
   },
   {
     id: 'APR-002', title: '小翼·营销 关联营销案例库', type: '知识库变更',
     employeeId: 'DE-2026003', employeeName: '小翼·营销', department: '数字化运营部',
-    applicant: '李明', approver: '管理员', status: '审批中', priority: '中',
+    applicant: '李明', approver: '刘经理', status: '审批中',
     createTime: '2026-05-12 11:00:00', updateTime: '2026-05-13 09:30:00',
     description: '申请为小翼·营销关联营销案例知识库，增强营销方案生成能力',
     steps: [
-      { name: '知识库审核', status: '通过', operator: '知识管理员', time: '2026-05-12 15:00:00', remark: '知识库内容审核通过' },
-      { name: '系统管理员确认', status: '处理中', operator: '管理员', time: '', remark: '' },
+      { name: '发起申请', status: '通过', operator: '李明', time: '2026-05-12 11:00:00', remark: '已提交申请' },
+      { name: '上级经理审批', status: '处理中', operator: '刘经理', time: '', remark: '' },
     ],
   },
   {
     id: 'APR-003', title: '小翼·审计 数据访问权限变更', type: '权限变更',
     employeeId: 'DE-2026004', employeeName: '小翼·审计', department: '审计部',
-    applicant: '王芳', approver: '管理员', status: '待审批', priority: '高',
+    applicant: '王芳', approver: '陈经理', status: '待审批',
     createTime: '2026-05-14 16:00:00', updateTime: '2026-05-14 16:00:00',
     description: '申请增加小翼·审计的数据访问权限范围，支持跨部门审计',
     steps: [
-      { name: '安全审批', status: '待处理', operator: '安全管理员', time: '', remark: '' },
-      { name: '系统管理员确认', status: '待处理', operator: '管理员', time: '', remark: '' },
+      { name: '发起申请', status: '通过', operator: '王芳', time: '2026-05-14 16:00:00', remark: '已提交申请' },
+      { name: '上级经理审批', status: '待处理', operator: '陈经理', time: '', remark: '' },
     ],
   },
   {
     id: 'APR-004', title: '小翼·财务 Tokens月度配额调整', type: 'Token配额调整',
     employeeId: 'DE-2026006', employeeName: '小翼·财务', department: '财务共享中心',
-    applicant: '赵六', approver: '管理员', status: '已通过', priority: '低',
+    applicant: '赵六', approver: '吴经理', status: '已通过',
     createTime: '2026-05-08 10:00:00', updateTime: '2026-05-09 11:30:00',
     description: '月度Tokens配额从4.5M调整至8M，业务量增长需要更多配额',
     steps: [
-      { name: '部门审批', status: '通过', operator: '财务主管', time: '2026-05-08 14:00:00', remark: '业务量增长，同意调整' },
-      { name: '系统管理员确认', status: '通过', operator: '管理员', time: '2026-05-09 11:30:00', remark: '已调整配额至8M' },
+      { name: '发起申请', status: '通过', operator: '赵六', time: '2026-05-08 10:00:00', remark: '已提交申请' },
+      { name: '上级经理审批', status: '通过', operator: '吴经理', time: '2026-05-09 11:30:00', remark: '业务量增长，同意调整配额至8M' },
     ],
   },
   {
     id: 'APR-005', title: '小翼·运维 增加数据库管理技能', type: '技能变更',
     employeeId: 'DE-2026007', employeeName: '小翼·运维', department: 'IT运维部',
-    applicant: '孙七', approver: '管理员', status: '已拒绝', priority: '中',
+    applicant: '孙七', approver: '周经理', status: '已拒绝',
     createTime: '2026-05-06 09:00:00', updateTime: '2026-05-07 16:45:00',
     description: '申请为小翼·运维增加数据库管理技能',
     steps: [
-      { name: '技术评审', status: '拒绝', operator: '技术主管', time: '2026-05-07 16:45:00', remark: '当前技能组合已满足需求，暂不增加' },
+      { name: '发起申请', status: '通过', operator: '孙七', time: '2026-05-06 09:00:00', remark: '已提交申请' },
+      { name: '上级经理审批', status: '拒绝', operator: '周经理', time: '2026-05-07 16:45:00', remark: '当前技能组合已满足需求，暂不增加' },
     ],
   },
   {
     id: 'APR-006', title: '小翼·商机 切换GPT-4o模型', type: '模型配置',
     employeeId: 'DE-2026008', employeeName: '小翼·商机', department: '数字化运营部',
-    applicant: '周八', approver: '管理员', status: '已通过', priority: '高',
+    applicant: '周八', approver: '刘经理', status: '已通过',
     createTime: '2026-05-01 14:00:00', updateTime: '2026-05-03 10:00:00',
     description: '申请将小翼·商机的底层模型从GPT-3.5升级至GPT-4o，提升分析精度',
     steps: [
-      { name: '技术评审', status: '通过', operator: '技术主管', time: '2026-05-01 17:00:00', remark: '模型兼容性测试通过' },
-      { name: '成本审批', status: '通过', operator: '财务主管', time: '2026-05-02 15:00:00', remark: '预算充足，同意' },
-      { name: '系统管理员确认', status: '通过', operator: '管理员', time: '2026-05-03 10:00:00', remark: '模型已切换完成' },
+      { name: '发起申请', status: '通过', operator: '周八', time: '2026-05-01 14:00:00', remark: '已提交申请' },
+      { name: '上级经理审批', status: '通过', operator: '刘经理', time: '2026-05-03 10:00:00', remark: '预算充足，同意升级，模型已切换完成' },
     ],
   },
   {
     id: 'APR-007', title: '小翼·HR 关联人力资源政策卡片', type: '知识库变更',
     employeeId: 'DE-2026005', employeeName: '小翼·HR', department: '人力资源部',
-    applicant: '张三', approver: '管理员', status: '已通过', priority: '中',
+    applicant: '张三', approver: '李经理', status: '已通过',
     createTime: '2026-05-04 09:00:00', updateTime: '2026-05-05 11:00:00',
     description: '为小翼·HR关联最新版人力资源政策知识卡片',
     steps: [
-      { name: '知识库审核', status: '通过', operator: '知识管理员', time: '2026-05-04 14:00:00', remark: '内容审核通过' },
-      { name: '系统管理员确认', status: '通过', operator: '管理员', time: '2026-05-05 11:00:00', remark: '已关联' },
+      { name: '发起申请', status: '通过', operator: '张三', time: '2026-05-04 09:00:00', remark: '已提交申请' },
+      { name: '上级经理审批', status: '通过', operator: '李经理', time: '2026-05-05 11:00:00', remark: '内容审核通过，已关联' },
     ],
   },
   {
     id: 'APR-008', title: '小翼·数据 Tokens配额紧急扩容', type: 'Token配额调整',
     employeeId: 'DE-2026002', employeeName: '小翼·数据', department: '数据运营中心',
-    applicant: '韩梅梅', approver: '管理员', status: '审批中', priority: '高',
+    applicant: '韩梅梅', approver: '赵经理', status: '审批中',
     createTime: '2026-05-13 08:30:00', updateTime: '2026-05-13 10:00:00',
     description: '数据标注任务量激增，申请Tokens配额从3M紧急扩容至6M',
     steps: [
-      { name: '部门审批', status: '通过', operator: '数据运营主管', time: '2026-05-13 09:00:00', remark: '确认业务需求紧急' },
-      { name: '系统管理员确认', status: '处理中', operator: '管理员', time: '', remark: '' },
+      { name: '发起申请', status: '通过', operator: '韩梅梅', time: '2026-05-13 08:30:00', remark: '已提交申请' },
+      { name: '上级经理审批', status: '处理中', operator: '赵经理', time: '', remark: '' },
     ],
   },
 ];
@@ -134,11 +133,6 @@ const typeColorMap: Record<string, string> = {
   '模型配置': 'geekblue',
 };
 
-const priorityColorMap: Record<string, string> = {
-  '高': 'red',
-  '中': 'orange',
-  '低': 'default',
-};
 
 const ApprovalRecords: React.FC = () => {
   const [searchText, setSearchText] = useState('');
@@ -183,10 +177,6 @@ const ApprovalRecords: React.FC = () => {
     { title: '关联员工', dataIndex: 'employeeName', key: 'employeeName', width: 120 },
     { title: '所属部门', dataIndex: 'department', key: 'department', width: 120 },
     { title: '申请人', dataIndex: 'applicant', key: 'applicant', width: 80 },
-    {
-      title: '优先级', dataIndex: 'priority', key: 'priority', width: 80,
-      render: (p: string) => <Tag color={priorityColorMap[p]}>{p}</Tag>,
-    },
     {
       title: '状态', dataIndex: 'status', key: 'status', width: 90,
       render: (status: string) => (
@@ -310,7 +300,6 @@ const ApprovalRecords: React.FC = () => {
               </Descriptions.Item>
               <Descriptions.Item label="申请人">{selectedRecord.applicant}</Descriptions.Item>
               <Descriptions.Item label="审批人">{selectedRecord.approver}</Descriptions.Item>
-              <Descriptions.Item label="优先级"><Tag color={priorityColorMap[selectedRecord.priority]}>{selectedRecord.priority}</Tag></Descriptions.Item>
               <Descriptions.Item label="状态"><Badge status={statusColorMap[selectedRecord.status] as any} text={selectedRecord.status} /></Descriptions.Item>
               <Descriptions.Item label="提交时间">{dayjs(selectedRecord.createTime).format('YYYY-MM-DD HH:mm')}</Descriptions.Item>
               <Descriptions.Item label="更新时间">{dayjs(selectedRecord.updateTime).format('YYYY-MM-DD HH:mm')}</Descriptions.Item>

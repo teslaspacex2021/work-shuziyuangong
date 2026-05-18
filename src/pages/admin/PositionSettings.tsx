@@ -1,12 +1,12 @@
 import React, { useState, useMemo } from 'react';
 import {
   Card, Table, Tag, Button, Space, Modal, Form, Input, Select, InputNumber,
-  Row, Col, Statistic, message, Radio, Tooltip,
+  Row, Col, Statistic, message, Radio, Result,
 } from 'antd';
 import {
-  SearchOutlined, PlusOutlined, EditOutlined, DeleteOutlined,
+  SearchOutlined, PlusOutlined,
   AppstoreOutlined, CheckCircleOutlined, StopOutlined, TeamOutlined,
-  ExclamationCircleFilled, SwapOutlined, PauseCircleOutlined,
+  ExclamationCircleFilled, SwapOutlined, PauseCircleOutlined, LinkOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { positions, type PositionItem } from '../../mock/data';
@@ -41,9 +41,9 @@ const PositionSettings: React.FC = () => {
   const [data, setData] = useState<PositionItem[]>(positions);
   const [searchText, setSearchText] = useState('');
   const [deptFilter, setDeptFilter] = useState<string | undefined>(undefined);
-  const [statusFilter, setStatusFilter] = useState<string | undefined>(undefined);
+  const [oaVisible, setOaVisible] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
-  const [editingItem, setEditingItem] = useState<PositionItem | null>(null);
+  const [editingItem] = useState<PositionItem | null>(null);
   const [form] = Form.useForm();
 
   const [suspendModalVisible, setSuspendModalVisible] = useState(false);
@@ -55,44 +55,14 @@ const PositionSettings: React.FC = () => {
     return data.filter((p) => {
       const matchSearch = !searchText || p.name.includes(searchText) || p.id.includes(searchText);
       const matchDept = !deptFilter || p.department === deptFilter;
-      const matchStatus = !statusFilter || p.status === statusFilter;
-      return matchSearch && matchDept && matchStatus;
+      return matchSearch && matchDept;
     });
-  }, [data, searchText, deptFilter, statusFilter]);
+  }, [data, searchText, deptFilter]);
 
   const enabledCount = data.filter((p) => p.status === '启用').length;
   const disabledCount = data.filter((p) => p.status === '停用').length;
   const totalEmployeeCount = data.reduce((sum, p) => sum + p.employeeCount, 0);
 
-  const handleAdd = () => {
-    setEditingItem(null);
-    form.resetFields();
-    setModalVisible(true);
-  };
-
-  const handleEdit = (record: PositionItem) => {
-    setEditingItem(record);
-    form.setFieldsValue(record);
-    setModalVisible(true);
-  };
-
-  const handleToggleStatus = (record: PositionItem) => {
-    if (record.status === '停用') {
-      setData((prev) => prev.map((p) => (p.id === record.id ? { ...p, status: '启用' } : p)));
-      message.success(`已启用岗位：${record.name}`);
-      return;
-    }
-
-    if (record.employeeCount > 0) {
-      setSuspendTarget(record);
-      setSuspendAction('suspend');
-      setMigrateTarget(undefined);
-      setSuspendModalVisible(true);
-    } else {
-      setData((prev) => prev.map((p) => (p.id === record.id ? { ...p, status: '停用' } : p)));
-      message.success(`已停用岗位：${record.name}`);
-    }
-  };
 
   const handleSuspendConfirm = () => {
     if (!suspendTarget) return;
@@ -119,47 +89,6 @@ const PositionSettings: React.FC = () => {
     setSuspendTarget(null);
   };
 
-  const handleDelete = (record: PositionItem) => {
-    if (record.employeeCount > 0 && record.status === '启用') {
-      Modal.warning({
-        title: '无法删除',
-        icon: <ExclamationCircleFilled />,
-        content: (
-          <div>
-            <p>该岗位下仍有 <strong>{record.employeeCount}</strong> 位在职数字员工，请先完成人员迁移后再删除。</p>
-            <p style={{ color: '#999', fontSize: 13 }}>
-              建议先停用该岗位（选择迁移方案），待员工全部迁出后再执行删除操作。
-            </p>
-          </div>
-        ),
-        okText: '知道了',
-      });
-      return;
-    }
-
-    Modal.confirm({
-      title: '确认删除岗位',
-      icon: <ExclamationCircleFilled />,
-      content: (
-        <div>
-          <p>确定要删除岗位 <strong>「{record.name}」</strong> 吗？</p>
-          {record.employeeCount > 0 && record.status === '停用' && (
-            <p style={{ color: '#999', fontSize: 13 }}>
-              该岗位下有 {record.employeeCount} 位已暂停/离职员工，历史数据中岗位名称将保留为快照。
-            </p>
-          )}
-          <p style={{ color: '#999', fontSize: 13 }}>此操作需要审批确认。</p>
-        </div>
-      ),
-      okText: '确认删除',
-      okButtonProps: { danger: true },
-      cancelText: '取消',
-      onOk() {
-        setData((prev) => prev.filter((p) => p.id !== record.id));
-        message.success(`岗位「${record.name}」删除审批已发起`);
-      },
-    });
-  };
 
   const handleSubmit = () => {
     form.validateFields().then((values) => {
@@ -221,37 +150,6 @@ const PositionSettings: React.FC = () => {
         );
       },
     },
-    {
-      title: '状态', dataIndex: 'status', key: 'status', width: 80,
-      render: (status: string) => (
-        <Tag color={status === '启用' ? 'success' : 'default'}>{status}</Tag>
-      ),
-    },
-    {
-      title: '操作', key: 'action', width: 200, fixed: 'right',
-      render: (_, record) => (
-        <Space size="small">
-          <Tooltip title="编辑">
-            <Button type="link" size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)}>
-              编辑
-            </Button>
-          </Tooltip>
-          <Button
-            type="link"
-            size="small"
-            danger={record.status === '启用'}
-            onClick={() => handleToggleStatus(record)}
-          >
-            {record.status === '启用' ? '停用' : '启用'}
-          </Button>
-          <Tooltip title="删除">
-            <Button type="link" size="small" danger icon={<DeleteOutlined />} onClick={() => handleDelete(record)}>
-              删除
-            </Button>
-          </Tooltip>
-        </Space>
-      ),
-    },
   ];
 
   return (
@@ -301,19 +199,8 @@ const PositionSettings: React.FC = () => {
               onChange={setDeptFilter}
               options={departmentOptions.map((d) => ({ label: d, value: d }))}
             />
-            <Select
-              placeholder="状态筛选"
-              style={{ width: 120 }}
-              allowClear
-              value={statusFilter}
-              onChange={setStatusFilter}
-              options={[
-                { label: '启用', value: '启用' },
-                { label: '停用', value: '停用' },
-              ]}
-            />
           </Space>
-          <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>新增岗位</Button>
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => setOaVisible(true)}>新增岗位</Button>
         </div>
 
         <Table
@@ -324,6 +211,34 @@ const PositionSettings: React.FC = () => {
           pagination={{ pageSize: 10, showTotal: (total) => `共 ${total} 条` }}
         />
       </Card>
+
+      {/* OA申请提示 Modal */}
+      <Modal
+        open={oaVisible}
+        onCancel={() => setOaVisible(false)}
+        footer={null}
+        width={480}
+        centered
+      >
+        <Result
+          status="info"
+          title="请前往 OA 系统申请"
+          subTitle="新增岗位需通过 OA 系统提交申请，经上级审批后由系统管理员统一创建。"
+          extra={[
+            <Button
+              type="primary"
+              key="oa"
+              icon={<LinkOutlined />}
+              href="https://oa.example.com/apply/position"
+              target="_blank"
+              onClick={() => setOaVisible(false)}
+            >
+              前往 OA 申请入口
+            </Button>,
+            <Button key="cancel" onClick={() => setOaVisible(false)}>取消</Button>,
+          ]}
+        />
+      </Modal>
 
       {/* Add/Edit Modal */}
       <Modal
