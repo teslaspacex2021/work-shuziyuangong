@@ -86,7 +86,9 @@ const ChatPage: React.FC = () => {
   const isNewChat = searchParams.get('newChat') === '1';
   const initialMsg = searchParams.get('msg') || '';
 
-  const [selectedConvId, setSelectedConvId] = useState<string>(initialEmployeeId);
+  const [selectedConvId, setSelectedConvId] = useState<string>(
+    () => initialEmployeeId || (!isUserLayout && !isNewChat ? (conversations[0]?.employeeId || '') : ''),
+  );
   const [convSearchText, setConvSearchText] = useState('');
   const [showDetail, setShowDetail] = useState(false);
   const [inputValue, setInputValue] = useState('');
