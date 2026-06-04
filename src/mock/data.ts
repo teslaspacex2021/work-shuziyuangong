@@ -1,5 +1,21 @@
+/** 是否已填写工号 */
+export const hasEmployeeNumber = (emp: DigitalEmployee): boolean =>
+  Boolean(emp.employeeNumber?.trim());
+
+/** 未填写工号时在职状态为空；已填工号时返回实际在职/离职 */
+export const getEffectiveEmploymentStatus = (
+  emp: DigitalEmployee,
+): DigitalEmployee['employmentStatus'] | null => {
+  if (!hasEmployeeNumber(emp)) return null;
+  return emp.employmentStatus;
+};
+
+export const canBeInService = (emp: DigitalEmployee): boolean => hasEmployeeNumber(emp);
+
 export interface DigitalEmployee {
   id: string;
+  /** 工号，未填写时不可设为在职 */
+  employeeNumber?: string;
   name: string;
   avatar: string;
   department: string;
@@ -258,7 +274,7 @@ export interface EmployeeEditApproval {
 
 export const digitalEmployees: DigitalEmployee[] = [
   {
-    id: 'DE-2026000', name: '小翼·智能助手', avatar: 'https://api.dicebear.com/7.x/personas/svg?seed=assistant2026&backgroundColor=b7eb8f', department: '综合服务部', position: '智能综合助理',
+    id: 'DE-2026000', employeeNumber: 'DE-2026000', name: '小翼·智能助手', avatar: 'https://api.dicebear.com/7.x/personas/svg?seed=assistant2026&backgroundColor=b7eb8f', department: '综合服务部', position: '智能综合助理',
     status: 'ACTIVE', employmentStatus: '在职', owner: '系统', ownerType: '自有',
     skills: ['智能问答', '任务分派', '流程引导', '综合咨询'],
     skillIds: ['SK001'],
@@ -269,7 +285,7 @@ export const digitalEmployees: DigitalEmployee[] = [
     likes: 520, dislikes: 5, heat: 2500,
   },
   {
-    id: 'DE-2026001', name: '小翼·客服', avatar: 'https://api.dicebear.com/7.x/personas/svg?seed=kefu&backgroundColor=b6e3f4', department: '客户服务部', position: '智能客服专员',
+    id: 'DE-2026001', employeeNumber: 'DE-2026001', name: '小翼·客服', avatar: 'https://api.dicebear.com/7.x/personas/svg?seed=kefu&backgroundColor=b6e3f4', department: '客户服务部', position: '智能客服专员',
     status: 'ACTIVE', employmentStatus: '在职', owner: '宇雷', ownerType: '自有',
     skills: ['智能问答', '工单处理', '知识检索', '情感分析'],
     skillIds: ['SK001', 'SK005', 'SK010'],
@@ -280,7 +296,7 @@ export const digitalEmployees: DigitalEmployee[] = [
     likes: 328, dislikes: 12, heat: 1456,
   },
   {
-    id: 'DE-2026002', name: '小翼·数据', avatar: 'https://api.dicebear.com/7.x/personas/svg?seed=shuju&backgroundColor=c0aede', department: '数据运营中心', position: '数据标注专员',
+    id: 'DE-2026002', employeeNumber: 'DE-2026002', name: '小翼·数据', avatar: 'https://api.dicebear.com/7.x/personas/svg?seed=shuju&backgroundColor=c0aede', department: '数据运营中心', position: '数据标注专员',
     status: 'TRAINING', employmentStatus: '在职', owner: '韩梅梅', ownerType: '外包',
     skills: ['数据标注', '数据清洗', '报表生成', '异常检测'],
     skillIds: ['SK003'],
@@ -291,7 +307,7 @@ export const digitalEmployees: DigitalEmployee[] = [
     likes: 145, dislikes: 8, heat: 620,
   },
   {
-    id: 'DE-2026003', name: '小翼·营销', avatar: 'https://api.dicebear.com/7.x/personas/svg?seed=yingxiao&backgroundColor=ffd5dc', department: '数字化运营部', position: '营销策划专员',
+    id: 'DE-2026003', employeeNumber: 'DE-2026003', name: '小翼·营销', avatar: 'https://api.dicebear.com/7.x/personas/svg?seed=yingxiao&backgroundColor=ffd5dc', department: '数字化运营部', position: '营销策划专员',
     status: 'ACTIVE', employmentStatus: '在职', owner: '李明', ownerType: '自有',
     skills: ['文案撰写', '营销方案', '用户画像', '竞品分析'],
     skillIds: ['SK002', 'SK004'],
@@ -302,7 +318,7 @@ export const digitalEmployees: DigitalEmployee[] = [
     likes: 256, dislikes: 15, heat: 1120,
   },
   {
-    id: 'DE-2026004', name: '小翼·审计', avatar: 'https://api.dicebear.com/7.x/personas/svg?seed=shenji&backgroundColor=d1f4d1', department: '审计部', position: '审计助理',
+    id: 'DE-2026004', employeeNumber: 'DE-2026004', name: '小翼·审计', avatar: 'https://api.dicebear.com/7.x/personas/svg?seed=shenji&backgroundColor=d1f4d1', department: '审计部', position: '审计助理',
     status: 'ACTIVE', employmentStatus: '在职', owner: '王芳', ownerType: '自有',
     skills: ['工作底稿', '整改判定', '风险识别', '报告生成'],
     skillIds: ['SK006'],
@@ -313,7 +329,7 @@ export const digitalEmployees: DigitalEmployee[] = [
     likes: 89, dislikes: 5, heat: 380,
   },
   {
-    id: 'DE-2026005', name: '小翼·HR', avatar: 'https://api.dicebear.com/7.x/personas/svg?seed=hr2026&backgroundColor=ffdfbf', department: '人力资源部', position: '人事助理',
+    id: 'DE-2026005', employeeNumber: 'DE-2026005', name: '小翼·HR', avatar: 'https://api.dicebear.com/7.x/personas/svg?seed=hr2026&backgroundColor=ffdfbf', department: '人力资源部', position: '人事助理',
     status: 'ACTIVE', employmentStatus: '在职', owner: '张三', ownerType: '自有',
     skills: ['人岗匹配', '简历筛选', '面试安排', '证书查询'],
     skillIds: ['SK008'],
@@ -324,7 +340,7 @@ export const digitalEmployees: DigitalEmployee[] = [
     likes: 210, dislikes: 7, heat: 980,
   },
   {
-    id: 'DE-2026006', name: '小翼·财务', avatar: 'https://api.dicebear.com/7.x/personas/svg?seed=caiwu&backgroundColor=b6e3f4', department: '财务共享中心', position: '财务分析专员',
+    id: 'DE-2026006', employeeNumber: 'DE-2026006', name: '小翼·财务', avatar: 'https://api.dicebear.com/7.x/personas/svg?seed=caiwu&backgroundColor=b6e3f4', department: '财务共享中心', position: '财务分析专员',
     status: 'ACTIVE', employmentStatus: '在职', owner: '赵六', ownerType: '自有',
     skills: ['报销审核', '预算分析', '费用统计', '合规检查'],
     skillIds: ['SK007'],
@@ -336,7 +352,7 @@ export const digitalEmployees: DigitalEmployee[] = [
   },
   {
     id: 'DE-2026007', name: '小翼·运维', avatar: 'https://api.dicebear.com/7.x/personas/svg?seed=yunwei&backgroundColor=c0aede', department: 'IT运维部', position: '运维工程师',
-    status: 'SUSPENDED', employmentStatus: '在职', owner: '孙七', ownerType: '外包',
+    status: 'SUSPENDED', employmentStatus: '离职', owner: '孙七', ownerType: '外包',
     skills: ['故障诊断', '日志分析', '自动巡检', '性能优化'],
     skillIds: ['SK009'],
     knowledgeIds: ['KB006'],
@@ -346,7 +362,7 @@ export const digitalEmployees: DigitalEmployee[] = [
     likes: 67, dislikes: 18, heat: 210,
   },
   {
-    id: 'DE-2026008', name: '小翼·商机', avatar: 'https://api.dicebear.com/7.x/personas/svg?seed=shangji&backgroundColor=ffd5dc', department: '数字化运营部', position: '商机分析专员',
+    id: 'DE-2026008', employeeNumber: 'DE-2026008', name: '小翼·商机', avatar: 'https://api.dicebear.com/7.x/personas/svg?seed=shangji&backgroundColor=ffd5dc', department: '数字化运营部', position: '商机分析专员',
     status: 'ACTIVE', employmentStatus: '在职', owner: '周八', ownerType: '自有',
     skills: ['商机挖掘', '客户画像', '竞品追踪', '销售预测'],
     skillIds: ['SK004'],
@@ -357,7 +373,7 @@ export const digitalEmployees: DigitalEmployee[] = [
     likes: 278, dislikes: 11, heat: 1280,
   },
   {
-    id: 'DE-2026009', name: '小翼·文档', avatar: 'https://api.dicebear.com/7.x/personas/svg?seed=wendang&backgroundColor=d1f4d1', department: '综合管理部', position: '文档管理专员',
+    id: 'DE-2026009', employeeNumber: 'DE-2026009', name: '小翼·文档', avatar: 'https://api.dicebear.com/7.x/personas/svg?seed=wendang&backgroundColor=d1f4d1', department: '综合管理部', position: '文档管理专员',
     status: 'ACTIVE', employmentStatus: '在职', owner: '钱九', ownerType: '自有',
     skills: ['文件解析', '摘要生成', '格式转换', '内容提取'],
     skillIds: ['SK001', 'SK002'],
@@ -369,7 +385,7 @@ export const digitalEmployees: DigitalEmployee[] = [
   },
   {
     id: 'DE-2026010', name: '小翼·经分', avatar: 'https://api.dicebear.com/7.x/personas/svg?seed=jingfen&backgroundColor=ffdfbf', department: '经营分析部', position: '经营分析专员',
-    status: 'TRAINING', employmentStatus: '在职', owner: '吴十', ownerType: '自有',
+    status: 'TRAINING', employmentStatus: '离职', owner: '吴十', ownerType: '自有',
     skills: ['经营报告', '指标分析', '趋势预测', '可视化'],
     skillIds: [],
     knowledgeIds: ['KB007'],

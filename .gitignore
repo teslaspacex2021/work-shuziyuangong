@@ -7,20 +7,44 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Dependencies
 node_modules
+
+# Build output
 dist
 dist-ssr
 *.local
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Test & coverage
+coverage
+*.lcov
+
+# TypeScript
+*.tsbuildinfo
+
+# Vite
+.vite
+*.vite
 
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
 .idea
-.DS_Store
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
-*.AI数字员工管理平台-功能清单与工作量评估.xlsx
 
+# OS files
+.DS_Store
+Thumbs.db
+
+# Business documents (Excel)
+*.xlsx
+*.xls

@@ -2,16 +2,18 @@ import React, { useState } from 'react';
 import {
   Card, Table, Tag, Button, Space, Avatar, Modal, Input, Select,
   Row, Col, Statistic, Descriptions, Checkbox, Badge, message, Tabs, Progress,
-  Tooltip, Result,
+  Tooltip, Result, Form, Alert,
 } from 'antd';
 import {
   SearchOutlined, SettingOutlined, TeamOutlined,
   ThunderboltOutlined, DatabaseOutlined, FileTextOutlined,
   BookOutlined, InfoCircleOutlined, SyncOutlined,
   CheckCircleOutlined, ExperimentOutlined, LinkOutlined,
+  IdcardOutlined,
 } from '@ant-design/icons';
 import {
   digitalEmployees, skills, knowledgeBases,
+  hasEmployeeNumber, getEffectiveEmploymentStatus, canBeInService,
   type DigitalEmployee, type Skill, type KnowledgeBase,
 } from '../../mock/data';
 
@@ -44,17 +46,26 @@ const EmployeeManagement: React.FC = () => {
   const [selectedEmployee, setSelectedEmployee] = useState<DigitalEmployee | null>(null);
   const [selectedSkillIds, setSelectedSkillIds] = useState<string[]>([]);
   const [selectedKBIds, setSelectedKBIds] = useState<string[]>([]);
+  const [employeeNumberVisible, setEmployeeNumberVisible] = useState(false);
+  const [employeeNumberForm] = Form.useForm<{ employeeNumber: string; setInService?: boolean }>();
+  const draftEmployeeNumber = Form.useWatch('employeeNumber', employeeNumberForm);
 
   const filtered = employees.filter((e) => {
-    const matchSearch = e.name.includes(searchText) || e.id.includes(searchText) || e.department.includes(searchText);
-    const matchStatus = !statusFilter || e.employmentStatus === statusFilter;
+    const empNo = e.employeeNumber ?? '';
+    const matchSearch =
+      e.name.includes(searchText)
+      || empNo.includes(searchText)
+      || e.id.includes(searchText)
+      || e.department.includes(searchText);
+    const effectiveStatus = getEffectiveEmploymentStatus(e);
+    const matchStatus = !statusFilter || effectiveStatus === statusFilter;
     return matchSearch && matchStatus;
   });
 
   const totalDocs = knowledgeBases.reduce((s, k) => s + k.docCount, 0);
   const activeCount = employees.filter((e) => e.status === 'ACTIVE').length;
   const trainingCount = employees.filter((e) => e.status === 'TRAINING').length;
-  const inServiceCount = employees.filter((e) => e.employmentStatus === '在职').length;
+  const inServiceCount = employees.filter((e) => getEffectiveEmploymentStatus(e) === '在职').length;
 
   const openConfig = (emp: DigitalEmployee, tab: string = 'skills') => {
     setSelectedEmployee(emp);
@@ -83,11 +94,69 @@ const EmployeeManagement: React.FC = () => {
     setDetailVisible(true);
   };
 
+  const openEmployeeNumberModal = (emp: DigitalEmployee) => {
+    setSelectedEmployee(emp);
+    employeeNumberForm.setFieldsValue({
+      employeeNumber: emp.employeeNumber ?? '',
+      setInService: emp.employmentStatus === '离职' && !hasEmployeeNumber(emp),
+    });
+    setEmployeeNumberVisible(true);
+  };
+
+  const saveEmployeeNumber = async () => {
+    if (!selectedEmployee) return;
+    try {
+      const values = await employeeNumberForm.validateFields();
+      const trimmed = values.employeeNumber.trim().toUpperCase();
+      const duplicated = employees.some(
+        (e) => e.id !== selectedEmployee.id && e.employeeNumber?.trim().toUpperCase() === trimmed,
+      );
+      if (duplicated) {
+        message.error('该工号已被其他数字员工使用');
+        return;
+      }
+      const wantInService = Boolean(values.setInService);
+      if (wantInService && !trimmed) {
+        message.error('未填写工号时不能设为在职');
+        return;
+      }
+      setEmployees((prev) =>
+        prev.map((e) => {
+          if (e.id !== selectedEmployee.id) return e;
+          const wasWithoutNumber = !hasEmployeeNumber(e);
+          const next: DigitalEmployee = { ...e, employeeNumber: trimmed };
+          if (wasWithoutNumber) {
+            next.status = 'ACTIVE';
+          }
+          if (wantInService) {
+            if (!canBeInService({ ...next, employeeNumber: trimmed })) {
+              return e;
+            }
+            next.employmentStatus = '在职';
+          } else if (e.employmentStatus === '在职' && !trimmed) {
+            next.employmentStatus = '离职';
+          }
+          return next;
+        }),
+      );
+      message.success(
+        `已为 ${selectedEmployee.name} 保存工号${wantInService ? '并设为在职' : ''}${!hasEmployeeNumber(selectedEmployee) ? '，运行状态已切换为在线' : ''}`,
+      );
+      setEmployeeNumberVisible(false);
+    } catch {
+      /* 表单校验未通过 */
+    }
+  };
 
   const columns = [
     {
-      title: '工号', dataIndex: 'id', key: 'id', width: 120,
-      render: (text: string) => <span style={{ fontFamily: 'monospace' }}>{text}</span>,
+      title: '工号', key: 'employeeNumber', width: 130,
+      render: (_: unknown, record: DigitalEmployee) => {
+        if (!hasEmployeeNumber(record)) {
+          return <Tag color="warning">未填写</Tag>;
+        }
+        return <span style={{ fontFamily: 'monospace' }}>{record.employeeNumber}</span>;
+      },
     },
     {
       title: '数字员工', key: 'name', width: 180,
@@ -146,14 +215,28 @@ const EmployeeManagement: React.FC = () => {
       },
     },
     {
-      title: '在职状态', dataIndex: 'employmentStatus', key: 'employmentStatus', width: 90,
-      render: (s: string) => <Tag color={s === '在职' ? 'green' : 'default'}>{s}</Tag>,
+      title: '在职状态', key: 'employmentStatus', width: 100,
+      render: (_: unknown, record: DigitalEmployee) => {
+        const effective = getEffectiveEmploymentStatus(record);
+        if (effective === null) {
+          return <span style={{ color: '#999' }}>—</span>;
+        }
+        return <Tag color={effective === '在职' ? 'green' : 'default'}>{effective}</Tag>;
+      },
     },
     { title: '最近活跃', dataIndex: 'lastActive', key: 'lastActive', width: 100 },
     {
-      title: '操作', key: 'action', width: 120, fixed: 'right' as const,
+      title: '操作', key: 'action', width: 150, fixed: 'right' as const,
       render: (_: unknown, record: DigitalEmployee) => (
         <Space size={4}>
+          <Tooltip title={hasEmployeeNumber(record) ? '修改工号' : '填写工号'}>
+            <Button
+              size="small"
+              icon={<IdcardOutlined />}
+              onClick={() => openEmployeeNumberModal(record)}
+              type={hasEmployeeNumber(record) ? 'default' : 'primary'}
+            />
+          </Tooltip>
           <Tooltip title="配置">
             <Button type="primary" size="small" icon={<SettingOutlined />} onClick={() => openConfig(record)} />
           </Tooltip>
@@ -407,6 +490,45 @@ const EmployeeManagement: React.FC = () => {
       </Modal>
 
 
+      {/* 工号填写 Modal */}
+      <Modal
+        title={`工号填写 — ${selectedEmployee?.name}`}
+        open={employeeNumberVisible}
+        onCancel={() => setEmployeeNumberVisible(false)}
+        onOk={saveEmployeeNumber}
+        okText="保存"
+        destroyOnClose
+        width={480}
+      >
+        {selectedEmployee && (
+          <Form form={employeeNumberForm} layout="vertical" style={{ marginTop: 8 }}>
+            <Alert
+              type="info"
+              showIcon
+              style={{ marginBottom: 16 }}
+              message="未填写工号的数字员工不能设为在职状态。"
+            />
+            <Form.Item
+              name="employeeNumber"
+              label="工号"
+              rules={[
+                { required: true, message: '请输入工号' },
+                { pattern: /^DE-\d{4,}$/i, message: '工号格式应为 DE- 加数字，如 DE-2026011' },
+              ]}
+            >
+              <Input placeholder="例如 DE-2026011" style={{ fontFamily: 'monospace' }} allowClear />
+            </Form.Item>
+            {selectedEmployee.employmentStatus === '离职' && (
+              <Form.Item name="setInService" valuePropName="checked">
+                <Checkbox disabled={!draftEmployeeNumber?.trim()}>
+                  保存后设为在职（须先填写工号）
+                </Checkbox>
+              </Form.Item>
+            )}
+          </Form>
+        )}
+      </Modal>
+
       {/* Detail Modal - includes OnDuty info */}
       <Modal
         title={`员工详情 — ${selectedEmployee?.name}`}
@@ -426,10 +548,18 @@ const EmployeeManagement: React.FC = () => {
             </div>
             <Descriptions column={2} bordered size="small" style={{ marginBottom: 16 }}>
               <Descriptions.Item label="工号">
-                <span style={{ fontFamily: 'monospace' }}>{selectedEmployee.id}</span>
+                {hasEmployeeNumber(selectedEmployee)
+                  ? <span style={{ fontFamily: 'monospace' }}>{selectedEmployee.employeeNumber}</span>
+                  : <Tag color="warning">未填写</Tag>}
               </Descriptions.Item>
               <Descriptions.Item label="在职状态">
-                <Tag color={selectedEmployee.employmentStatus === '在职' ? 'green' : 'default'}>{selectedEmployee.employmentStatus}</Tag>
+                {(() => {
+                  const effective = getEffectiveEmploymentStatus(selectedEmployee);
+                  if (effective === null) {
+                    return <span style={{ color: '#999' }}>—</span>;
+                  }
+                  return <Tag color={effective === '在职' ? 'green' : 'default'}>{effective}</Tag>;
+                })()}
               </Descriptions.Item>
               <Descriptions.Item label="运行状态">
                 <Tag color={statusColorMap[selectedEmployee.status]}>{statusLabelMap[selectedEmployee.status]}</Tag>
