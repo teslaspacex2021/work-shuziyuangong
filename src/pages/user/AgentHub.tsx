@@ -9,7 +9,12 @@ import {
   FireOutlined, IdcardOutlined, TrophyOutlined, RocketOutlined,
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
-import { digitalEmployees, positions, skills, knowledgeBases, type DigitalEmployee } from '../../mock/data';
+import {
+  digitalEmployees, skills, knowledgeBases,
+  BUSINESS_LINES, BUSINESS_LINE_COLORS, getEmployeeBusinessLine,
+  CAPABILITY_LEVEL_COLORS, getEmployeeCapabilityLevel,
+  type DigitalEmployee,
+} from '../../mock/data';
 
 const mockAgents = [
   { id: 'a1', name: '惠企优才', desc: '我可以帮您查询人才政策、根据余额...', tags: ['人才推荐', '政策查询'], users: 10, sessions: 5, tokens: 3042, department: '数字化运营部' },
@@ -35,23 +40,14 @@ const statusColor: Record<string, string> = {
 const statusLabel: Record<string, string> = {
   ACTIVE: '在线', TRAINING: '训练中', SUSPENDED: '已暂停', TERMINATED: '已停用',
 };
-const levelLabel: Record<string, string> = {
-  L1: '初级', L2: '中级', L3: '高级', L4: '专家',
-};
 const levelColor: Record<string, string> = {
   L1: '#8c8c8c', L2: '#1d39c4', L3: '#0958d9', L4: '#006d75',
 };
 
-const positionToCategoryMap: Record<string, string> = {};
-positions.forEach((p) => {
-  positionToCategoryMap[p.name] = p.category;
-});
-positionToCategoryMap['智能综合助理'] = '综合类';
-
-const categoryOrder = ['全部', '综合类', '服务类', '技术类', '运营类', '合规类', '管理类', '财务类', '分析类'];
+const categoryOrder: string[] = ['全部', ...BUSINESS_LINES];
 const categoryIconColors: Record<string, string> = {
-  '全部': '#1677ff', '综合类': '#722ed1', '服务类': '#13c2c2', '技术类': '#2f54eb',
-  '运营类': '#fa541c', '合规类': '#52c41a', '管理类': '#eb2f96', '财务类': '#faad14', '分析类': '#1890ff',
+  '全部': '#1677ff',
+  ...BUSINESS_LINE_COLORS,
 };
 
 const AgentHub: React.FC = () => {
@@ -88,8 +84,7 @@ const AgentHub: React.FC = () => {
   const allCategories = useMemo(() => {
     const cats = new Set<string>();
     digitalEmployees.forEach((e) => {
-      const cat = positionToCategoryMap[e.position] || '其他';
-      cats.add(cat);
+      cats.add(getEmployeeBusinessLine(e));
     });
     return categoryOrder.filter((c) => c === '全部' || cats.has(c));
   }, []);
@@ -101,8 +96,7 @@ const AgentHub: React.FC = () => {
     }
     const posSet = new Set<string>();
     digitalEmployees.forEach((e) => {
-      const cat = positionToCategoryMap[e.position] || '其他';
-      if (cat === categoryFilter) posSet.add(e.position);
+      if (getEmployeeBusinessLine(e) === categoryFilter) posSet.add(e.position);
     });
     return ['全部', ...Array.from(posSet)];
   }, [categoryFilter]);
@@ -120,7 +114,7 @@ const AgentHub: React.FC = () => {
       );
     }
     if (categoryFilter !== '全部') {
-      list = list.filter((e) => (positionToCategoryMap[e.position] || '其他') === categoryFilter);
+      list = list.filter((e) => getEmployeeBusinessLine(e) === categoryFilter);
     }
     if (posFilter !== '全部') {
       list = list.filter((e) => e.position === posFilter);
@@ -240,11 +234,16 @@ const AgentHub: React.FC = () => {
                   </div>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
-                  <Tag style={{
-                    fontSize: 10, borderRadius: 4, margin: 0, lineHeight: '18px',
-                    padding: '0 6px', fontWeight: 600, color: '#fff',
-                    border: 'none', background: levelColor[emp.level],
-                  }}>{emp.level} {levelLabel[emp.level]}</Tag>
+                  {(() => {
+                    const cap = getEmployeeCapabilityLevel(emp);
+                    return (
+                      <Tag style={{
+                        fontSize: 10, borderRadius: 4, margin: 0, lineHeight: '18px',
+                        padding: '0 6px', fontWeight: 600, color: '#fff',
+                        border: 'none', background: CAPABILITY_LEVEL_COLORS[cap],
+                      }}>{cap}</Tag>
+                    );
+                  })()}
                   <Tag color={statusColor[emp.status]} style={{ fontSize: 10, margin: 0, borderRadius: 4 }}>
                     {statusLabel[emp.status]}
                   </Tag>
@@ -536,7 +535,7 @@ const AgentHub: React.FC = () => {
           const emp = selectedEmployee;
           const empSkills = skills.filter((s) => emp.skillIds.includes(s.id));
           const empKBs = knowledgeBases.filter((kb) => emp.knowledgeIds.includes(kb.id));
-          const cat = positionToCategoryMap[emp.position] || '其他';
+          const businessLine = getEmployeeBusinessLine(emp);
           return (
             <div>
               <div style={{
@@ -554,9 +553,14 @@ const AgentHub: React.FC = () => {
                 </div>
                 <div style={{ marginTop: 10, display: 'flex', justifyContent: 'center', gap: 6 }}>
                   <Tag color={statusColor[emp.status]}>{statusLabel[emp.status]}</Tag>
-                  <Tag style={{ color: '#fff', fontWeight: 600, fontSize: 12, padding: '2px 10px', border: 'none', background: levelColor[emp.level] }}>
-                    {emp.level} {levelLabel[emp.level]}
-                  </Tag>
+                  {(() => {
+                    const cap = getEmployeeCapabilityLevel(emp);
+                    return (
+                      <Tag style={{ color: '#fff', fontWeight: 600, fontSize: 12, padding: '2px 10px', border: 'none', background: CAPABILITY_LEVEL_COLORS[cap] }}>
+                        {cap}
+                      </Tag>
+                    );
+                  })()}
                 </div>
                 <Button
                   type="primary"
@@ -579,12 +583,26 @@ const AgentHub: React.FC = () => {
                 </Card>
                 <Card title="基本信息" size="small" style={{ borderRadius: 12, marginBottom: 16 }}>
                   <Descriptions column={2} size="small">
-                    <Descriptions.Item label="工号"><span style={{ fontFamily: 'monospace' }}>{emp.id}</span></Descriptions.Item>
-                    <Descriptions.Item label="职级"><Tag color="blue">{emp.level}</Tag></Descriptions.Item>
-                    <Descriptions.Item label="部门">{emp.department}</Descriptions.Item>
-                    <Descriptions.Item label="岗位">{emp.position}</Descriptions.Item>
-                    <Descriptions.Item label="岗位性质"><Tag color={categoryIconColors[cat]}>{cat}</Tag></Descriptions.Item>
-                    <Descriptions.Item label="归属人">{emp.owner}</Descriptions.Item>
+                    <Descriptions.Item label="数字员工名称">{emp.name}</Descriptions.Item>
+                    <Descriptions.Item label="所属条线"><Tag color={BUSINESS_LINE_COLORS[businessLine]}>{businessLine}</Tag></Descriptions.Item>
+                    <Descriptions.Item label="基准岗位">{emp.position}</Descriptions.Item>
+                    <Descriptions.Item label="级别">
+                      {emp.capabilityLevel
+                        ? <Tag color="blue">{emp.capabilityLevel}</Tag>
+                        : <span style={{ color: '#999' }}>—</span>}
+                    </Descriptions.Item>
+                    <Descriptions.Item label="应用职责描述" span={2}>
+                      {emp.responsibility ?? emp.description}
+                    </Descriptions.Item>
+                    <Descriptions.Item label="运营负责人">
+                      {emp.operationOwner ?? <span style={{ color: '#999' }}>—</span>}
+                    </Descriptions.Item>
+                    <Descriptions.Item label="业务负责人">
+                      {emp.businessOwner ?? <span style={{ color: '#999' }}>—</span>}
+                    </Descriptions.Item>
+                    <Descriptions.Item label="技术负责人" span={2}>
+                      {emp.techOwner ?? <span style={{ color: '#999' }}>—</span>}
+                    </Descriptions.Item>
                   </Descriptions>
                 </Card>
                 <Card title="Tokens 使用情况" size="small" style={{ borderRadius: 12, marginBottom: 16 }}>

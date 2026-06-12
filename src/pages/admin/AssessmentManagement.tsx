@@ -154,7 +154,7 @@ const AssessmentManagement: React.FC = () => {
       },
     },
     { title: '部门', dataIndex: 'department', key: 'department', width: 120 },
-    { title: '岗位', dataIndex: 'position', key: 'position', width: 130 },
+    { title: '岗位', dataIndex: 'position', key: 'position', width: 220 },
     {
       title: '任务完成率', dataIndex: 'taskCompleteRate', key: 'taskCompleteRate', width: 150,
       render: (rate: number) => <Progress percent={rate} size="small" style={{ width: 100 }} />,

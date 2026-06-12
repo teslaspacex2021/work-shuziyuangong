@@ -115,7 +115,7 @@ const DemandManagement: React.FC = () => {
       render: (t: string) => <span style={{ fontWeight: 500 }}>{t}</span>,
     },
     { title: '需求部门', dataIndex: 'department', key: 'department', width: 120 },
-    { title: '需求岗位', dataIndex: 'position', key: 'position', width: 130 },
+    { title: '需求岗位', dataIndex: 'position', key: 'position', width: 220 },
     {
       title: '需求人数', dataIndex: 'headcount', key: 'headcount', width: 90, align: 'center',
       render: (v: number) => <span style={{ fontWeight: 600, color: '#1677ff' }}>{v}</span>,

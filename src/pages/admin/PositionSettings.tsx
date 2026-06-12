@@ -9,18 +9,7 @@ import {
   ExclamationCircleFilled, SwapOutlined, PauseCircleOutlined, LinkOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
-import { positions, type PositionItem } from '../../mock/data';
-
-const categoryColors: Record<string, string> = {
-  '服务类': 'blue',
-  '技术类': 'cyan',
-  '运营类': 'green',
-  '合规类': 'orange',
-  '管理类': 'purple',
-  '财务类': 'gold',
-  '分析类': 'magenta',
-  '综合类': 'default',
-};
+import { positions, BUSINESS_LINES, BUSINESS_LINE_COLORS, type PositionItem } from '../../mock/data';
 
 const allSkillOptions = [
   '智能问答', '工单处理', '情感分析', '数据标注', '数据清洗',
@@ -35,7 +24,7 @@ const departmentOptions = [
   '人力资源部', '财务共享中心', 'IT运维部', '综合管理部', '经营分析部', '法务部',
 ];
 
-const categoryOptions = ['服务类', '技术类', '运营类', '合规类', '管理类', '财务类', '分析类', '综合类'];
+const categoryOptions: string[] = [...BUSINESS_LINES];
 
 const PositionSettings: React.FC = () => {
   const [data, setData] = useState<PositionItem[]>(positions);
@@ -53,7 +42,7 @@ const PositionSettings: React.FC = () => {
 
   const filteredData = useMemo(() => {
     return data.filter((p) => {
-      const matchSearch = !searchText || p.name.includes(searchText) || p.id.includes(searchText);
+      const matchSearch = !searchText || p.name.includes(searchText);
       const matchDept = !deptFilter || p.department === deptFilter;
       return matchSearch && matchDept;
     });
@@ -121,12 +110,11 @@ const PositionSettings: React.FC = () => {
   }, [data, suspendTarget]);
 
   const columns: ColumnsType<PositionItem> = [
-    { title: '岗位ID', dataIndex: 'id', key: 'id', width: 100 },
-    { title: '岗位名称', dataIndex: 'name', key: 'name', width: 140 },
+    { title: '岗位名称', dataIndex: 'name', key: 'name', width: 220 },
     { title: '所属部门', dataIndex: 'department', key: 'department', width: 130 },
     {
-      title: '岗位分类', dataIndex: 'category', key: 'category', width: 100,
-      render: (cat: string) => <Tag color={categoryColors[cat] || 'default'}>{cat}</Tag>,
+      title: '岗位所属条线', dataIndex: 'category', key: 'category', width: 120,
+      render: (cat: string) => <Tag color={BUSINESS_LINE_COLORS[cat] || 'default'}>{cat}</Tag>,
     },
     { title: '等级要求', dataIndex: 'level', key: 'level', width: 100 },
     {
@@ -184,7 +172,7 @@ const PositionSettings: React.FC = () => {
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
           <Space wrap>
             <Input
-              placeholder="搜索岗位名称/ID"
+              placeholder="搜索岗位名称"
               prefix={<SearchOutlined />}
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
@@ -255,9 +243,9 @@ const PositionSettings: React.FC = () => {
           <Form.Item name="department" label="所属部门" rules={[{ required: true, message: '请选择所属部门' }]}>
             <Select placeholder="请选择部门" options={departmentOptions.map((d) => ({ label: d, value: d }))} />
           </Form.Item>
-          <Form.Item name="category" label="岗位分类" rules={[{ required: true, message: '请选择岗位分类' }]}>
+          <Form.Item name="category" label="岗位所属条线" rules={[{ required: true, message: '请选择所属条线' }]}>
             <Select
-              placeholder="请选择分类"
+              placeholder="请选择所属条线"
               options={categoryOptions.map((c) => ({ label: c, value: c }))}
             />
           </Form.Item>

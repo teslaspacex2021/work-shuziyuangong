@@ -9,10 +9,13 @@ import {
   ExclamationCircleFilled,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
+import {
+  positions, BUSINESS_LINES, BUSINESS_LINE_COLORS, type BusinessLine,
+} from '../../mock/data';
 
-const DEFAULT_TYPE_ID = 'PT008';
+const DEFAULT_LINE_ID = 'LN012';
 
-interface PositionType {
+interface BusinessLineItem {
   id: string;
   name: string;
   code: string;
@@ -25,27 +28,61 @@ interface PositionType {
   sortOrder: number;
 }
 
-const mockPositionTypes: PositionType[] = [
-  { id: 'PT001', name: '服务类', code: 'SERVICE', color: '#1677ff', description: '面向客户服务、咨询类岗位', positionCount: 3, employeeCount: 5, isDefault: false, createTime: '2026-01-15', sortOrder: 1 },
-  { id: 'PT002', name: '技术类', code: 'TECH', color: '#13c2c2', description: '涉及技术开发、运维、数据处理类岗位', positionCount: 4, employeeCount: 6, isDefault: false, createTime: '2026-01-15', sortOrder: 2 },
-  { id: 'PT003', name: '运营类', code: 'OPERATION', color: '#fa541c', description: '业务运营、内容运营、市场运营类岗位', positionCount: 2, employeeCount: 3, isDefault: false, createTime: '2026-01-15', sortOrder: 3 },
-  { id: 'PT004', name: '合规类', code: 'COMPLIANCE', color: '#52c41a', description: '审计、合规检查、风险管控类岗位', positionCount: 2, employeeCount: 2, isDefault: false, createTime: '2026-01-15', sortOrder: 4 },
-  { id: 'PT005', name: '管理类', code: 'MANAGEMENT', color: '#eb2f96', description: '综合管理、行政事务类岗位', positionCount: 1, employeeCount: 1, isDefault: false, createTime: '2026-02-01', sortOrder: 5 },
-  { id: 'PT006', name: '财务类', code: 'FINANCE', color: '#faad14', description: '财务核算、报表分析、报销审核类岗位', positionCount: 2, employeeCount: 2, isDefault: false, createTime: '2026-02-01', sortOrder: 6 },
-  { id: 'PT007', name: '分析类', code: 'ANALYSIS', color: '#722ed1', description: '数据分析、经营分析、BI类岗位', positionCount: 1, employeeCount: 2, isDefault: false, createTime: '2026-02-15', sortOrder: 7 },
-  { id: DEFAULT_TYPE_ID, name: '综合类', code: 'GENERAL', color: '#8c8c8c', description: '系统内置默认岗位类型，不可编辑删除。其他岗位类型被删除后，关联岗位和员工自动归入此类型。', positionCount: 1, employeeCount: 1, isDefault: true, createTime: '2026-01-01', sortOrder: 99 },
-];
+const LINE_META: Record<BusinessLine, { code: string; description: string }> = {
+  渠道: { code: 'CHANNEL', description: '负责销售渠道开拓、渠道管理、渠道支持类岗位' },
+  市场: { code: 'MARKET', description: '负责市场推广、品牌运营、商机挖掘类岗位' },
+  研发: { code: 'RD', description: '负责产品研发、技术开发、系统架构类岗位' },
+  客服: { code: 'CS', description: '面向客户服务、咨询、工单处理类岗位' },
+  云网: { code: 'CLOUD_NET', description: '负责云网络运维、系统监控、故障处理类岗位' },
+  政企: { code: 'GOV_ENT', description: '面向政企客户支持、定制化服务类岗位' },
+  数发: { code: 'DATA_DEV', description: '负责数据治理、数据标注、数据应用开发类岗位' },
+  财务: { code: 'FINANCE', description: '负责财务核算、报表分析、报销审核类岗位' },
+  人力: { code: 'HR', description: '负责人力资源管理、招聘、培训类岗位' },
+  法律: { code: 'LEGAL', description: '负责法务合规、合同审核、风险管控类岗位' },
+  企发: { code: 'ENTERPRISE', description: '负责企业战略规划、经营分析、业务发展类岗位' },
+  办公室: { code: 'OFFICE', description: '负责综合管理、行政事务、文档处理类岗位' },
+  党群: { code: 'PARTY', description: '负责党建工作、群众工作、思想教育类岗位' },
+  工会: { code: 'UNION', description: '负责工会工作、员工关怀、活动组织类岗位' },
+  纪检: { code: 'DISCIPLINE', description: '负责纪检监察、廉政建设、监督检查类岗位' },
+  审计: { code: 'AUDIT', description: '负责内部审计、合规检查、风险识别类岗位' },
+};
+
+const buildInitialLines = (): BusinessLineItem[] => {
+  const positionCountMap: Record<string, number> = {};
+  const employeeCountMap: Record<string, number> = {};
+  positions.forEach((p) => {
+    positionCountMap[p.category] = (positionCountMap[p.category] || 0) + 1;
+    employeeCountMap[p.category] = (employeeCountMap[p.category] || 0) + p.employeeCount;
+  });
+
+  return BUSINESS_LINES.map((name, index) => {
+    const id = `LN${String(index + 1).padStart(3, '0')}`;
+    const meta = LINE_META[name];
+    return {
+      id,
+      name,
+      code: meta.code,
+      color: BUSINESS_LINE_COLORS[name] || '#1677ff',
+      description: meta.description,
+      positionCount: positionCountMap[name] || 0,
+      employeeCount: employeeCountMap[name] || 0,
+      isDefault: id === DEFAULT_LINE_ID,
+      createTime: '2026-01-15',
+      sortOrder: index + 1,
+    };
+  });
+};
 
 const PositionTypeConfig: React.FC = () => {
-  const [data, setData] = useState<PositionType[]>(mockPositionTypes);
+  const [data, setData] = useState<BusinessLineItem[]>(buildInitialLines());
   const [searchText, setSearchText] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
-  const [editingItem, setEditingItem] = useState<PositionType | null>(null);
+  const [editingItem, setEditingItem] = useState<BusinessLineItem | null>(null);
   const [form] = Form.useForm();
 
   const filteredData = useMemo(() => {
-    return data.filter((pt) => {
-      return !searchText || pt.name.includes(searchText) || pt.code.includes(searchText);
+    return data.filter((line) => {
+      return !searchText || line.name.includes(searchText) || line.code.includes(searchText);
     }).sort((a, b) => {
       if (a.isDefault) return 1;
       if (b.isDefault) return -1;
@@ -53,9 +90,9 @@ const PositionTypeConfig: React.FC = () => {
     });
   }, [data, searchText]);
 
-  const customCount = data.filter((pt) => !pt.isDefault).length;
-  const totalPositions = data.reduce((sum, pt) => sum + pt.positionCount, 0);
-  const totalEmployees = data.reduce((sum, pt) => sum + pt.employeeCount, 0);
+  const customCount = data.filter((line) => !line.isDefault).length;
+  const totalPositions = data.reduce((sum, line) => sum + line.positionCount, 0);
+  const totalEmployees = data.reduce((sum, line) => sum + line.employeeCount, 0);
 
   const handleAdd = () => {
     setEditingItem(null);
@@ -64,24 +101,24 @@ const PositionTypeConfig: React.FC = () => {
     setModalVisible(true);
   };
 
-  const handleEdit = (record: PositionType) => {
+  const handleEdit = (record: BusinessLineItem) => {
     setEditingItem(record);
     form.setFieldsValue(record);
     setModalVisible(true);
   };
 
-  const handleDelete = (record: PositionType) => {
+  const handleDelete = (record: BusinessLineItem) => {
     if (record.isDefault) return;
 
-    const defaultType = data.find((pt) => pt.isDefault);
-    const defaultName = defaultType?.name || '综合类';
+    const defaultLine = data.find((line) => line.isDefault);
+    const defaultName = defaultLine?.name || '办公室';
 
     Modal.confirm({
-      title: '确认删除岗位类型',
+      title: '确认删除条线',
       icon: <ExclamationCircleFilled />,
       content: (
         <div>
-          <p>确定要删除岗位类型 <strong>「{record.name}」</strong> 吗？</p>
+          <p>确定要删除条线 <strong>「{record.name}」</strong> 吗？</p>
           {(record.positionCount > 0 || record.employeeCount > 0) && (
             <div style={{
               background: '#fff7e6', border: '1px solid #ffd591', borderRadius: 8,
@@ -89,17 +126,17 @@ const PositionTypeConfig: React.FC = () => {
             }}>
               <p style={{ margin: 0, fontWeight: 500, color: '#d48806' }}>
                 <ExclamationCircleFilled style={{ marginRight: 6 }} />
-                该类型下有 <strong>{record.positionCount}</strong> 个岗位、
+                该条线下有 <strong>{record.positionCount}</strong> 个岗位、
                 <strong>{record.employeeCount}</strong> 位数字员工
               </p>
               <p style={{ margin: '8px 0 0', color: '#666', fontSize: 13 }}>
-                删除后，这些岗位和员工将自动归入默认岗位类型「{defaultName}」。
+                删除后，这些岗位和员工将自动归入默认条线「{defaultName}」。
                 <br />员工运行状态不受影响。
               </p>
             </div>
           )}
           {record.positionCount === 0 && record.employeeCount === 0 && (
-            <p style={{ color: '#999', fontSize: 13 }}>该类型下暂无关联岗位和员工。</p>
+            <p style={{ color: '#999', fontSize: 13 }}>该条线下暂无关联岗位和员工。</p>
           )}
         </div>
       ),
@@ -108,25 +145,25 @@ const PositionTypeConfig: React.FC = () => {
       cancelText: '取消',
       onOk() {
         setData((prev) => {
-          const defaultItem = prev.find((pt) => pt.isDefault);
-          if (!defaultItem) return prev.filter((pt) => pt.id !== record.id);
+          const defaultItem = prev.find((line) => line.isDefault);
+          if (!defaultItem) return prev.filter((line) => line.id !== record.id);
 
           return prev
-            .filter((pt) => pt.id !== record.id)
-            .map((pt) =>
-              pt.id === defaultItem.id
+            .filter((line) => line.id !== record.id)
+            .map((line) =>
+              line.id === defaultItem.id
                 ? {
-                    ...pt,
-                    positionCount: pt.positionCount + record.positionCount,
-                    employeeCount: pt.employeeCount + record.employeeCount,
+                    ...line,
+                    positionCount: line.positionCount + record.positionCount,
+                    employeeCount: line.employeeCount + record.employeeCount,
                   }
-                : pt,
+                : line,
             );
         });
         message.success(
           record.positionCount > 0
             ? `已删除「${record.name}」，${record.positionCount} 个岗位和 ${record.employeeCount} 位员工已归入「${defaultName}」`
-            : `已删除岗位类型「${record.name}」`,
+            : `已删除条线「${record.name}」`,
         );
       },
     });
@@ -137,12 +174,12 @@ const PositionTypeConfig: React.FC = () => {
       const colorValue = typeof values.color === 'string' ? values.color : values.color?.toHexString?.() || '#1677ff';
       if (editingItem) {
         setData((prev) =>
-          prev.map((pt) => (pt.id === editingItem.id ? { ...pt, ...values, color: colorValue } : pt)),
+          prev.map((line) => (line.id === editingItem.id ? { ...line, ...values, color: colorValue } : line)),
         );
-        message.success('岗位类型已更新');
+        message.success('条线已更新');
       } else {
-        const newItem: PositionType = {
-          id: `PT${String(data.length + 1).padStart(3, '0')}`,
+        const newItem: BusinessLineItem = {
+          id: `LN${String(data.length + 1).padStart(3, '0')}`,
           ...values,
           color: colorValue,
           isDefault: false,
@@ -151,17 +188,17 @@ const PositionTypeConfig: React.FC = () => {
           createTime: new Date().toISOString().split('T')[0],
         };
         setData((prev) => [...prev, newItem]);
-        message.success('岗位类型已创建');
+        message.success('条线已创建');
       }
       setModalVisible(false);
       form.resetFields();
     });
   };
 
-  const columns: ColumnsType<PositionType> = [
-    { title: '类型ID', dataIndex: 'id', key: 'id', width: 90 },
+  const columns: ColumnsType<BusinessLineItem> = [
+    { title: '条线ID', dataIndex: 'id', key: 'id', width: 90 },
     {
-      title: '类型名称', dataIndex: 'name', key: 'name', width: 140,
+      title: '条线名称', dataIndex: 'name', key: 'name', width: 140,
       render: (name: string, record) => (
         <Space>
           <div style={{ width: 12, height: 12, borderRadius: 3, background: record.color, flexShrink: 0 }} />
@@ -209,18 +246,18 @@ const PositionTypeConfig: React.FC = () => {
 
   return (
     <div>
-      <h2 style={{ marginBottom: 4, fontSize: 20, fontWeight: 600 }}>岗位类型配置</h2>
-      <p style={{ color: '#999', marginBottom: 20 }}>管理数字员工的岗位分类体系，定义岗位类型的编码、颜色和排序。系统内置默认岗位类型「综合类」不可编辑删除。</p>
+      <h2 style={{ marginBottom: 4, fontSize: 20, fontWeight: 600 }}>岗位所属条线</h2>
+      <p style={{ color: '#999', marginBottom: 20 }}>管理数字员工的岗位所属条线体系，定义条线的编码、颜色和排序。系统内置默认条线「办公室」不可编辑删除。</p>
 
       <Row gutter={16} style={{ marginBottom: 20 }}>
         <Col span={6}>
           <Card style={{ borderRadius: 12 }}>
-            <Statistic title="类型总数" value={data.length} prefix={<TagOutlined style={{ color: '#1677ff' }} />} />
+            <Statistic title="条线总数" value={data.length} prefix={<TagOutlined style={{ color: '#1677ff' }} />} />
           </Card>
         </Col>
         <Col span={6}>
           <Card style={{ borderRadius: 12 }}>
-            <Statistic title="自定义类型" value={customCount} prefix={<AppstoreOutlined style={{ color: '#52c41a' }} />} valueStyle={{ color: '#52c41a' }} />
+            <Statistic title="自定义条线" value={customCount} prefix={<AppstoreOutlined style={{ color: '#52c41a' }} />} valueStyle={{ color: '#52c41a' }} />
           </Card>
         </Col>
         <Col span={6}>
@@ -238,14 +275,14 @@ const PositionTypeConfig: React.FC = () => {
       <Card style={{ borderRadius: 12 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
           <Input
-            placeholder="搜索类型名称/编码"
+            placeholder="搜索条线名称/编码"
             prefix={<SearchOutlined />}
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}
             style={{ width: 200 }}
             allowClear
           />
-          <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>新增岗位类型</Button>
+          <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>新增条线</Button>
         </div>
 
         <Table
@@ -258,7 +295,7 @@ const PositionTypeConfig: React.FC = () => {
       </Card>
 
       <Modal
-        title={editingItem ? '编辑岗位类型' : '新增岗位类型'}
+        title={editingItem ? '编辑条线' : '新增条线'}
         open={modalVisible}
         onOk={handleSubmit}
         onCancel={() => { setModalVisible(false); form.resetFields(); }}
@@ -266,11 +303,11 @@ const PositionTypeConfig: React.FC = () => {
         destroyOnHidden
       >
         <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
-          <Form.Item name="name" label="类型名称" rules={[{ required: true, message: '请输入类型名称' }]}>
-            <Input placeholder="如：服务类、技术类" />
+          <Form.Item name="name" label="条线名称" rules={[{ required: true, message: '请输入条线名称' }]}>
+            <Input placeholder="如：渠道、市场、客服" />
           </Form.Item>
-          <Form.Item name="code" label="类型编码" rules={[{ required: true, message: '请输入类型编码' }]}>
-            <Input placeholder="如：SERVICE、TECH（全大写英文）" disabled={!!editingItem} />
+          <Form.Item name="code" label="条线编码" rules={[{ required: true, message: '请输入条线编码' }]}>
+            <Input placeholder="如：CHANNEL、MARKET（全大写英文）" disabled={!!editingItem} />
           </Form.Item>
           <Row gutter={16}>
             <Col span={12}>
@@ -285,7 +322,7 @@ const PositionTypeConfig: React.FC = () => {
             </Col>
           </Row>
           <Form.Item name="description" label="描述">
-            <Input.TextArea rows={3} placeholder="请输入岗位类型的描述说明" />
+            <Input.TextArea rows={3} placeholder="请输入条线的描述说明" />
           </Form.Item>
         </Form>
       </Modal>

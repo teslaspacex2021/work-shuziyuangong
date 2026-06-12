@@ -73,7 +73,7 @@ const OnDutyManagement: React.FC = () => {
         <Tag color={type === '自有' ? 'blue' : 'orange'}>{type}</Tag>
       ),
     },
-    { title: '岗位', dataIndex: 'position', key: 'position', width: 130 },
+    { title: '岗位', dataIndex: 'position', key: 'position', width: 220 },
     { title: '部门', dataIndex: 'department', key: 'department', width: 120 },
     {
       title: '状态', dataIndex: 'status', key: 'status', width: 100,

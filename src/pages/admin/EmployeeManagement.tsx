@@ -1,21 +1,23 @@
 import React, { useState } from 'react';
 import {
   Card, Table, Tag, Button, Space, Avatar, Modal, Input, Select,
-  Row, Col, Statistic, Descriptions, Checkbox, Badge, message, Tabs, Progress,
-  Tooltip, Result, Form, Alert,
+  Row, Col, Statistic, Checkbox, Badge, message, Tabs,
+  Tooltip, Form, Alert,
 } from 'antd';
 import {
   SearchOutlined, SettingOutlined, TeamOutlined,
   ThunderboltOutlined, DatabaseOutlined, FileTextOutlined,
   BookOutlined, InfoCircleOutlined, SyncOutlined,
-  CheckCircleOutlined, ExperimentOutlined, LinkOutlined,
-  IdcardOutlined,
+  CheckCircleOutlined, ExperimentOutlined,
+  IdcardOutlined, PlusOutlined,
 } from '@ant-design/icons';
 import {
   digitalEmployees, skills, knowledgeBases,
   hasEmployeeNumber, getEffectiveEmploymentStatus, canBeInService,
-  type DigitalEmployee, type Skill, type KnowledgeBase,
+  type DigitalEmployee, type Skill, type KnowledgeBase, type BusinessLine,
 } from '../../mock/data';
+import EmployeeFormModal, { type EmployeeFormValues } from '../../components/EmployeeFormModal';
+import EmployeeFieldSections from '../../components/EmployeeFieldSections';
 
 const levelColor: Record<string, string> = {
   L1: '#8c8c8c', L2: '#2f54eb', L3: '#1677ff', L4: '#13c2c2',
@@ -35,11 +37,31 @@ const typeIcon: Record<string, React.ReactNode> = {
   '数据集': <BookOutlined style={{ color: '#722ed1' }} />,
 };
 
+const businessLineDeptMap: Partial<Record<BusinessLine, string>> = {
+  客服: '客户服务部', 研发: '数据运营中心', 市场: '数字化运营部', 审计: '审计部',
+  财务: '财务共享中心', 人力: '人力资源部', 云网: 'IT运维部', 政企: '数字化运营部',
+  数发: '数据运营中心',
+};
+
+const capabilityToLevel = (cap: EmployeeFormValues['capabilityLevel']): DigitalEmployee['level'] => {
+  if (cap === '超级型') return 'L4';
+  if (cap === '智能型') return 'L3';
+  return 'L2';
+};
+
+const generateEmployeeId = (list: DigitalEmployee[]): string => {
+  const maxNum = list.reduce((max, e) => {
+    const m = e.id.match(/^DE-(\d+)$/);
+    return m ? Math.max(max, parseInt(m[1], 10)) : max;
+  }, 2026000);
+  return `DE-${maxNum + 1}`;
+};
+
 const EmployeeManagement: React.FC = () => {
   const [employees, setEmployees] = useState(digitalEmployees);
   const [searchText, setSearchText] = useState('');
   const [statusFilter, setStatusFilter] = useState<string | undefined>(undefined);
-  const [oaVisible, setOaVisible] = useState(false);
+  const [addVisible, setAddVisible] = useState(false);
   const [configVisible, setConfigVisible] = useState(false);
   const [configTab, setConfigTab] = useState('skills');
   const [detailVisible, setDetailVisible] = useState(false);
@@ -62,7 +84,6 @@ const EmployeeManagement: React.FC = () => {
     return matchSearch && matchStatus;
   });
 
-  const totalDocs = knowledgeBases.reduce((s, k) => s + k.docCount, 0);
   const activeCount = employees.filter((e) => e.status === 'ACTIVE').length;
   const trainingCount = employees.filter((e) => e.status === 'TRAINING').length;
   const inServiceCount = employees.filter((e) => getEffectiveEmploymentStatus(e) === '在职').length;
@@ -92,6 +113,51 @@ const EmployeeManagement: React.FC = () => {
   const showDetail = (emp: DigitalEmployee) => {
     setSelectedEmployee(emp);
     setDetailVisible(true);
+  };
+
+  const createEmployee = (values: EmployeeFormValues) => {
+    const id = generateEmployeeId(employees);
+    const today = new Date().toISOString().slice(0, 10);
+    const newEmp: DigitalEmployee = {
+      id,
+      name: values.name.trim(),
+      avatar: `https://api.dicebear.com/7.x/personas/svg?seed=${encodeURIComponent(values.name)}&backgroundColor=b6e3f4`,
+      department: businessLineDeptMap[values.businessLine] ?? `${values.businessLine}条线`,
+      position: values.position.trim(),
+      status: 'TRAINING',
+      employmentStatus: '离职',
+      owner: values.operationOwner.trim(),
+      ownerType: '自有',
+      skills: [],
+      skillIds: [],
+      knowledgeIds: [],
+      description: values.responsibility.trim(),
+      level: capabilityToLevel(values.capabilityLevel),
+      tokensQuota: 2000000,
+      tokensUsed: 0,
+      taskCompleteRate: 0,
+      lastActive: '尚未上线',
+      onboardDate: today,
+      relatedAgents: [],
+      likes: 0,
+      dislikes: 0,
+      heat: 0,
+      businessLine: values.businessLine,
+      capabilityLevel: values.capabilityLevel,
+      responsibility: values.responsibility.trim(),
+      operationOwner: values.operationOwner.trim(),
+      businessOwner: values.businessOwner.trim(),
+      techOwner: values.techOwner.trim(),
+      outputMetrics: values.outputMetrics.filter((m) => m.name.trim()),
+      designMaxConcurrency: values.designMaxConcurrency,
+      designTokensPerSec: values.designTokensPerSec,
+      securityPassed: values.securityPassed,
+      logAuditCompliant: values.logAuditCompliant,
+      runSystems: values.runSystems.filter((s) => s.systemName.trim()),
+    };
+    setEmployees((prev) => [newEmp, ...prev]);
+    message.success(`已创建数字员工「${newEmp.name}」，请填写工号后设为在职`);
+    setAddVisible(false);
   };
 
   const openEmployeeNumberModal = (emp: DigitalEmployee) => {
@@ -150,16 +216,7 @@ const EmployeeManagement: React.FC = () => {
 
   const columns = [
     {
-      title: '工号', key: 'employeeNumber', width: 130,
-      render: (_: unknown, record: DigitalEmployee) => {
-        if (!hasEmployeeNumber(record)) {
-          return <Tag color="warning">未填写</Tag>;
-        }
-        return <span style={{ fontFamily: 'monospace' }}>{record.employeeNumber}</span>;
-      },
-    },
-    {
-      title: '数字员工', key: 'name', width: 180,
+      title: '数字员工名称', key: 'name', width: 200,
       render: (_: unknown, record: DigitalEmployee) => (
         <Space>
           <Badge dot color={record.status === 'ACTIVE' ? '#52c41a' : record.status === 'TRAINING' ? '#1677ff' : '#faad14'} offset={[-2, 32]}>
@@ -172,10 +229,17 @@ const EmployeeManagement: React.FC = () => {
         </Space>
       ),
     },
-    { title: '部门', dataIndex: 'department', key: 'department', width: 120 },
-    { title: '岗位', dataIndex: 'position', key: 'position', width: 120 },
     {
-      title: '已配置技能', key: 'skills', width: 220,
+      title: '所属条线', dataIndex: 'businessLine', key: 'businessLine', width: 100,
+      render: (v: string | undefined) => v ? <Tag>{v}</Tag> : <span style={{ color: '#999' }}>—</span>,
+    },
+    { title: '基准岗位', dataIndex: 'position', key: 'position', width: 220 },
+    {
+      title: '级别', dataIndex: 'capabilityLevel', key: 'capabilityLevel', width: 90,
+      render: (v: string | undefined) => v ? <Tag color="blue">{v}</Tag> : <span style={{ color: '#999' }}>—</span>,
+    },
+    {
+      title: '所需技能', key: 'skills', width: 240,
       render: (_: unknown, record: DigitalEmployee) => {
         const shown = record.skills.slice(0, 3);
         const rest = record.skills.length - 3;
@@ -189,42 +253,19 @@ const EmployeeManagement: React.FC = () => {
       },
     },
     {
-      title: '已关联知识', key: 'knowledge', width: 180,
+      title: '在岗/上线', key: 'dutyStatus', width: 120,
       render: (_: unknown, record: DigitalEmployee) => {
-        const kbs = knowledgeBases.filter((kb) => record.knowledgeIds.includes(kb.id));
-        if (kbs.length === 0) return <span style={{ color: '#999', fontSize: 12 }}>暂未关联</span>;
+        const effective = getEffectiveEmploymentStatus(record);
         return (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-            {kbs.map((kb) => (
-              <Tag key={kb.id} icon={typeIcon[kb.type]} style={{ margin: 0 }}>{kb.name}</Tag>
-            ))}
-          </div>
+          <Space direction="vertical" size={2}>
+            {effective === null
+              ? <span style={{ color: '#999', fontSize: 12 }}>—</span>
+              : <Tag color={effective === '在职' ? 'green' : 'default'}>{effective}</Tag>}
+            <Tag color={statusColorMap[record.status]}>{statusLabelMap[record.status] || record.status}</Tag>
+          </Space>
         );
       },
     },
-    {
-      title: '职级', dataIndex: 'level', key: 'level', width: 80,
-      render: (l: string) => (
-        <Tag color={levelColor[l]} style={{ color: '#fff' }}>{l}</Tag>
-      ),
-    },
-    {
-      title: '运行状态', dataIndex: 'status', key: 'status', width: 100,
-      render: (s: string) => {
-        return <Tag color={statusColorMap[s]}>{statusLabelMap[s] || s}</Tag>;
-      },
-    },
-    {
-      title: '在职状态', key: 'employmentStatus', width: 100,
-      render: (_: unknown, record: DigitalEmployee) => {
-        const effective = getEffectiveEmploymentStatus(record);
-        if (effective === null) {
-          return <span style={{ color: '#999' }}>—</span>;
-        }
-        return <Tag color={effective === '在职' ? 'green' : 'default'}>{effective}</Tag>;
-      },
-    },
-    { title: '最近活跃', dataIndex: 'lastActive', key: 'lastActive', width: 100 },
     {
       title: '操作', key: 'action', width: 150, fixed: 'right' as const,
       render: (_: unknown, record: DigitalEmployee) => (
@@ -320,29 +361,24 @@ const EmployeeManagement: React.FC = () => {
       </div>
 
       <Row gutter={16} style={{ marginBottom: 20 }}>
-        <Col span={5}>
+        <Col span={6}>
           <Card style={{ borderRadius: 12 }}>
             <Statistic title="数字员工总数" value={employees.length} prefix={<TeamOutlined />} />
           </Card>
         </Col>
-        <Col span={5}>
+        <Col span={6}>
           <Card style={{ borderRadius: 12 }}>
             <Statistic title="在职" value={inServiceCount} prefix={<CheckCircleOutlined style={{ color: '#52c41a' }} />} valueStyle={{ color: '#52c41a' }} />
           </Card>
         </Col>
-        <Col span={5}>
+        <Col span={6}>
           <Card style={{ borderRadius: 12 }}>
             <Statistic title="在线" value={activeCount} prefix={<CheckCircleOutlined style={{ color: '#1677ff' }} />} valueStyle={{ color: '#1677ff' }} />
           </Card>
         </Col>
-        <Col span={5}>
+        <Col span={6}>
           <Card style={{ borderRadius: 12 }}>
             <Statistic title="训练中" value={trainingCount} prefix={<ExperimentOutlined style={{ color: '#722ed1' }} />} valueStyle={{ color: '#722ed1' }} />
-          </Card>
-        </Col>
-        <Col span={4}>
-          <Card style={{ borderRadius: 12 }}>
-            <Statistic title="总文档数" value={totalDocs} prefix={<FileTextOutlined style={{ color: '#722ed1' }} />} />
           </Card>
         </Col>
       </Row>
@@ -352,6 +388,9 @@ const EmployeeManagement: React.FC = () => {
         title="数字员工列表"
         extra={
           <Space>
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => setAddVisible(true)}>
+              新增员工
+            </Button>
             <Input
               placeholder="搜索员工名称/工号/部门..."
               prefix={<SearchOutlined />}
@@ -380,37 +419,15 @@ const EmployeeManagement: React.FC = () => {
           rowKey="id"
           pagination={{ pageSize: 10 }}
           size="middle"
-          scroll={{ x: 1600 }}
+          scroll={{ x: 1000 }}
         />
       </Card>
 
-      {/* OA申请提示 Modal */}
-      <Modal
-        open={oaVisible}
-        onCancel={() => setOaVisible(false)}
-        footer={null}
-        width={480}
-        centered
-      >
-        <Result
-          status="info"
-          title="请前往 OA 系统申请"
-          subTitle="新增数字员工需通过 OA 系统提交申请，经上级审批后由系统管理员统一创建。"
-          extra={[
-            <Button
-              type="primary"
-              key="oa"
-              icon={<LinkOutlined />}
-              href="https://oa.example.com/apply/digital-employee"
-              target="_blank"
-              onClick={() => setOaVisible(false)}
-            >
-              前往 OA 申请入口
-            </Button>,
-            <Button key="cancel" onClick={() => setOaVisible(false)}>取消</Button>,
-          ]}
-        />
-      </Modal>
+      <EmployeeFormModal
+        open={addVisible}
+        onCancel={() => setAddVisible(false)}
+        onSubmit={createEmployee}
+      />
 
       {/* Unified Config Modal with Tabs */}
       <Modal
@@ -529,87 +546,37 @@ const EmployeeManagement: React.FC = () => {
         )}
       </Modal>
 
-      {/* Detail Modal - includes OnDuty info */}
+      {/* Detail Modal */}
       <Modal
         title={`员工详情 — ${selectedEmployee?.name}`}
         open={detailVisible}
         onCancel={() => setDetailVisible(false)}
         footer={null}
-        width={750}
+        width={900}
+        styles={{ body: { maxHeight: '75vh', overflowY: 'auto' } }}
       >
         {selectedEmployee && (
           <div>
             <div style={{ display: 'flex', gap: 16, marginBottom: 20 }}>
               <Avatar size={64} src={selectedEmployee.avatar} />
-              <div>
+              <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 18, fontWeight: 600 }}>{selectedEmployee.name}</div>
-                <div style={{ color: '#999', marginTop: 4 }}>{selectedEmployee.description}</div>
+                <Space style={{ marginTop: 8 }} wrap>
+                  {hasEmployeeNumber(selectedEmployee)
+                    ? <Tag style={{ fontFamily: 'monospace' }}>{selectedEmployee.employeeNumber}</Tag>
+                    : <Tag color="warning">工号未填写</Tag>}
+                  {(() => {
+                    const effective = getEffectiveEmploymentStatus(selectedEmployee);
+                    if (effective !== null) {
+                      return <Tag color={effective === '在职' ? 'green' : 'default'}>{effective}</Tag>;
+                    }
+                    return null;
+                  })()}
+                  <Tag color={statusColorMap[selectedEmployee.status]}>{statusLabelMap[selectedEmployee.status]}</Tag>
+                </Space>
               </div>
             </div>
-            <Descriptions column={2} bordered size="small" style={{ marginBottom: 16 }}>
-              <Descriptions.Item label="工号">
-                {hasEmployeeNumber(selectedEmployee)
-                  ? <span style={{ fontFamily: 'monospace' }}>{selectedEmployee.employeeNumber}</span>
-                  : <Tag color="warning">未填写</Tag>}
-              </Descriptions.Item>
-              <Descriptions.Item label="在职状态">
-                {(() => {
-                  const effective = getEffectiveEmploymentStatus(selectedEmployee);
-                  if (effective === null) {
-                    return <span style={{ color: '#999' }}>—</span>;
-                  }
-                  return <Tag color={effective === '在职' ? 'green' : 'default'}>{effective}</Tag>;
-                })()}
-              </Descriptions.Item>
-              <Descriptions.Item label="运行状态">
-                <Tag color={statusColorMap[selectedEmployee.status]}>{statusLabelMap[selectedEmployee.status]}</Tag>
-              </Descriptions.Item>
-              <Descriptions.Item label="职级">
-                <Tag color={levelColor[selectedEmployee.level]} style={{ color: '#fff' }}>
-                  {selectedEmployee.level}
-                </Tag>
-              </Descriptions.Item>
-              <Descriptions.Item label="部门">{selectedEmployee.department}</Descriptions.Item>
-              <Descriptions.Item label="岗位">{selectedEmployee.position}</Descriptions.Item>
-              <Descriptions.Item label="所属自然人">{selectedEmployee.owner}</Descriptions.Item>
-              <Descriptions.Item label="身份类型">
-                <Tag color={selectedEmployee.ownerType === '自有' ? 'blue' : 'orange'}>{selectedEmployee.ownerType}</Tag>
-              </Descriptions.Item>
-              <Descriptions.Item label="入职日期">{selectedEmployee.onboardDate}</Descriptions.Item>
-              <Descriptions.Item label="最近活跃">{selectedEmployee.lastActive}</Descriptions.Item>
-              <Descriptions.Item label="Tokens配额" span={2}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <Progress
-                    percent={Math.round((selectedEmployee.tokensUsed / selectedEmployee.tokensQuota) * 100)}
-                    size="small"
-                    style={{ width: 200 }}
-                    status={selectedEmployee.tokensUsed / selectedEmployee.tokensQuota > 0.8 ? 'exception' : 'active'}
-                  />
-                  <span>{(selectedEmployee.tokensUsed / 1000000).toFixed(1)}M / {(selectedEmployee.tokensQuota / 1000000).toFixed(1)}M</span>
-                </div>
-              </Descriptions.Item>
-              <Descriptions.Item label="任务完成率" span={2}>
-                <Progress percent={selectedEmployee.taskCompleteRate} size="small" style={{ width: 200 }} />
-              </Descriptions.Item>
-              <Descriptions.Item label="已配置技能" span={2}>
-                {selectedEmployee.skills.length > 0
-                  ? selectedEmployee.skills.map((s) => <Tag key={s} color="processing">{s}</Tag>)
-                  : <span style={{ color: '#999' }}>暂未配置</span>}
-              </Descriptions.Item>
-              <Descriptions.Item label="已关联知识" span={2}>
-                {(() => {
-                  const kbs = knowledgeBases.filter((kb) => selectedEmployee.knowledgeIds.includes(kb.id));
-                  return kbs.length > 0
-                    ? kbs.map((kb) => <Tag key={kb.id} icon={typeIcon[kb.type]}>{kb.name}</Tag>)
-                    : <span style={{ color: '#999' }}>暂未关联</span>;
-                })()}
-              </Descriptions.Item>
-              <Descriptions.Item label="关联智能体" span={2}>
-                {selectedEmployee.relatedAgents.map((a) => <Tag key={a}>{a}</Tag>)}
-              </Descriptions.Item>
-              <Descriptions.Item label="热度">{selectedEmployee.heat}</Descriptions.Item>
-              <Descriptions.Item label="点赞/踩">{selectedEmployee.likes} / {selectedEmployee.dislikes}</Descriptions.Item>
-            </Descriptions>
+            <EmployeeFieldSections employee={selectedEmployee} />
           </div>
         )}
       </Modal>

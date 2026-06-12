@@ -12,6 +12,108 @@ export const getEffectiveEmploymentStatus = (
 
 export const canBeInService = (emp: DigitalEmployee): boolean => hasEmployeeNumber(emp);
 
+/** 所属条线（按字段设计文档） */
+export const BUSINESS_LINES = [
+  '渠道', '市场', '研发', '客服', '云网', '政企', '数发', '财务',
+  '人力', '法律', '企发', '办公室', '党群', '工会', '纪检', '审计',
+] as const;
+export type BusinessLine = typeof BUSINESS_LINES[number];
+
+/** 部门到所属条线的兜底映射（用于未填写 businessLine 的存量数据） */
+const DEPARTMENT_TO_BUSINESS_LINE: Record<string, BusinessLine> = {
+  综合服务部: '办公室',
+  客户服务部: '客服',
+  数据运营中心: '数发',
+  数字化运营部: '市场',
+  审计部: '审计',
+  人力资源部: '人力',
+  财务共享中心: '财务',
+  IT运维部: '云网',
+  综合管理部: '办公室',
+  经营分析部: '企发',
+  法务部: '法律',
+};
+
+/** 获取数字员工所属条线：优先使用 businessLine 字段，其次按部门兜底 */
+export const getEmployeeBusinessLine = (emp: DigitalEmployee): BusinessLine | '其他' =>
+  emp.businessLine ?? DEPARTMENT_TO_BUSINESS_LINE[emp.department] ?? '其他';
+
+/** 业务条线对应的标识色 */
+export const BUSINESS_LINE_COLORS: Record<string, string> = {
+  渠道: '#1677ff',
+  市场: '#fa541c',
+  研发: '#2f54eb',
+  客服: '#13c2c2',
+  云网: '#0958d9',
+  政企: '#722ed1',
+  数发: '#eb2f96',
+  财务: '#faad14',
+  人力: '#52c41a',
+  法律: '#cf1322',
+  企发: '#1890ff',
+  办公室: '#8c8c8c',
+  党群: '#d4380d',
+  工会: '#9254de',
+  纪检: '#08979c',
+  审计: '#7cb305',
+  其他: '#bfbfbf',
+};
+
+/** 数字员工能力级别（按字段设计文档） */
+export const CAPABILITY_LEVELS = ['工具型', '智能型', '超级型'] as const;
+export type CapabilityLevel = typeof CAPABILITY_LEVELS[number];
+
+/** 能力级别对应的标识色 */
+export const CAPABILITY_LEVEL_COLORS: Record<CapabilityLevel, string> = {
+  工具型: '#8c8c8c',
+  智能型: '#1677ff',
+  超级型: '#722ed1',
+};
+
+/** L1–L4 兜底映射到能力级别（用于未填写 capabilityLevel 的存量数据） */
+const FALLBACK_LEVEL_MAP: Record<string, CapabilityLevel> = {
+  L1: '工具型',
+  L2: '工具型',
+  L3: '智能型',
+  L4: '超级型',
+};
+
+/** 获取数字员工能力级别：优先使用 capabilityLevel 字段，其次按职级兜底 */
+export const getEmployeeCapabilityLevel = (emp: DigitalEmployee): CapabilityLevel =>
+  emp.capabilityLevel ?? FALLBACK_LEVEL_MAP[emp.level] ?? '工具型';
+
+/** 关联系统级别 */
+export const SYSTEM_LEVELS = ['集团级系统', '公司级系统'] as const;
+export type SystemLevelType = typeof SYSTEM_LEVELS[number];
+
+/** 产出指标项 */
+export interface OutputMetric {
+  /** 指标名称 */
+  name: string;
+  /** 统计周期，例如 日/周/月/季 */
+  cycle: string;
+  /** 统计单位，例如 单/次/张 */
+  unit: string;
+  /** 上岗目标值 */
+  target: string;
+  /** 指标数据来源（系统） */
+  source: string;
+}
+
+/** 关联系统运行配置项 */
+export interface RunSystemConfig {
+  /** 关联系统名称 */
+  systemName: string;
+  /** 系统级别 */
+  systemLevel: SystemLevelType;
+  /** 关联系统权限 */
+  permission: string;
+  /** 预估 tokens 数 */
+  estimatedTokens: number;
+  /** 预估并发数 */
+  estimatedConcurrency: number;
+}
+
 export interface DigitalEmployee {
   id: string;
   /** 工号，未填写时不可设为在职 */
@@ -38,6 +140,37 @@ export interface DigitalEmployee {
   likes: number;
   dislikes: number;
   heat: number;
+
+  // === 字段设计文档新增字段 ===
+  /** 所属条线 */
+  businessLine?: BusinessLine;
+  /** 能力级别（工具型/智能型/超级型） */
+  capabilityLevel?: CapabilityLevel;
+  /** 应用职责描述 */
+  responsibility?: string;
+  /** 运营负责人 */
+  operationOwner?: string;
+  /** 业务负责人 */
+  businessOwner?: string;
+  /** 技术负责人 */
+  techOwner?: string;
+  /** 产出指标项（可多条） */
+  outputMetrics?: OutputMetric[];
+
+  // 算力投资设计信息
+  /** 设计最大并发数（设计压测最大峰值） */
+  designMaxConcurrency?: number;
+  /** 设计 tokens 数（设计最大峰值 tokens/秒，不涉及为 0） */
+  designTokensPerSec?: number;
+
+  // 合规
+  /** 安检是否通过 */
+  securityPassed?: '是' | '否';
+  /** 是否符合日志审计 */
+  logAuditCompliant?: '是' | '否';
+
+  /** 运行配置——关联系统列表（可多条） */
+  runSystems?: RunSystemConfig[];
 }
 
 export interface Skill {
@@ -274,7 +407,7 @@ export interface EmployeeEditApproval {
 
 export const digitalEmployees: DigitalEmployee[] = [
   {
-    id: 'DE-2026000', employeeNumber: 'DE-2026000', name: '小翼·智能助手', avatar: 'https://api.dicebear.com/7.x/personas/svg?seed=assistant2026&backgroundColor=b7eb8f', department: '综合服务部', position: '智能综合助理',
+    id: 'DE-2026000', employeeNumber: 'DE-2026000', name: '小翼·智能助手', avatar: 'https://api.dicebear.com/7.x/personas/svg?seed=assistant2026&backgroundColor=b7eb8f', department: '综合服务部', position: '综合支撑-办公室-智能综合',
     status: 'ACTIVE', employmentStatus: '在职', owner: '系统', ownerType: '自有',
     skills: ['智能问答', '任务分派', '流程引导', '综合咨询'],
     skillIds: ['SK001'],
@@ -285,7 +418,7 @@ export const digitalEmployees: DigitalEmployee[] = [
     likes: 520, dislikes: 5, heat: 2500,
   },
   {
-    id: 'DE-2026001', employeeNumber: 'DE-2026001', name: '小翼·客服', avatar: 'https://api.dicebear.com/7.x/personas/svg?seed=kefu&backgroundColor=b6e3f4', department: '客户服务部', position: '智能客服专员',
+    id: 'DE-2026001', employeeNumber: 'DE-2026001', name: '小翼·客服', avatar: 'https://api.dicebear.com/7.x/personas/svg?seed=kefu&backgroundColor=b6e3f4', department: '客户服务部', position: '业务支撑-客服-智能客服',
     status: 'ACTIVE', employmentStatus: '在职', owner: '宇雷', ownerType: '自有',
     skills: ['智能问答', '工单处理', '知识检索', '情感分析'],
     skillIds: ['SK001', 'SK005', 'SK010'],
@@ -294,9 +427,23 @@ export const digitalEmployees: DigitalEmployee[] = [
     level: 'L3', tokensQuota: 5000000, tokensUsed: 3200000, taskCompleteRate: 96.5,
     lastActive: '10分钟前', onboardDate: '2026-01-15', relatedAgents: ['翼答', '通用问答智能体'],
     likes: 328, dislikes: 12, heat: 1456,
+    businessLine: '客服', capabilityLevel: '智能型',
+    responsibility: '7×24 在线响应客户咨询，处理产品/账单/故障类工单，实现首问解决率 >85%，并对客户情绪进行实时识别与升级。',
+    operationOwner: '宇雷', businessOwner: '客户服务部-陈总监', techOwner: '研发中心-周工',
+    outputMetrics: [
+      { name: '工单处理量', cycle: '日', unit: '单', target: '500', source: '客服工单系统' },
+      { name: '首问解决率', cycle: '周', unit: '%', target: '85', source: 'CRM' },
+      { name: '客户满意度', cycle: '月', unit: '分', target: '4.6', source: '满意度调查系统' },
+    ],
+    designMaxConcurrency: 200, designTokensPerSec: 50000,
+    securityPassed: '是', logAuditCompliant: '是',
+    runSystems: [
+      { systemName: 'CRM 客户关系管理系统', systemLevel: '集团级系统', permission: '工单读写、客户信息只读', estimatedTokens: 2000000, estimatedConcurrency: 100 },
+      { systemName: '客服工单系统', systemLevel: '公司级系统', permission: '工单读写', estimatedTokens: 1500000, estimatedConcurrency: 80 },
+    ],
   },
   {
-    id: 'DE-2026002', employeeNumber: 'DE-2026002', name: '小翼·数据', avatar: 'https://api.dicebear.com/7.x/personas/svg?seed=shuju&backgroundColor=c0aede', department: '数据运营中心', position: '数据标注专员',
+    id: 'DE-2026002', employeeNumber: 'DE-2026002', name: '小翼·数据', avatar: 'https://api.dicebear.com/7.x/personas/svg?seed=shuju&backgroundColor=c0aede', department: '数据运营中心', position: '综合支撑-数发-数据标注',
     status: 'TRAINING', employmentStatus: '在职', owner: '韩梅梅', ownerType: '外包',
     skills: ['数据标注', '数据清洗', '报表生成', '异常检测'],
     skillIds: ['SK003'],
@@ -307,7 +454,7 @@ export const digitalEmployees: DigitalEmployee[] = [
     likes: 145, dislikes: 8, heat: 620,
   },
   {
-    id: 'DE-2026003', employeeNumber: 'DE-2026003', name: '小翼·营销', avatar: 'https://api.dicebear.com/7.x/personas/svg?seed=yingxiao&backgroundColor=ffd5dc', department: '数字化运营部', position: '营销策划专员',
+    id: 'DE-2026003', employeeNumber: 'DE-2026003', name: '小翼·营销', avatar: 'https://api.dicebear.com/7.x/personas/svg?seed=yingxiao&backgroundColor=ffd5dc', department: '数字化运营部', position: '业务支撑-市场-营销策划',
     status: 'ACTIVE', employmentStatus: '在职', owner: '李明', ownerType: '自有',
     skills: ['文案撰写', '营销方案', '用户画像', '竞品分析'],
     skillIds: ['SK002', 'SK004'],
@@ -318,7 +465,7 @@ export const digitalEmployees: DigitalEmployee[] = [
     likes: 256, dislikes: 15, heat: 1120,
   },
   {
-    id: 'DE-2026004', employeeNumber: 'DE-2026004', name: '小翼·审计', avatar: 'https://api.dicebear.com/7.x/personas/svg?seed=shenji&backgroundColor=d1f4d1', department: '审计部', position: '审计助理',
+    id: 'DE-2026004', employeeNumber: 'DE-2026004', name: '小翼·审计', avatar: 'https://api.dicebear.com/7.x/personas/svg?seed=shenji&backgroundColor=d1f4d1', department: '审计部', position: '党群监督-审计-内部审计',
     status: 'ACTIVE', employmentStatus: '在职', owner: '王芳', ownerType: '自有',
     skills: ['工作底稿', '整改判定', '风险识别', '报告生成'],
     skillIds: ['SK006'],
@@ -327,9 +474,21 @@ export const digitalEmployees: DigitalEmployee[] = [
     level: 'L2', tokensQuota: 2000000, tokensUsed: 800000, taskCompleteRate: 91.0,
     lastActive: '1小时前', onboardDate: '2026-02-10', relatedAgents: ['【审计】工作底稿助手', '【审计】整改判定助手'],
     likes: 89, dislikes: 5, heat: 380,
+    businessLine: '审计', capabilityLevel: '工具型',
+    responsibility: '协助审计师完成审计底稿初稿、风险点识别、整改建议生成，提升审计项目交付效率。',
+    operationOwner: '王芳', businessOwner: '审计部-马经理', techOwner: '研发中心-韩工',
+    outputMetrics: [
+      { name: '底稿生成数', cycle: '月', unit: '份', target: '40', source: '审计管理系统' },
+      { name: '风险识别准确率', cycle: '季', unit: '%', target: '92', source: '审计管理系统' },
+    ],
+    designMaxConcurrency: 30, designTokensPerSec: 8000,
+    securityPassed: '是', logAuditCompliant: '是',
+    runSystems: [
+      { systemName: '审计管理系统', systemLevel: '集团级系统', permission: '审计底稿读写、整改记录读写', estimatedTokens: 600000, estimatedConcurrency: 20 },
+    ],
   },
   {
-    id: 'DE-2026005', employeeNumber: 'DE-2026005', name: '小翼·HR', avatar: 'https://api.dicebear.com/7.x/personas/svg?seed=hr2026&backgroundColor=ffdfbf', department: '人力资源部', position: '人事助理',
+    id: 'DE-2026005', employeeNumber: 'DE-2026005', name: '小翼·HR', avatar: 'https://api.dicebear.com/7.x/personas/svg?seed=hr2026&backgroundColor=ffdfbf', department: '人力资源部', position: '综合支撑-人力-人事管理',
     status: 'ACTIVE', employmentStatus: '在职', owner: '张三', ownerType: '自有',
     skills: ['人岗匹配', '简历筛选', '面试安排', '证书查询'],
     skillIds: ['SK008'],
@@ -340,7 +499,7 @@ export const digitalEmployees: DigitalEmployee[] = [
     likes: 210, dislikes: 7, heat: 980,
   },
   {
-    id: 'DE-2026006', employeeNumber: 'DE-2026006', name: '小翼·财务', avatar: 'https://api.dicebear.com/7.x/personas/svg?seed=caiwu&backgroundColor=b6e3f4', department: '财务共享中心', position: '财务分析专员',
+    id: 'DE-2026006', employeeNumber: 'DE-2026006', name: '小翼·财务', avatar: 'https://api.dicebear.com/7.x/personas/svg?seed=caiwu&backgroundColor=b6e3f4', department: '财务共享中心', position: '综合支撑-财务-财务管理',
     status: 'ACTIVE', employmentStatus: '在职', owner: '赵六', ownerType: '自有',
     skills: ['报销审核', '预算分析', '费用统计', '合规检查'],
     skillIds: ['SK007'],
@@ -351,7 +510,7 @@ export const digitalEmployees: DigitalEmployee[] = [
     likes: 302, dislikes: 9, heat: 1350,
   },
   {
-    id: 'DE-2026007', name: '小翼·运维', avatar: 'https://api.dicebear.com/7.x/personas/svg?seed=yunwei&backgroundColor=c0aede', department: 'IT运维部', position: '运维工程师',
+    id: 'DE-2026007', name: '小翼·运维', avatar: 'https://api.dicebear.com/7.x/personas/svg?seed=yunwei&backgroundColor=c0aede', department: 'IT运维部', position: '综合支撑-云网-系统运维',
     status: 'SUSPENDED', employmentStatus: '离职', owner: '孙七', ownerType: '外包',
     skills: ['故障诊断', '日志分析', '自动巡检', '性能优化'],
     skillIds: ['SK009'],
@@ -362,7 +521,7 @@ export const digitalEmployees: DigitalEmployee[] = [
     likes: 67, dislikes: 18, heat: 210,
   },
   {
-    id: 'DE-2026008', employeeNumber: 'DE-2026008', name: '小翼·商机', avatar: 'https://api.dicebear.com/7.x/personas/svg?seed=shangji&backgroundColor=ffd5dc', department: '数字化运营部', position: '商机分析专员',
+    id: 'DE-2026008', employeeNumber: 'DE-2026008', name: '小翼·商机', avatar: 'https://api.dicebear.com/7.x/personas/svg?seed=shangji&backgroundColor=ffd5dc', department: '数字化运营部', position: '业务支撑-市场-商机分析',
     status: 'ACTIVE', employmentStatus: '在职', owner: '周八', ownerType: '自有',
     skills: ['商机挖掘', '客户画像', '竞品追踪', '销售预测'],
     skillIds: ['SK004'],
@@ -373,7 +532,7 @@ export const digitalEmployees: DigitalEmployee[] = [
     likes: 278, dislikes: 11, heat: 1280,
   },
   {
-    id: 'DE-2026009', employeeNumber: 'DE-2026009', name: '小翼·文档', avatar: 'https://api.dicebear.com/7.x/personas/svg?seed=wendang&backgroundColor=d1f4d1', department: '综合管理部', position: '文档管理专员',
+    id: 'DE-2026009', employeeNumber: 'DE-2026009', name: '小翼·文档', avatar: 'https://api.dicebear.com/7.x/personas/svg?seed=wendang&backgroundColor=d1f4d1', department: '综合管理部', position: '综合支撑-办公室-文档管理',
     status: 'ACTIVE', employmentStatus: '在职', owner: '钱九', ownerType: '自有',
     skills: ['文件解析', '摘要生成', '格式转换', '内容提取'],
     skillIds: ['SK001', 'SK002'],
@@ -384,7 +543,7 @@ export const digitalEmployees: DigitalEmployee[] = [
     likes: 156, dislikes: 6, heat: 720,
   },
   {
-    id: 'DE-2026010', name: '小翼·经分', avatar: 'https://api.dicebear.com/7.x/personas/svg?seed=jingfen&backgroundColor=ffdfbf', department: '经营分析部', position: '经营分析专员',
+    id: 'DE-2026010', name: '小翼·经分', avatar: 'https://api.dicebear.com/7.x/personas/svg?seed=jingfen&backgroundColor=ffdfbf', department: '经营分析部', position: '综合支撑-企发-经营分析',
     status: 'TRAINING', employmentStatus: '离职', owner: '吴十', ownerType: '自有',
     skills: ['经营报告', '指标分析', '趋势预测', '可视化'],
     skillIds: [],
@@ -449,16 +608,16 @@ export const alerts: AlertItem[] = [
 ];
 
 export const positions: PositionItem[] = [
-  { id: 'POS001', name: '智能客服专员', department: '客户服务部', category: '服务类', description: '负责7×24小时智能客服，处理客户咨询和工单', requiredSkills: ['智能问答', '工单处理', '情感分析'], level: 'L2-L3', status: '启用', employeeCount: 3, maxEmployeeCount: 5, createTime: '2025-12-01' },
-  { id: 'POS002', name: '数据标注专员', department: '数据运营中心', category: '技术类', description: '负责各类数据标注、清洗和预处理工作', requiredSkills: ['数据标注', '数据清洗'], level: 'L1-L2', status: '启用', employeeCount: 2, maxEmployeeCount: 4, createTime: '2025-12-15' },
-  { id: 'POS003', name: '营销策划专员', department: '数字化运营部', category: '运营类', description: '负责营销文案创作、用户画像分析和竞品对比', requiredSkills: ['文案撰写', '用户画像', '竞品分析'], level: 'L2-L3', status: '启用', employeeCount: 2, maxEmployeeCount: 3, createTime: '2025-12-10' },
-  { id: 'POS004', name: '审计助理', department: '审计部', category: '合规类', description: '辅助审计人员撰写底稿、识别风险并生成建议', requiredSkills: ['工作底稿', '风险识别'], level: 'L2', status: '启用', employeeCount: 1, maxEmployeeCount: 2, createTime: '2026-01-05' },
-  { id: 'POS005', name: '人事助理', department: '人力资源部', category: '管理类', description: '人力资源管理支持，简历筛选和面试安排', requiredSkills: ['简历筛选', '人岗匹配'], level: 'L2-L3', status: '启用', employeeCount: 1, maxEmployeeCount: 2, createTime: '2025-11-20' },
-  { id: 'POS006', name: '财务分析专员', department: '财务共享中心', category: '财务类', description: '报销审核、预算分析和费用统计', requiredSkills: ['报销审核', '预算分析'], level: 'L3', status: '启用', employeeCount: 1, maxEmployeeCount: 2, createTime: '2025-11-25' },
-  { id: 'POS007', name: '运维工程师', department: 'IT运维部', category: '技术类', description: '系统运维监控、故障诊断和修复', requiredSkills: ['故障诊断', '日志分析', '自动巡检'], level: 'L2-L3', status: '启用', employeeCount: 1, maxEmployeeCount: 3, createTime: '2026-01-15' },
-  { id: 'POS008', name: '商机分析专员', department: '数字化运营部', category: '运营类', description: 'AI商机线索挖掘和客户画像分析', requiredSkills: ['商机挖掘', '客户画像'], level: 'L3-L4', status: '启用', employeeCount: 1, maxEmployeeCount: 2, createTime: '2025-10-20' },
-  { id: 'POS009', name: '文档管理专员', department: '综合管理部', category: '管理类', description: '文档智能处理、摘要生成和格式转换', requiredSkills: ['文件解析', '摘要生成'], level: 'L2', status: '启用', employeeCount: 1, maxEmployeeCount: 2, createTime: '2026-01-10' },
-  { id: 'POS010', name: '经营分析专员', department: '经营分析部', category: '分析类', description: '经营数据采集和多维度分析报告', requiredSkills: ['经营报告', '指标分析', '可视化'], level: 'L1-L2', status: '停用', employeeCount: 1, maxEmployeeCount: 2, createTime: '2026-02-01' },
+  { id: 'POS001', name: '业务支撑-客服-智能客服', department: '客户服务部', category: '客服', description: '负责7×24小时智能客服，处理客户咨询和工单', requiredSkills: ['智能问答', '工单处理', '情感分析'], level: 'L2-L3', status: '启用', employeeCount: 3, maxEmployeeCount: 5, createTime: '2025-12-01' },
+  { id: 'POS002', name: '综合支撑-数发-数据标注', department: '数据运营中心', category: '数发', description: '负责各类数据标注、清洗和预处理工作', requiredSkills: ['数据标注', '数据清洗'], level: 'L1-L2', status: '启用', employeeCount: 2, maxEmployeeCount: 4, createTime: '2025-12-15' },
+  { id: 'POS003', name: '业务支撑-市场-营销策划', department: '数字化运营部', category: '市场', description: '负责营销文案创作、用户画像分析和竞品对比', requiredSkills: ['文案撰写', '用户画像', '竞品分析'], level: 'L2-L3', status: '启用', employeeCount: 2, maxEmployeeCount: 3, createTime: '2025-12-10' },
+  { id: 'POS004', name: '党群监督-审计-内部审计', department: '审计部', category: '审计', description: '辅助审计人员撰写底稿、识别风险并生成建议', requiredSkills: ['工作底稿', '风险识别'], level: 'L2', status: '启用', employeeCount: 1, maxEmployeeCount: 2, createTime: '2026-01-05' },
+  { id: 'POS005', name: '综合支撑-人力-人事管理', department: '人力资源部', category: '人力', description: '人力资源管理支持，简历筛选和面试安排', requiredSkills: ['简历筛选', '人岗匹配'], level: 'L2-L3', status: '启用', employeeCount: 1, maxEmployeeCount: 2, createTime: '2025-11-20' },
+  { id: 'POS006', name: '综合支撑-财务-财务管理', department: '财务共享中心', category: '财务', description: '报销审核、预算分析和费用统计', requiredSkills: ['报销审核', '预算分析'], level: 'L3', status: '启用', employeeCount: 1, maxEmployeeCount: 2, createTime: '2025-11-25' },
+  { id: 'POS007', name: '综合支撑-云网-系统运维', department: 'IT运维部', category: '云网', description: '系统运维监控、故障诊断和修复', requiredSkills: ['故障诊断', '日志分析', '自动巡检'], level: 'L2-L3', status: '启用', employeeCount: 1, maxEmployeeCount: 3, createTime: '2026-01-15' },
+  { id: 'POS008', name: '业务支撑-市场-商机分析', department: '数字化运营部', category: '市场', description: 'AI商机线索挖掘和客户画像分析', requiredSkills: ['商机挖掘', '客户画像'], level: 'L3-L4', status: '启用', employeeCount: 1, maxEmployeeCount: 2, createTime: '2025-10-20' },
+  { id: 'POS009', name: '综合支撑-办公室-文档管理', department: '综合管理部', category: '办公室', description: '文档智能处理、摘要生成和格式转换', requiredSkills: ['文件解析', '摘要生成'], level: 'L2', status: '启用', employeeCount: 1, maxEmployeeCount: 2, createTime: '2026-01-10' },
+  { id: 'POS010', name: '综合支撑-企发-经营分析', department: '经营分析部', category: '企发', description: '经营数据采集和多维度分析报告', requiredSkills: ['经营报告', '指标分析', '可视化'], level: 'L1-L2', status: '停用', employeeCount: 1, maxEmployeeCount: 2, createTime: '2026-02-01' },
 ];
 
 export const taskLogs: TaskLogItem[] = [
@@ -479,7 +638,7 @@ export const taskLogs: TaskLogItem[] = [
 export const onboardRecords: OnboardRecord[] = [
   {
     id: 'OB001', employeeId: 'DE-2026010', employeeName: '小翼·经分', owner: '吴十', ownerType: '自有',
-    department: '经营分析部', position: '经营分析专员', applyDate: '2026-02-25', status: '已完成', currentStep: 4,
+    department: '经营分析部', position: '综合支撑-企发-经营分析', applyDate: '2026-02-25', status: '已完成', currentStep: 4,
     approvalSteps: [
       { step: '发起申请', status: '已完成', time: '2026-02-25 10:00', approver: '吴十', remark: '申请入职经营分析专员岗位' },
       { step: '部门经理审批', status: '已完成', time: '2026-02-26 14:00', approver: '经营分析部-张部长', opinion: '同意入职，该岗位急需人力补充', remark: '同意' },
@@ -489,7 +648,7 @@ export const onboardRecords: OnboardRecord[] = [
   },
   {
     id: 'OB002', employeeId: 'DE-2026002', employeeName: '小翼·数据', owner: '韩梅梅', ownerType: '外包',
-    department: '数据运营中心', position: '数据标注专员', applyDate: '2026-01-28', status: '已完成', currentStep: 4,
+    department: '数据运营中心', position: '综合支撑-数发-数据标注', applyDate: '2026-01-28', status: '已完成', currentStep: 4,
     approvalSteps: [
       { step: '发起申请', status: '已完成', time: '2026-01-28 09:00', approver: '韩梅梅', remark: '申请外包数据标注专员入职' },
       { step: '部门经理审批', status: '已完成', time: '2026-01-29 10:00', approver: '数据运营中心-王总监', opinion: '同意引入外包人员', remark: '同意' },
@@ -499,7 +658,7 @@ export const onboardRecords: OnboardRecord[] = [
   },
   {
     id: 'OB003', employeeId: 'NEW-001', employeeName: '小翼·法务', owner: '陈律师', ownerType: '自有',
-    department: '法务部', position: '法务助理', applyDate: '2026-03-10', status: '部门经理审批', currentStep: 2,
+    department: '法务部', position: '综合支撑-法律-法务支持', applyDate: '2026-03-10', status: '部门经理审批', currentStep: 2,
     approvalSteps: [
       { step: '发起申请', status: '已完成', time: '2026-03-10 09:00', approver: '陈律师', remark: '申请入职法务助理岗位，用于合同审核和法规检索' },
       { step: '部门经理审批', status: '进行中', time: '2026-03-10 14:00', approver: '法务部-刘总' },
@@ -509,7 +668,7 @@ export const onboardRecords: OnboardRecord[] = [
   },
   {
     id: 'OB004', employeeId: 'NEW-002', employeeName: '小翼·培训', owner: '赵丽', ownerType: '自有',
-    department: '人力资源部', position: '培训助理', applyDate: '2026-03-15', status: '人力部门审批', currentStep: 3,
+    department: '人力资源部', position: '综合支撑-人力-培训管理', applyDate: '2026-03-15', status: '人力部门审批', currentStep: 3,
     approvalSteps: [
       { step: '发起申请', status: '已完成', time: '2026-03-15 09:00', approver: '赵丽', remark: '申请入职培训助理岗位' },
       { step: '部门经理审批', status: '已完成', time: '2026-03-16 10:00', approver: '人力资源部-陈经理', opinion: '部门需要AI培训助手，同意入职', remark: '同意' },
@@ -521,7 +680,7 @@ export const onboardRecords: OnboardRecord[] = [
 
 export const exitRecords: ExitRecord[] = [
   {
-    id: 'EX001', employeeId: 'DE-2026007', employeeName: '小翼·运维', department: 'IT运维部', position: '运维工程师',
+    id: 'EX001', employeeId: 'DE-2026007', employeeName: '小翼·运维', department: 'IT运维部', position: '综合支撑-云网-系统运维',
     reason: '效能不达标', applyDate: '2026-03-08', status: '人力部门审批', currentStep: 3,
     approvalSteps: [
       { step: '发起申请', status: '已完成', time: '2026-03-08 10:00', approver: '孙七', remark: '连续3天未活跃，效能不达标，申请退出' },
@@ -531,7 +690,7 @@ export const exitRecords: ExitRecord[] = [
     ],
   },
   {
-    id: 'EX002', employeeId: 'DE-2026009', employeeName: '小翼·文档', department: '综合管理部', position: '文档管理专员',
+    id: 'EX002', employeeId: 'DE-2026009', employeeName: '小翼·文档', department: '综合管理部', position: '综合支撑-办公室-文档管理',
     reason: '岗位调整', applyDate: '2026-03-05', status: '部门经理审批', currentStep: 2,
     approvalSteps: [
       { step: '发起申请', status: '已完成', time: '2026-03-05 15:00', approver: '钱九', remark: '岗位调整，文档管理工作合并至其他岗位' },
@@ -541,7 +700,7 @@ export const exitRecords: ExitRecord[] = [
     ],
   },
   {
-    id: 'EX003', employeeId: 'DE-2026004', employeeName: '小翼·审计', department: '审计部', position: '审计助理',
+    id: 'EX003', employeeId: 'DE-2026004', employeeName: '小翼·审计', department: '审计部', position: '党群监督-审计-内部审计',
     reason: '合同到期', applyDate: '2026-03-18', status: '已完成', currentStep: 4,
     approvalSteps: [
       { step: '发起申请', status: '已完成', time: '2026-03-18 09:00', approver: '王芳', remark: '服务合同到期，申请退出' },
@@ -555,7 +714,7 @@ export const exitRecords: ExitRecord[] = [
 export const transferRecords: TransferRecord[] = [
   {
     id: 'TF001', employeeId: 'DE-2026002', employeeName: '小翼·数据',
-    fromDepartment: '数据运营中心', fromPosition: '数据标注专员',
+    fromDepartment: '数据运营中心', fromPosition: '综合支撑-数发-数据标注',
     toDepartment: '数字化运营部', toPosition: '数据分析专员',
     reason: '业务需要，该员工具备数据分析能力，调动至数字化运营部承担更重要的数据分析工作',
     applyDate: '2026-03-12', applicant: '韩梅梅',
@@ -569,7 +728,7 @@ export const transferRecords: TransferRecord[] = [
   },
   {
     id: 'TF002', employeeId: 'DE-2026009', employeeName: '小翼·文档',
-    fromDepartment: '综合管理部', fromPosition: '文档管理专员',
+    fromDepartment: '综合管理部', fromPosition: '综合支撑-办公室-文档管理',
     toDepartment: '客户服务部', toPosition: '知识管理专员',
     reason: '客户服务部需要知识管理能力，小翼·文档的文件解析和摘要能力可以更好地服务于客服知识库建设',
     applyDate: '2026-03-08', applicant: '钱九',
@@ -583,9 +742,9 @@ export const transferRecords: TransferRecord[] = [
   },
   {
     id: 'TF003', employeeId: 'DE-2026003', employeeName: '小翼·营销',
-    fromDepartment: '数字化运营部', fromPosition: '营销策划专员',
-    toDepartment: '数字化运营部', toPosition: '高级营销策划专员',
-    reason: '该员工表现优异，完成率93.8%，建议晋升为高级营销策划专员',
+    fromDepartment: '数字化运营部', fromPosition: '业务支撑-市场-营销策划',
+    toDepartment: '数字化运营部', toPosition: '业务支撑-市场-高级营销策划',
+    reason: '该员工表现优异，完成率93.8%，建议晋升为高级营销策划',
     applyDate: '2026-02-20', applicant: '李明',
     status: '已完成', currentStep: 4,
     approvalSteps: [
@@ -599,7 +758,7 @@ export const transferRecords: TransferRecord[] = [
 
 export const demandRecords: DemandRecord[] = [
   {
-    id: 'DM001', title: '客服部智能客服专员扩编', department: '客户服务部', position: '智能客服专员',
+    id: 'DM001', title: '客服部智能客服专员扩编', department: '客户服务部', position: '业务支撑-客服-智能客服',
     headcount: 2, urgency: '紧急',
     reason: '315消费者权益日期间客户咨询量激增，现有客服人力不足，需紧急扩编',
     requirements: '需具备智能问答、工单处理、情感分析能力，L2及以上职级',
@@ -613,7 +772,7 @@ export const demandRecords: DemandRecord[] = [
     ],
   },
   {
-    id: 'DM002', title: '审计部AI审计助理招募', department: '审计部', position: '审计助理',
+    id: 'DM002', title: '审计部AI审计助理招募', department: '审计部', position: '党群监督-审计-内部审计',
     headcount: 1, urgency: '普通',
     reason: '年度审计工作量增加，需补充AI审计助理协助完成工作底稿',
     requirements: '需具备工作底稿、风险识别、报告生成能力',
@@ -627,7 +786,7 @@ export const demandRecords: DemandRecord[] = [
     ],
   },
   {
-    id: 'DM003', title: '财务中心报表分析师需求', department: '财务共享中心', position: '财务分析专员',
+    id: 'DM003', title: '财务中心报表分析师需求', department: '财务共享中心', position: '综合支撑-财务-财务管理',
     headcount: 1, urgency: '普通',
     reason: '季度报表分析工作繁重，需增加一名AI财务分析专员',
     requirements: '需具备报销审核、预算分析、费用统计能力，L3职级',
@@ -769,7 +928,7 @@ export const performanceReviews: PerformanceReview[] = [
 
 export const employeeEditApprovals: EmployeeEditApproval[] = [
   { id: 'EA001', employeeId: 'DE-2026001', employeeName: '小翼·客服', field: 'Tokens配额', oldValue: '500万', newValue: '800万', applyDate: '2026-03-13', status: '待审批', applicant: '宇雷' },
-  { id: 'EA002', employeeId: 'DE-2026002', employeeName: '小翼·数据', field: '岗位', oldValue: '数据标注专员', newValue: '数据分析专员', applyDate: '2026-03-12', status: '待审批', applicant: '韩梅梅' },
+  { id: 'EA002', employeeId: 'DE-2026002', employeeName: '小翼·数据', field: '岗位', oldValue: '综合支撑-数发-数据标注', newValue: '数据分析专员', applyDate: '2026-03-12', status: '待审批', applicant: '韩梅梅' },
 ];
 
 export const scheduledTasks: ScheduledTask[] = [

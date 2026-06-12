@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   Avatar, Tag, Button, Input, Tooltip, Badge, Space, Empty,
-  Descriptions, Tabs, List, Progress, Divider, message, Modal,
+  Descriptions, Tabs, List, Divider, message, Modal,
   Card, Switch, Form, Select, Row, Col, Upload,
 } from 'antd';
 import {
@@ -783,23 +783,51 @@ const ChatPage: React.FC = () => {
                       children: (
                         <div style={{ padding: '0 16px 16px' }}>
                           <Descriptions column={1} size="small">
-                            <Descriptions.Item label="工号">{selectedEmployee.id}</Descriptions.Item>
-                            <Descriptions.Item label="部门">{selectedEmployee.department}</Descriptions.Item>
-                            <Descriptions.Item label="岗位">{selectedEmployee.position}</Descriptions.Item>
-                            <Descriptions.Item label="职级"><Tag color="blue">{selectedEmployee.level}</Tag></Descriptions.Item>
-                            <Descriptions.Item label="归属人">{selectedEmployee.owner} ({selectedEmployee.ownerType})</Descriptions.Item>
-                            <Descriptions.Item label="入职日期">{selectedEmployee.onboardDate}</Descriptions.Item>
+                            <Descriptions.Item label="工号">
+                              {selectedEmployee.employeeNumber
+                                ? <span style={{ fontFamily: 'monospace' }}>{selectedEmployee.employeeNumber}</span>
+                                : <span style={{ color: '#999' }}>未填写</span>}
+                            </Descriptions.Item>
+                            <Descriptions.Item label="所属条线">
+                              {selectedEmployee.businessLine
+                                ? <Tag>{selectedEmployee.businessLine}</Tag>
+                                : <span style={{ color: '#999' }}>—</span>}
+                            </Descriptions.Item>
+                            <Descriptions.Item label="基准岗位">{selectedEmployee.position}</Descriptions.Item>
+                            <Descriptions.Item label="级别">
+                              {selectedEmployee.capabilityLevel
+                                ? <Tag color="blue">{selectedEmployee.capabilityLevel}</Tag>
+                                : <span style={{ color: '#999' }}>—</span>}
+                            </Descriptions.Item>
+                            <Descriptions.Item label="运营负责人">
+                              {selectedEmployee.operationOwner ?? <span style={{ color: '#999' }}>—</span>}
+                            </Descriptions.Item>
+                            <Descriptions.Item label="业务负责人">
+                              {selectedEmployee.businessOwner ?? <span style={{ color: '#999' }}>—</span>}
+                            </Descriptions.Item>
+                            <Descriptions.Item label="技术负责人">
+                              {selectedEmployee.techOwner ?? <span style={{ color: '#999' }}>—</span>}
+                            </Descriptions.Item>
+                            <Descriptions.Item label="安检通过">
+                              {selectedEmployee.securityPassed
+                                ? <Tag color={selectedEmployee.securityPassed === '是' ? 'success' : 'error'}>{selectedEmployee.securityPassed}</Tag>
+                                : <span style={{ color: '#999' }}>—</span>}
+                            </Descriptions.Item>
+                            <Descriptions.Item label="日志审计">
+                              {selectedEmployee.logAuditCompliant
+                                ? <Tag color={selectedEmployee.logAuditCompliant === '是' ? 'success' : 'error'}>{selectedEmployee.logAuditCompliant}</Tag>
+                                : <span style={{ color: '#999' }}>—</span>}
+                            </Descriptions.Item>
                           </Descriptions>
-                          <Divider style={{ margin: '12px 0' }} />
-                          <div style={{ marginBottom: 8, fontWeight: 500, fontSize: 13 }}>Tokens 使用</div>
-                          <Progress
-                            percent={Math.round((selectedEmployee.tokensUsed / selectedEmployee.tokensQuota) * 100)}
-                            status={selectedEmployee.tokensUsed / selectedEmployee.tokensQuota > 0.8 ? 'exception' : 'active'}
-                            format={(p) => `${p}%`}
-                          />
-                          <div style={{ fontSize: 12, color: '#999', marginTop: 4 }}>
-                            {(selectedEmployee.tokensUsed / 1000000).toFixed(1)}M / {(selectedEmployee.tokensQuota / 1000000).toFixed(1)}M
-                          </div>
+                          {selectedEmployee.responsibility && (
+                            <>
+                              <Divider style={{ margin: '12px 0' }} />
+                              <div style={{ marginBottom: 6, fontWeight: 500, fontSize: 13 }}>应用职责描述</div>
+                              <div style={{ fontSize: 12, color: '#666', lineHeight: 1.6 }}>
+                                {selectedEmployee.responsibility}
+                              </div>
+                            </>
+                          )}
                         </div>
                       ),
                     },

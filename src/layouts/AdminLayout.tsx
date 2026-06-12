@@ -65,7 +65,7 @@ const AdminLayout: React.FC = () => {
         { key: '/admin/employees', icon: <TeamOutlined />, label: '员工管理', permission: 'employees' },
         { key: '/admin/approval-records', icon: <AuditOutlined />, label: '审批记录', permission: 'employees' },
         { key: '/admin/positions', icon: <SettingOutlined />, label: '岗位设置', permission: 'positions' },
-        { key: '/admin/position-types', icon: <TagOutlined />, label: '岗位类型配置', permission: 'positions' },
+        { key: '/admin/position-types', icon: <TagOutlined />, label: '岗位所属条线', permission: 'positions' },
       ],
     },
     // 人事管理菜单已隐藏

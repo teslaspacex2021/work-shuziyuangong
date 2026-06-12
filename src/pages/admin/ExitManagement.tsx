@@ -75,7 +75,7 @@ const ExitManagement: React.FC = () => {
     { title: '申请单号', dataIndex: 'id', key: 'id', width: 110 },
     { title: '员工名称', dataIndex: 'employeeName', key: 'employeeName', width: 120 },
     { title: '部门', dataIndex: 'department', key: 'department', width: 120 },
-    { title: '岗位', dataIndex: 'position', key: 'position', width: 130 },
+    { title: '岗位', dataIndex: 'position', key: 'position', width: 220 },
     { title: '退出原因', dataIndex: 'reason', key: 'reason', width: 120 },
     { title: '申请日期', dataIndex: 'applyDate', key: 'applyDate', width: 120 },
     {

@@ -76,7 +76,7 @@ const OnboardManagement: React.FC = () => {
     { title: '员工名称', dataIndex: 'employeeName', key: 'employeeName', width: 120 },
     { title: '所属自然人', dataIndex: 'owner', key: 'owner', width: 100 },
     { title: '部门', dataIndex: 'department', key: 'department', width: 120 },
-    { title: '岗位', dataIndex: 'position', key: 'position', width: 130 },
+    { title: '岗位', dataIndex: 'position', key: 'position', width: 220 },
     { title: '申请日期', dataIndex: 'applyDate', key: 'applyDate', width: 120 },
     {
       title: '当前状态', dataIndex: 'status', key: 'status', width: 120,
