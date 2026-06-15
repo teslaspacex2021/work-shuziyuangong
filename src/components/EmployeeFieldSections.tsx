@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card, Descriptions, Table, Tag } from 'antd';
+import { Avatar, Card, Descriptions, Table, Tag } from 'antd';
 import type { DigitalEmployee } from '../mock/data';
 
 const yesNoColor = (v?: string) => (v === '是' ? 'success' : v === '否' ? 'error' : 'default');
@@ -15,9 +15,25 @@ const EmployeeFieldSections: React.FC<EmployeeFieldSectionsProps> = ({ employee 
   <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
     <Card size="small" title="基本信息" style={{ borderRadius: 8 }}>
       <Descriptions column={2} bordered size="small">
-        <Descriptions.Item label="数字员工名称">{employee.name}</Descriptions.Item>
+        <Descriptions.Item label="数字员工名称">
+          {emptyText(employee.positionName ?? employee.position)}
+        </Descriptions.Item>
+        <Descriptions.Item label="数字员工别名">{employee.name}</Descriptions.Item>
+        <Descriptions.Item label="头像">
+          <Avatar src={employee.avatar} size={40} />
+        </Descriptions.Item>
+        <Descriptions.Item label="工号">
+          {emptyText(employee.employeeNumber ?? employee.id)}
+        </Descriptions.Item>
+        <Descriptions.Item label="入职日期">{emptyText(employee.onboardDate)}</Descriptions.Item>
+        <Descriptions.Item label="部门">{emptyText(employee.department)}</Descriptions.Item>
         <Descriptions.Item label="所属条线">{emptyText(employee.businessLine)}</Descriptions.Item>
         <Descriptions.Item label="基准岗位">{emptyText(employee.position)}</Descriptions.Item>
+        <Descriptions.Item label="身份类型">
+          {employee.ownerType
+            ? <Tag color={employee.ownerType === '自有' ? 'blue' : 'orange'}>{employee.ownerType}</Tag>
+            : emptyText()}
+        </Descriptions.Item>
         <Descriptions.Item label="级别">
           {employee.capabilityLevel
             ? <Tag color="blue">{employee.capabilityLevel}</Tag>
@@ -26,7 +42,9 @@ const EmployeeFieldSections: React.FC<EmployeeFieldSectionsProps> = ({ employee 
         <Descriptions.Item label="应用职责描述" span={2}>
           {emptyText(employee.responsibility ?? employee.description)}
         </Descriptions.Item>
-        <Descriptions.Item label="运营负责人">{emptyText(employee.operationOwner)}</Descriptions.Item>
+        <Descriptions.Item label="运营负责人">
+          {emptyText(employee.operationOwner ?? employee.owner)}
+        </Descriptions.Item>
         <Descriptions.Item label="业务负责人">{emptyText(employee.businessOwner)}</Descriptions.Item>
         <Descriptions.Item label="技术负责人" span={2}>
           {emptyText(employee.techOwner)}

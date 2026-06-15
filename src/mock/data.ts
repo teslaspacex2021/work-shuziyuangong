@@ -118,6 +118,8 @@ export interface DigitalEmployee {
   id: string;
   /** 工号，未填写时不可设为在职 */
   employeeNumber?: string;
+  /** 岗位模板名称（新增员工表单中的数字员工名称） */
+  positionName?: string;
   name: string;
   avatar: string;
   department: string;

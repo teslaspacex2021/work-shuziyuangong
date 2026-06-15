@@ -4,7 +4,7 @@ import {
   Row, Col, Statistic, message, Radio, Result,
 } from 'antd';
 import {
-  SearchOutlined,
+  SearchOutlined, PlusOutlined,
   AppstoreOutlined, CheckCircleOutlined, StopOutlined, TeamOutlined,
   ExclamationCircleFilled, SwapOutlined, PauseCircleOutlined, LinkOutlined,
 } from '@ant-design/icons';
@@ -18,13 +18,8 @@ const departmentOptions = [
   '人力资源部', '财务共享中心', 'IT运维部', '综合管理部', '经营分析部', '法务部',
 ];
 
-const allSkillOptions = [
-  '智能问答', '工单处理', '情感分析', '数据标注', '数据清洗',
-  '文案撰写', '用户画像', '竞品分析', '商机挖掘', '客户画像',
-  '工作底稿', '风险识别', '简历筛选', '人岗匹配', '报销审核',
-  '预算分析', '故障诊断', '日志分析', '自动巡检', '文件解析',
-  '摘要生成', '经营报告', '指标分析', '可视化', '报告生成',
-];
+const parseRequiredSkills = (text: string): string[] =>
+  text.split(/[\n,，、]+/).map((s) => s.trim()).filter(Boolean);
 
 const PositionSettings: React.FC = () => {
   const [data, setData] = useState<PositionItem[]>(positions);
@@ -79,19 +74,27 @@ const PositionSettings: React.FC = () => {
   };
 
 
+  const handleAdd = () => {
+    form.resetFields();
+    setModalVisible(true);
+  };
+
   const handleSubmit = () => {
     form.validateFields().then((values) => {
+      const { requiredSkillsText, ...rest } = values;
+      const requiredSkills = parseRequiredSkills(requiredSkillsText || '');
       if (editingItem) {
         setData((prev) =>
-          prev.map((p) => (p.id === editingItem.id ? { ...p, ...values } : p)),
+          prev.map((p) => (p.id === editingItem.id ? { ...p, ...rest, requiredSkills } : p)),
         );
         message.success('岗位已更新');
       } else {
         const newItem: PositionItem = {
           id: `POS${String(data.length + 1).padStart(3, '0')}`,
-          ...values,
-          benchmarkPosition: values.benchmarkPosition || values.name,
-          requiredSkills: values.requiredSkills || [],
+          ...rest,
+          description: '',
+          benchmarkPosition: rest.benchmarkPosition || rest.name,
+          requiredSkills,
           level: values.level || 'L2',
           status: '启用',
           employeeCount: 0,
@@ -118,6 +121,7 @@ const PositionSettings: React.FC = () => {
       title: '所属条线', dataIndex: 'category', key: 'category', width: 90,
       render: (cat: string) => <Tag color={BUSINESS_LINE_COLORS[cat] || 'default'}>{cat}</Tag>,
     },
+    { title: '所属部门', dataIndex: 'department', key: 'department', width: 130, ellipsis: true },
     { title: '基准岗位', dataIndex: 'benchmarkPosition', key: 'benchmarkPosition', ellipsis: true },
     {
       title: '级别', dataIndex: 'capabilityLevel', key: 'capabilityLevel', width: 80,
@@ -202,6 +206,9 @@ const PositionSettings: React.FC = () => {
               options={categoryOptions.map((c) => ({ label: c, value: c }))}
             />
           </Space>
+          <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
+            新增岗位
+          </Button>
         </div>
 
         <Table
@@ -268,21 +275,18 @@ const PositionSettings: React.FC = () => {
               options={['工具型', '智能型', '超级型'].map((l) => ({ label: l, value: l }))}
             />
           </Form.Item>
-          <Form.Item name="requiredSkills" label="所需技能" rules={[{ required: true, message: '请选择所需技能' }]}>
-            <Select
-              mode="multiple"
-              placeholder="请选择技能"
-              options={allSkillOptions.map((s) => ({ label: s, value: s }))}
-            />
+          <Form.Item
+            name="requiredSkillsText"
+            label="所需技能"
+            rules={[{ required: true, message: '请输入所需技能' }]}
+          >
+            <Input.TextArea rows={3} placeholder="请输入所需技能，多个技能可用换行或逗号分隔" />
           </Form.Item>
           <Form.Item name="department" label="所属部门" rules={[{ required: true, message: '请选择所属部门' }]}>
             <Select placeholder="请选择部门" options={departmentOptions.map((d) => ({ label: d, value: d }))} />
           </Form.Item>
           <Form.Item name="maxEmployeeCount" label="员工数量上限" rules={[{ required: true, message: '请输入数量上限' }]}>
             <InputNumber min={1} max={100} placeholder="该岗位最多可安排的员工数" style={{ width: '100%' }} />
-          </Form.Item>
-          <Form.Item name="description" label="描述">
-            <Input.TextArea rows={3} placeholder="请输入岗位描述" />
           </Form.Item>
         </Form>
       </Modal>

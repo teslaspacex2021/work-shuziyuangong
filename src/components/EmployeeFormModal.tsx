@@ -1,16 +1,24 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
-  Modal, Form, Input, Select, InputNumber, Card, Row, Col,
+  Modal, Form, Input, Select, InputNumber, Card, Row, Col, Upload, DatePicker,
 } from 'antd';
+import { PlusOutlined } from '@ant-design/icons';
+import dayjs from 'dayjs';
 import {
-  BUSINESS_LINES, CAPABILITY_LEVELS, SYSTEM_LEVELS,
+  SYSTEM_LEVELS, positions,
   type BusinessLine, type CapabilityLevel, type OutputMetric, type RunSystemConfig,
 } from '../mock/data';
 
 export interface EmployeeFormValues {
   name: string;
+  alias?: string;
+  avatar?: string;
+  employeeNumber: string;
+  onboardDate?: dayjs.Dayjs;
+  department: string;
   businessLine: BusinessLine;
   position: string;
+  ownerType: '自有' | '外包';
   capabilityLevel: CapabilityLevel;
   responsibility: string;
   operationOwner: string;
@@ -39,6 +47,7 @@ const initialValues: Partial<EmployeeFormValues> = {
   designTokensPerSec: 0,
   securityPassed: '是',
   logAuditCompliant: '是',
+  ownerType: '自有',
 };
 
 interface EmployeeFormModalProps {
@@ -47,8 +56,67 @@ interface EmployeeFormModalProps {
   onSubmit: (values: EmployeeFormValues) => void;
 }
 
+export const fullHeightModalStyles = {
+  container: {
+    display: 'flex',
+    flexDirection: 'column' as const,
+    height: '100vh',
+    maxHeight: '100vh',
+    overflow: 'hidden',
+  },
+  header: {
+    flexShrink: 0,
+  },
+  body: {
+    flex: 1,
+    minHeight: 0,
+    overflowY: 'auto' as const,
+  },
+  footer: {
+    flexShrink: 0,
+  },
+};
+
 const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({ open, onCancel, onSubmit }) => {
   const [form] = Form.useForm<EmployeeFormValues>();
+
+  const positionOptions = useMemo(
+    () => positions
+      .filter((p) => p.status === '启用')
+      .map((p) => {
+        const full = p.employeeCount >= p.maxEmployeeCount;
+        return {
+          label: full ? `${p.name}（已满员）` : p.name,
+          value: p.name,
+          disabled: full,
+        };
+      }),
+    [],
+  );
+
+  const handlePositionSelect = (positionName?: string) => {
+    if (!positionName) {
+      form.setFieldsValue({
+        alias: undefined,
+        businessLine: undefined,
+        department: undefined,
+        position: undefined,
+        capabilityLevel: undefined,
+        responsibility: undefined,
+      });
+      return;
+    }
+    const pos = positions.find((p) => p.name === positionName);
+    if (!pos) return;
+    form.setFieldsValue({
+      alias: positionName,
+      businessLine: pos.category as BusinessLine,
+      department: pos.department,
+      position: pos.benchmarkPosition,
+      capabilityLevel: pos.capabilityLevel,
+      responsibility: pos.description,
+    });
+  };
 
   const handleOk = async () => {
     const values = await form.validateFields();
@@ -70,8 +138,10 @@ const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({ open, onCancel, o
       okText="创建"
       cancelText="取消"
       width={860}
+      centered={false}
       destroyOnClose
-      styles={{ body: { maxHeight: '70vh', overflowY: 'auto' } }}
+      style={{ top: 0, paddingBottom: 0, maxWidth: '100vw' }}
+      styles={fullHeightModalStyles}
     >
       <Form form={form} layout="vertical" initialValues={initialValues} style={{ marginTop: 8 }}>
         <Card size="small" title="基本信息" style={{ marginBottom: 16, borderRadius: 8 }}>
@@ -80,20 +150,82 @@ const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({ open, onCancel, o
               <Form.Item
                 name="name"
                 label="数字员工名称"
-                rules={[{ required: true, message: '请输入数字员工名称' }]}
+                rules={[{ required: true, message: '请选择数字员工名称' }]}
               >
-                <Input placeholder="例如：小翼·客服" allowClear />
+                <Select
+                  placeholder="请选择岗位"
+                  showSearch
+                  optionFilterProp="label"
+                  allowClear
+                  options={positionOptions}
+                  onChange={handlePositionSelect}
+                />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="alias" label="数字员工别名">
+                <Input placeholder="默认同数字员工名称，可修改" allowClear />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item label="头像">
+                <Upload
+                  listType="picture-circle"
+                  maxCount={1}
+                  accept="image/*"
+                  beforeUpload={() => false}
+                  onChange={({ fileList }) => {
+                    const file = fileList[0]?.originFileObj as File | undefined;
+                    form.setFieldValue('avatar', file ? URL.createObjectURL(file) : undefined);
+                  }}
+                >
+                  <button type="button" style={{ border: 0, background: 'none', cursor: 'pointer' }}>
+                    <PlusOutlined />
+                    <div style={{ marginTop: 8 }}>头像</div>
+                  </button>
+                </Upload>
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="employeeNumber"
+                label="工号"
+                rules={[
+                  { required: true, message: '请输入工号' },
+                  { pattern: /^DE-\d{4,}$/i, message: '工号格式应为 DE- 加数字，如 DE-2026011' },
+                ]}
+              >
+                <Input placeholder="请输入工号" allowClear />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="onboardDate" label="入职日期">
+                <DatePicker style={{ width: '100%' }} placeholder="请选择入职日期" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="department"
+                label="部门"
+                rules={[{ required: true, message: '请先选择数字员工名称以带入部门' }]}
+              >
+                <Input
+                  placeholder="选择岗位后自动带入"
+                  readOnly
+                  style={{ background: '#f5f5f5', cursor: 'not-allowed', color: 'rgba(0,0,0,0.88)' }}
+                />
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item
                 name="businessLine"
                 label="所属条线"
-                rules={[{ required: true, message: '请选择所属条线' }]}
+                rules={[{ required: true, message: '请先选择数字员工名称以带入所属条线' }]}
               >
-                <Select
-                  placeholder="请选择"
-                  options={BUSINESS_LINES.map((v) => ({ label: v, value: v }))}
+                <Input
+                  placeholder="选择岗位后自动带入"
+                  readOnly
+                  style={{ background: '#f5f5f5', cursor: 'not-allowed', color: 'rgba(0,0,0,0.88)' }}
                 />
               </Form.Item>
             </Col>
@@ -101,20 +233,40 @@ const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({ open, onCancel, o
               <Form.Item
                 name="position"
                 label="基准岗位"
-                rules={[{ required: true, message: '请输入基准岗位' }]}
+                rules={[{ required: true, message: '请先选择数字员工名称以带入基准岗位' }]}
               >
-                <Input placeholder="例如：综合支撑-财务-财务管理" allowClear />
+                <Input
+                  placeholder="选择岗位后自动带入"
+                  readOnly
+                  style={{ background: '#f5f5f5', cursor: 'not-allowed', color: 'rgba(0,0,0,0.88)' }}
+                />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="ownerType"
+                label="身份类型"
+                rules={[{ required: true, message: '请选择身份类型' }]}
+              >
+                <Select
+                  placeholder="请选择身份类型"
+                  options={[
+                    { label: '自有', value: '自有' },
+                    { label: '外包', value: '外包' },
+                  ]}
+                />
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item
                 name="capabilityLevel"
                 label="级别"
-                rules={[{ required: true, message: '请选择级别' }]}
+                rules={[{ required: true, message: '请先选择数字员工名称以带入级别' }]}
               >
-                <Select
-                  placeholder="请选择"
-                  options={CAPABILITY_LEVELS.map((v) => ({ label: v, value: v }))}
+                <Input
+                  placeholder="选择岗位后自动带入"
+                  readOnly
+                  style={{ background: '#f5f5f5', cursor: 'not-allowed', color: 'rgba(0,0,0,0.88)' }}
                 />
               </Form.Item>
             </Col>
@@ -124,7 +276,12 @@ const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({ open, onCancel, o
                 label="应用职责描述"
                 rules={[{ required: true, message: '请输入应用职责描述' }]}
               >
-                <Input.TextArea rows={3} placeholder="描述该数字员工的主要职责与应用场景" />
+                <Input.TextArea
+                  rows={3}
+                  maxLength={500}
+                  showCount
+                  placeholder="描述该数字员工的主要职责与应用场景"
+                />
               </Form.Item>
             </Col>
             <Col span={8}>

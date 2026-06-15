@@ -2,21 +2,21 @@ import React, { useState } from 'react';
 import {
   Card, Table, Tag, Button, Space, Avatar, Modal, Input, Select,
   Row, Col, Statistic, Checkbox, Badge, message, Tabs,
-  Tooltip, Form, Alert,
+  Tooltip,
 } from 'antd';
 import {
   SearchOutlined, SettingOutlined, TeamOutlined,
   ThunderboltOutlined, DatabaseOutlined, FileTextOutlined,
   BookOutlined, InfoCircleOutlined, SyncOutlined,
   CheckCircleOutlined, ExperimentOutlined,
-  IdcardOutlined, PlusOutlined,
+  PlusOutlined,
 } from '@ant-design/icons';
 import {
   digitalEmployees, skills, knowledgeBases,
-  hasEmployeeNumber, getEffectiveEmploymentStatus, canBeInService,
-  type DigitalEmployee, type Skill, type KnowledgeBase, type BusinessLine,
+  hasEmployeeNumber, getEffectiveEmploymentStatus,
+  type DigitalEmployee, type Skill, type KnowledgeBase,
 } from '../../mock/data';
-import EmployeeFormModal, { type EmployeeFormValues } from '../../components/EmployeeFormModal';
+import EmployeeFormModal, { fullHeightModalStyles, type EmployeeFormValues } from '../../components/EmployeeFormModal';
 import EmployeeFieldSections from '../../components/EmployeeFieldSections';
 
 const levelColor: Record<string, string> = {
@@ -35,12 +35,6 @@ const typeIcon: Record<string, React.ReactNode> = {
   '知识库': <DatabaseOutlined style={{ color: '#1677ff' }} />,
   '知识卡片': <FileTextOutlined style={{ color: '#52c41a' }} />,
   '数据集': <BookOutlined style={{ color: '#722ed1' }} />,
-};
-
-const businessLineDeptMap: Partial<Record<BusinessLine, string>> = {
-  客服: '客户服务部', 研发: '数据运营中心', 市场: '数字化运营部', 审计: '审计部',
-  财务: '财务共享中心', 人力: '人力资源部', 云网: 'IT运维部', 政企: '数字化运营部',
-  数发: '数据运营中心',
 };
 
 const capabilityToLevel = (cap: EmployeeFormValues['capabilityLevel']): DigitalEmployee['level'] => {
@@ -68,9 +62,6 @@ const EmployeeManagement: React.FC = () => {
   const [selectedEmployee, setSelectedEmployee] = useState<DigitalEmployee | null>(null);
   const [selectedSkillIds, setSelectedSkillIds] = useState<string[]>([]);
   const [selectedKBIds, setSelectedKBIds] = useState<string[]>([]);
-  const [employeeNumberVisible, setEmployeeNumberVisible] = useState(false);
-  const [employeeNumberForm] = Form.useForm<{ employeeNumber: string; setInService?: boolean }>();
-  const draftEmployeeNumber = Form.useWatch('employeeNumber', employeeNumberForm);
 
   const filtered = employees.filter((e) => {
     const empNo = e.employeeNumber ?? '';
@@ -116,18 +107,34 @@ const EmployeeManagement: React.FC = () => {
   };
 
   const createEmployee = (values: EmployeeFormValues) => {
-    const id = generateEmployeeId(employees);
+    const empNo = values.employeeNumber.trim().toUpperCase();
+    const duplicated = employees.some(
+      (e) => e.id === empNo || e.employeeNumber?.trim().toUpperCase() === empNo,
+    );
+    if (duplicated) {
+      message.error('该工号已被其他数字员工使用');
+      return;
+    }
+
+    const id = empNo || generateEmployeeId(employees);
     const today = new Date().toISOString().slice(0, 10);
+    const onboardDate = values.onboardDate
+      ? values.onboardDate.format('YYYY-MM-DD')
+      : today;
+    const displayName = values.alias?.trim() || values.name.trim();
     const newEmp: DigitalEmployee = {
       id,
-      name: values.name.trim(),
-      avatar: `https://api.dicebear.com/7.x/personas/svg?seed=${encodeURIComponent(values.name)}&backgroundColor=b6e3f4`,
-      department: businessLineDeptMap[values.businessLine] ?? `${values.businessLine}条线`,
+      employeeNumber: empNo,
+      positionName: values.name.trim(),
+      name: displayName,
+      avatar: values.avatar
+        ?? `https://api.dicebear.com/7.x/personas/svg?seed=${encodeURIComponent(displayName)}&backgroundColor=b6e3f4`,
+      department: values.department,
       position: values.position.trim(),
       status: 'TRAINING',
       employmentStatus: '离职',
       owner: values.operationOwner.trim(),
-      ownerType: '自有',
+      ownerType: values.ownerType,
       skills: [],
       skillIds: [],
       knowledgeIds: [],
@@ -137,7 +144,7 @@ const EmployeeManagement: React.FC = () => {
       tokensUsed: 0,
       taskCompleteRate: 0,
       lastActive: '尚未上线',
-      onboardDate: today,
+      onboardDate,
       relatedAgents: [],
       likes: 0,
       dislikes: 0,
@@ -156,62 +163,8 @@ const EmployeeManagement: React.FC = () => {
       runSystems: values.runSystems.filter((s) => s.systemName.trim()),
     };
     setEmployees((prev) => [newEmp, ...prev]);
-    message.success(`已创建数字员工「${newEmp.name}」，请填写工号后设为在职`);
+    message.success(`已创建数字员工「${newEmp.name}」，可设为在职`);
     setAddVisible(false);
-  };
-
-  const openEmployeeNumberModal = (emp: DigitalEmployee) => {
-    setSelectedEmployee(emp);
-    employeeNumberForm.setFieldsValue({
-      employeeNumber: emp.employeeNumber ?? '',
-      setInService: emp.employmentStatus === '离职' && !hasEmployeeNumber(emp),
-    });
-    setEmployeeNumberVisible(true);
-  };
-
-  const saveEmployeeNumber = async () => {
-    if (!selectedEmployee) return;
-    try {
-      const values = await employeeNumberForm.validateFields();
-      const trimmed = values.employeeNumber.trim().toUpperCase();
-      const duplicated = employees.some(
-        (e) => e.id !== selectedEmployee.id && e.employeeNumber?.trim().toUpperCase() === trimmed,
-      );
-      if (duplicated) {
-        message.error('该工号已被其他数字员工使用');
-        return;
-      }
-      const wantInService = Boolean(values.setInService);
-      if (wantInService && !trimmed) {
-        message.error('未填写工号时不能设为在职');
-        return;
-      }
-      setEmployees((prev) =>
-        prev.map((e) => {
-          if (e.id !== selectedEmployee.id) return e;
-          const wasWithoutNumber = !hasEmployeeNumber(e);
-          const next: DigitalEmployee = { ...e, employeeNumber: trimmed };
-          if (wasWithoutNumber) {
-            next.status = 'ACTIVE';
-          }
-          if (wantInService) {
-            if (!canBeInService({ ...next, employeeNumber: trimmed })) {
-              return e;
-            }
-            next.employmentStatus = '在职';
-          } else if (e.employmentStatus === '在职' && !trimmed) {
-            next.employmentStatus = '离职';
-          }
-          return next;
-        }),
-      );
-      message.success(
-        `已为 ${selectedEmployee.name} 保存工号${wantInService ? '并设为在职' : ''}${!hasEmployeeNumber(selectedEmployee) ? '，运行状态已切换为在线' : ''}`,
-      );
-      setEmployeeNumberVisible(false);
-    } catch {
-      /* 表单校验未通过 */
-    }
   };
 
   const columns = [
@@ -267,17 +220,9 @@ const EmployeeManagement: React.FC = () => {
       },
     },
     {
-      title: '操作', key: 'action', width: 150, fixed: 'right' as const,
+      title: '操作', key: 'action', width: 100, fixed: 'right' as const,
       render: (_: unknown, record: DigitalEmployee) => (
         <Space size={4}>
-          <Tooltip title={hasEmployeeNumber(record) ? '修改工号' : '填写工号'}>
-            <Button
-              size="small"
-              icon={<IdcardOutlined />}
-              onClick={() => openEmployeeNumberModal(record)}
-              type={hasEmployeeNumber(record) ? 'default' : 'primary'}
-            />
-          </Tooltip>
           <Tooltip title="配置">
             <Button type="primary" size="small" icon={<SettingOutlined />} onClick={() => openConfig(record)} />
           </Tooltip>
@@ -506,46 +451,6 @@ const EmployeeManagement: React.FC = () => {
         )}
       </Modal>
 
-
-      {/* 工号填写 Modal */}
-      <Modal
-        title={`工号填写 — ${selectedEmployee?.name}`}
-        open={employeeNumberVisible}
-        onCancel={() => setEmployeeNumberVisible(false)}
-        onOk={saveEmployeeNumber}
-        okText="保存"
-        destroyOnClose
-        width={480}
-      >
-        {selectedEmployee && (
-          <Form form={employeeNumberForm} layout="vertical" style={{ marginTop: 8 }}>
-            <Alert
-              type="info"
-              showIcon
-              style={{ marginBottom: 16 }}
-              message="未填写工号的数字员工不能设为在职状态。"
-            />
-            <Form.Item
-              name="employeeNumber"
-              label="工号"
-              rules={[
-                { required: true, message: '请输入工号' },
-                { pattern: /^DE-\d{4,}$/i, message: '工号格式应为 DE- 加数字，如 DE-2026011' },
-              ]}
-            >
-              <Input placeholder="例如 DE-2026011" style={{ fontFamily: 'monospace' }} allowClear />
-            </Form.Item>
-            {selectedEmployee.employmentStatus === '离职' && (
-              <Form.Item name="setInService" valuePropName="checked">
-                <Checkbox disabled={!draftEmployeeNumber?.trim()}>
-                  保存后设为在职（须先填写工号）
-                </Checkbox>
-              </Form.Item>
-            )}
-          </Form>
-        )}
-      </Modal>
-
       {/* Detail Modal */}
       <Modal
         title={`员工详情 — ${selectedEmployee?.name}`}
@@ -553,7 +458,9 @@ const EmployeeManagement: React.FC = () => {
         onCancel={() => setDetailVisible(false)}
         footer={null}
         width={900}
-        styles={{ body: { maxHeight: '75vh', overflowY: 'auto' } }}
+        centered={false}
+        style={{ top: 0, paddingBottom: 0, maxWidth: '100vw' }}
+        styles={fullHeightModalStyles}
       >
         {selectedEmployee && (
           <div>
