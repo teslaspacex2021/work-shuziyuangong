@@ -220,11 +220,13 @@ export interface AlertItem {
 export interface PositionItem {
   id: string;
   name: string;
+  benchmarkPosition: string;
   department: string;
   category: string;
   description: string;
   requiredSkills: string[];
   level: string;
+  capabilityLevel?: CapabilityLevel;
   status: '启用' | '停用';
   employeeCount: number;
   maxEmployeeCount: number;
@@ -608,16 +610,16 @@ export const alerts: AlertItem[] = [
 ];
 
 export const positions: PositionItem[] = [
-  { id: 'POS001', name: '业务支撑-客服-智能客服', department: '客户服务部', category: '客服', description: '负责7×24小时智能客服，处理客户咨询和工单', requiredSkills: ['智能问答', '工单处理', '情感分析'], level: 'L2-L3', status: '启用', employeeCount: 3, maxEmployeeCount: 5, createTime: '2025-12-01' },
-  { id: 'POS002', name: '综合支撑-数发-数据标注', department: '数据运营中心', category: '数发', description: '负责各类数据标注、清洗和预处理工作', requiredSkills: ['数据标注', '数据清洗'], level: 'L1-L2', status: '启用', employeeCount: 2, maxEmployeeCount: 4, createTime: '2025-12-15' },
-  { id: 'POS003', name: '业务支撑-市场-营销策划', department: '数字化运营部', category: '市场', description: '负责营销文案创作、用户画像分析和竞品对比', requiredSkills: ['文案撰写', '用户画像', '竞品分析'], level: 'L2-L3', status: '启用', employeeCount: 2, maxEmployeeCount: 3, createTime: '2025-12-10' },
-  { id: 'POS004', name: '党群监督-审计-内部审计', department: '审计部', category: '审计', description: '辅助审计人员撰写底稿、识别风险并生成建议', requiredSkills: ['工作底稿', '风险识别'], level: 'L2', status: '启用', employeeCount: 1, maxEmployeeCount: 2, createTime: '2026-01-05' },
-  { id: 'POS005', name: '综合支撑-人力-人事管理', department: '人力资源部', category: '人力', description: '人力资源管理支持，简历筛选和面试安排', requiredSkills: ['简历筛选', '人岗匹配'], level: 'L2-L3', status: '启用', employeeCount: 1, maxEmployeeCount: 2, createTime: '2025-11-20' },
-  { id: 'POS006', name: '综合支撑-财务-财务管理', department: '财务共享中心', category: '财务', description: '报销审核、预算分析和费用统计', requiredSkills: ['报销审核', '预算分析'], level: 'L3', status: '启用', employeeCount: 1, maxEmployeeCount: 2, createTime: '2025-11-25' },
-  { id: 'POS007', name: '综合支撑-云网-系统运维', department: 'IT运维部', category: '云网', description: '系统运维监控、故障诊断和修复', requiredSkills: ['故障诊断', '日志分析', '自动巡检'], level: 'L2-L3', status: '启用', employeeCount: 1, maxEmployeeCount: 3, createTime: '2026-01-15' },
-  { id: 'POS008', name: '业务支撑-市场-商机分析', department: '数字化运营部', category: '市场', description: 'AI商机线索挖掘和客户画像分析', requiredSkills: ['商机挖掘', '客户画像'], level: 'L3-L4', status: '启用', employeeCount: 1, maxEmployeeCount: 2, createTime: '2025-10-20' },
-  { id: 'POS009', name: '综合支撑-办公室-文档管理', department: '综合管理部', category: '办公室', description: '文档智能处理、摘要生成和格式转换', requiredSkills: ['文件解析', '摘要生成'], level: 'L2', status: '启用', employeeCount: 1, maxEmployeeCount: 2, createTime: '2026-01-10' },
-  { id: 'POS010', name: '综合支撑-企发-经营分析', department: '经营分析部', category: '企发', description: '经营数据采集和多维度分析报告', requiredSkills: ['经营报告', '指标分析', '可视化'], level: 'L1-L2', status: '停用', employeeCount: 1, maxEmployeeCount: 2, createTime: '2026-02-01' },
+  { id: 'POS001', name: '业务支撑-客服-智能客服', benchmarkPosition: '业务支撑-客服-智能客服', department: '客户服务部', category: '客服', description: '负责7×24小时智能客服，处理客户咨询和工单', requiredSkills: ['智能问答', '工单处理', '情感分析'], level: 'L2-L3', capabilityLevel: '智能型', status: '启用', employeeCount: 3, maxEmployeeCount: 5, createTime: '2025-12-01' },
+  { id: 'POS002', name: '综合支撑-数发-数据标注', benchmarkPosition: '综合支撑-数发-数据标注', department: '数据运营中心', category: '数发', description: '负责各类数据标注、清洗和预处理工作', requiredSkills: ['数据标注', '数据清洗'], level: 'L1-L2', capabilityLevel: '工具型', status: '启用', employeeCount: 2, maxEmployeeCount: 4, createTime: '2025-12-15' },
+  { id: 'POS003', name: '业务支撑-市场-营销策划', benchmarkPosition: '业务支撑-市场-营销策划', department: '数字化运营部', category: '市场', description: '负责营销文案创作、用户画像分析和竞品对比', requiredSkills: ['文案撰写', '用户画像', '竞品分析'], level: 'L2-L3', capabilityLevel: '智能型', status: '启用', employeeCount: 2, maxEmployeeCount: 3, createTime: '2025-12-10' },
+  { id: 'POS004', name: '党群监督-审计-内部审计', benchmarkPosition: '党群监督-审计-内部审计', department: '审计部', category: '审计', description: '辅助审计人员撰写底稿、识别风险并生成建议', requiredSkills: ['工作底稿', '风险识别'], level: 'L2', capabilityLevel: '工具型', status: '启用', employeeCount: 1, maxEmployeeCount: 2, createTime: '2026-01-05' },
+  { id: 'POS005', name: '综合支撑-人力-人事管理', benchmarkPosition: '综合支撑-人力-人事管理', department: '人力资源部', category: '人力', description: '人力资源管理支持，简历筛选和面试安排', requiredSkills: ['简历筛选', '人岗匹配'], level: 'L2-L3', capabilityLevel: '智能型', status: '启用', employeeCount: 1, maxEmployeeCount: 2, createTime: '2025-11-20' },
+  { id: 'POS006', name: '综合支撑-财务-财务管理', benchmarkPosition: '综合支撑-财务-财务管理', department: '财务共享中心', category: '财务', description: '报销审核、预算分析和费用统计', requiredSkills: ['报销审核', '预算分析'], level: 'L3', capabilityLevel: '智能型', status: '启用', employeeCount: 1, maxEmployeeCount: 2, createTime: '2025-11-25' },
+  { id: 'POS007', name: '综合支撑-云网-系统运维', benchmarkPosition: '综合支撑-云网-系统运维', department: 'IT运维部', category: '云网', description: '系统运维监控、故障诊断和修复', requiredSkills: ['故障诊断', '日志分析', '自动巡检'], level: 'L2-L3', capabilityLevel: '智能型', status: '启用', employeeCount: 1, maxEmployeeCount: 3, createTime: '2026-01-15' },
+  { id: 'POS008', name: '业务支撑-市场-商机分析', benchmarkPosition: '业务支撑-市场-商机分析', department: '数字化运营部', category: '市场', description: 'AI商机线索挖掘和客户画像分析', requiredSkills: ['商机挖掘', '客户画像'], level: 'L3-L4', capabilityLevel: '超级型', status: '启用', employeeCount: 1, maxEmployeeCount: 2, createTime: '2025-10-20' },
+  { id: 'POS009', name: '综合支撑-办公室-文档管理', benchmarkPosition: '综合支撑-办公室-文档管理', department: '综合管理部', category: '办公室', description: '文档智能处理、摘要生成和格式转换', requiredSkills: ['文件解析', '摘要生成'], level: 'L2', capabilityLevel: '工具型', status: '启用', employeeCount: 1, maxEmployeeCount: 2, createTime: '2026-01-10' },
+  { id: 'POS010', name: '综合支撑-企发-经营分析', benchmarkPosition: '综合支撑-企发-经营分析', department: '经营分析部', category: '企发', description: '经营数据采集和多维度分析报告', requiredSkills: ['经营报告', '指标分析', '可视化'], level: 'L1-L2', capabilityLevel: '工具型', status: '停用', employeeCount: 1, maxEmployeeCount: 2, createTime: '2026-02-01' },
 ];
 
 export const taskLogs: TaskLogItem[] = [

@@ -9,19 +9,27 @@ import {
   ExclamationCircleFilled, SwapOutlined, PauseCircleOutlined, LinkOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
-import { positions, BUSINESS_LINES, BUSINESS_LINE_COLORS, type PositionItem } from '../../mock/data';
+import { positions, BUSINESS_LINES, BUSINESS_LINE_COLORS, CAPABILITY_LEVEL_COLORS, type PositionItem } from '../../mock/data';
+
+const categoryOptions: string[] = [...BUSINESS_LINES];
 
 const departmentOptions = [
   '客户服务部', '数据运营中心', '数字化运营部', '审计部',
   '人力资源部', '财务共享中心', 'IT运维部', '综合管理部', '经营分析部', '法务部',
 ];
 
-const categoryOptions: string[] = [...BUSINESS_LINES];
+const allSkillOptions = [
+  '智能问答', '工单处理', '情感分析', '数据标注', '数据清洗',
+  '文案撰写', '用户画像', '竞品分析', '商机挖掘', '客户画像',
+  '工作底稿', '风险识别', '简历筛选', '人岗匹配', '报销审核',
+  '预算分析', '故障诊断', '日志分析', '自动巡检', '文件解析',
+  '摘要生成', '经营报告', '指标分析', '可视化', '报告生成',
+];
 
 const PositionSettings: React.FC = () => {
   const [data, setData] = useState<PositionItem[]>(positions);
   const [searchText, setSearchText] = useState('');
-  const [deptFilter, setDeptFilter] = useState<string | undefined>(undefined);
+  const [lineFilter, setLineFilter] = useState<string | undefined>(undefined);
   const [oaVisible, setOaVisible] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [editingItem] = useState<PositionItem | null>(null);
@@ -34,11 +42,11 @@ const PositionSettings: React.FC = () => {
 
   const filteredData = useMemo(() => {
     return data.filter((p) => {
-      const matchSearch = !searchText || p.name.includes(searchText);
-      const matchDept = !deptFilter || p.department === deptFilter;
-      return matchSearch && matchDept;
+      const matchSearch = !searchText || p.name.includes(searchText) || p.benchmarkPosition.includes(searchText);
+      const matchLine = !lineFilter || p.category === lineFilter;
+      return matchSearch && matchLine;
     });
-  }, [data, searchText, deptFilter]);
+  }, [data, searchText, lineFilter]);
 
   const enabledCount = data.filter((p) => p.status === '启用').length;
   const disabledCount = data.filter((p) => p.status === '停用').length;
@@ -82,6 +90,9 @@ const PositionSettings: React.FC = () => {
         const newItem: PositionItem = {
           id: `POS${String(data.length + 1).padStart(3, '0')}`,
           ...values,
+          benchmarkPosition: values.benchmarkPosition || values.name,
+          requiredSkills: values.requiredSkills || [],
+          level: values.level || 'L2',
           status: '启用',
           employeeCount: 0,
           createTime: new Date().toISOString().split('T')[0],
@@ -102,14 +113,34 @@ const PositionSettings: React.FC = () => {
   }, [data, suspendTarget]);
 
   const columns: ColumnsType<PositionItem> = [
-    { title: '岗位名称', dataIndex: 'name', key: 'name', ellipsis: true },
-    { title: '所属部门', dataIndex: 'department', key: 'department', width: 140 },
+    { title: '数字员工名称', dataIndex: 'name', key: 'name', width: 180, ellipsis: true },
     {
-      title: '岗位所属条线', dataIndex: 'category', key: 'category', width: 130,
+      title: '所属条线', dataIndex: 'category', key: 'category', width: 90,
       render: (cat: string) => <Tag color={BUSINESS_LINE_COLORS[cat] || 'default'}>{cat}</Tag>,
     },
+    { title: '基准岗位', dataIndex: 'benchmarkPosition', key: 'benchmarkPosition', ellipsis: true },
     {
-      title: '在岗/上限', key: 'employeeQuota', width: 130, align: 'center',
+      title: '级别', dataIndex: 'capabilityLevel', key: 'capabilityLevel', width: 80,
+      render: (v: string | undefined) => v
+        ? <Tag color={CAPABILITY_LEVEL_COLORS[v as keyof typeof CAPABILITY_LEVEL_COLORS] || 'default'}>{v}</Tag>
+        : <span style={{ color: '#999' }}>—</span>,
+    },
+    {
+      title: '所需技能', dataIndex: 'requiredSkills', key: 'requiredSkills', width: 180,
+      render: (skillList: string[]) => {
+        const shown = skillList.slice(0, 2);
+        const rest = skillList.length - 2;
+        if (shown.length === 0) return <span style={{ color: '#999' }}>—</span>;
+        return (
+          <Space wrap size={[4, 4]}>
+            {shown.map((s) => <Tag key={s} color="blue">{s}</Tag>)}
+            {rest > 0 && <Tag>+{rest}</Tag>}
+          </Space>
+        );
+      },
+    },
+    {
+      title: '在岗/上限', key: 'employeeQuota', width: 100, align: 'center',
       render: (_, record) => {
         const ratio = record.maxEmployeeCount > 0 ? (record.employeeCount / record.maxEmployeeCount) * 100 : 0;
         return (
@@ -126,7 +157,7 @@ const PositionSettings: React.FC = () => {
   return (
     <div>
       <h2 style={{ marginBottom: 4, fontSize: 20, fontWeight: 600 }}>岗位设置</h2>
-      <p style={{ color: '#999', marginBottom: 20 }}>维护数字员工的岗位选项，设置各岗位的所属条线和员工数量上限</p>
+      <p style={{ color: '#999', marginBottom: 20 }}>维护数字员工的岗位选项，设置所属条线、级别、所需技能及员工数量上限</p>
 
       <Row gutter={16} style={{ marginBottom: 20 }}>
         <Col span={6}>
@@ -155,7 +186,7 @@ const PositionSettings: React.FC = () => {
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
           <Space wrap>
             <Input
-              placeholder="搜索岗位名称"
+              placeholder="搜索数字员工名称"
               prefix={<SearchOutlined />}
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
@@ -163,12 +194,12 @@ const PositionSettings: React.FC = () => {
               allowClear
             />
             <Select
-              placeholder="部门筛选"
-              style={{ width: 150 }}
+              placeholder="条线筛选"
+              style={{ width: 120 }}
               allowClear
-              value={deptFilter}
-              onChange={setDeptFilter}
-              options={departmentOptions.map((d) => ({ label: d, value: d }))}
+              value={lineFilter}
+              onChange={setLineFilter}
+              options={categoryOptions.map((c) => ({ label: c, value: c }))}
             />
           </Space>
         </div>
@@ -219,17 +250,33 @@ const PositionSettings: React.FC = () => {
         destroyOnHidden
       >
         <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
-          <Form.Item name="name" label="岗位名称" rules={[{ required: true, message: '请输入岗位名称' }]}>
-            <Input placeholder="请输入岗位名称" />
+          <Form.Item name="name" label="数字员工名称" rules={[{ required: true, message: '请输入数字员工名称' }]}>
+            <Input placeholder="例如：综合支撑-财务-财务管理" />
           </Form.Item>
-          <Form.Item name="department" label="所属部门" rules={[{ required: true, message: '请选择所属部门' }]}>
-            <Select placeholder="请选择部门" options={departmentOptions.map((d) => ({ label: d, value: d }))} />
+          <Form.Item name="benchmarkPosition" label="基准岗位" rules={[{ required: true, message: '请输入基准岗位' }]}>
+            <Input placeholder="例如：综合支撑-财务-财务管理" />
           </Form.Item>
-          <Form.Item name="category" label="岗位所属条线" rules={[{ required: true, message: '请选择所属条线' }]}>
+          <Form.Item name="category" label="所属条线" rules={[{ required: true, message: '请选择所属条线' }]}>
             <Select
               placeholder="请选择所属条线"
               options={categoryOptions.map((c) => ({ label: c, value: c }))}
             />
+          </Form.Item>
+          <Form.Item name="capabilityLevel" label="级别" rules={[{ required: true, message: '请选择级别' }]}>
+            <Select
+              placeholder="请选择级别"
+              options={['工具型', '智能型', '超级型'].map((l) => ({ label: l, value: l }))}
+            />
+          </Form.Item>
+          <Form.Item name="requiredSkills" label="所需技能" rules={[{ required: true, message: '请选择所需技能' }]}>
+            <Select
+              mode="multiple"
+              placeholder="请选择技能"
+              options={allSkillOptions.map((s) => ({ label: s, value: s }))}
+            />
+          </Form.Item>
+          <Form.Item name="department" label="所属部门" rules={[{ required: true, message: '请选择所属部门' }]}>
+            <Select placeholder="请选择部门" options={departmentOptions.map((d) => ({ label: d, value: d }))} />
           </Form.Item>
           <Form.Item name="maxEmployeeCount" label="员工数量上限" rules={[{ required: true, message: '请输入数量上限' }]}>
             <InputNumber min={1} max={100} placeholder="该岗位最多可安排的员工数" style={{ width: '100%' }} />
