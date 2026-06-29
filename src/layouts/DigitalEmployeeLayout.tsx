@@ -121,11 +121,11 @@ const DigitalEmployeeLayout: React.FC = () => {
               onClick={() => setCollapsed(!collapsed)}
               style={{ color: '#8c8c8c' }}
             />
-            <Tooltip title="返回数字员工平台">
+            <Tooltip title="返回数字员工广场">
               <Button
                 type="text"
                 icon={<ArrowLeftOutlined />}
-                onClick={() => window.open('/user/agents', '_self')}
+                onClick={() => navigate('/user/digital-employees')}
                 style={{ color: '#8c8c8c' }}
               >
                 返回主页

@@ -48,3 +48,5 @@ Thumbs.db
 # Business documents (Excel)
 *.xlsx
 *.xls
+*.docx
+/docs

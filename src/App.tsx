@@ -3,11 +3,12 @@ import { ConfigProvider } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
 
 import { PermissionProvider } from './contexts/PermissionContext';
+import { BRAND_PRIMARY, BRAND_PRIMARY_RGB } from './theme/brand';
 import UserLayout from './layouts/UserLayout';
 import AdminLayout from './layouts/AdminLayout';
 import DigitalEmployeeLayout from './layouts/DigitalEmployeeLayout';
 
-import DigitalEmployeeDirectory from './pages/user/DigitalEmployeeDirectory';
+import DigitalEmployeePlaza from './pages/user/DigitalEmployeePlaza';
 import ChatPage from './pages/user/ChatPage';
 import AgentHub from './pages/user/AgentHub';
 
@@ -37,15 +38,21 @@ function App() {
       theme={{
         token: {
           borderRadius: 8,
-          colorPrimary: '#1677ff',
+          colorPrimary: BRAND_PRIMARY,
         },
         components: {
           Menu: {
             darkItemBg: 'transparent',
             darkSubMenuItemBg: 'transparent',
-            darkItemSelectedBg: 'rgba(22, 119, 255, 0.15)',
+            darkItemSelectedBg: `rgba(${BRAND_PRIMARY_RGB}, 0.15)`,
             darkItemHoverBg: 'rgba(255, 255, 255, 0.05)',
             darkGroupTitleColor: 'rgba(255, 255, 255, 0.45)',
+            itemSelectedBg: `rgba(${BRAND_PRIMARY_RGB}, 0.08)`,
+            itemSelectedColor: BRAND_PRIMARY,
+            itemHoverBg: `rgba(${BRAND_PRIMARY_RGB}, 0.04)`,
+          },
+          Button: {
+            colorPrimary: BRAND_PRIMARY,
           },
         },
       }}
@@ -57,11 +64,12 @@ function App() {
 
             {/* User Portal */}
             <Route path="/user" element={<UserLayout />}>
-              <Route index element={<Navigate to="/user/agents" replace />} />
-              <Route path="digital-employees" element={<DigitalEmployeeDirectory />} />
+              <Route index element={<Navigate to="/user/digital-employees" replace />} />
+              <Route path="digital-employees" element={<DigitalEmployeePlaza />} />
+              <Route path="schedule" element={<EmployeeSchedule />} />
               <Route path="agents" element={<AgentHub />} />
               <Route path="chat" element={<ChatPage />} />
-              <Route path="*" element={<ChatPage />} />
+              <Route path="*" element={<Navigate to="/user/digital-employees" replace />} />
             </Route>
 
             {/* AI Digital Employee Portal (independent) */}

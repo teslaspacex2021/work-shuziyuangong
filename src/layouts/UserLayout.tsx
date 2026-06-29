@@ -2,21 +2,25 @@ import React, { useState } from 'react';
 import { Layout, Menu, Button, Avatar, Badge } from 'antd';
 import {
   UserOutlined,
-  TeamOutlined,
   RobotOutlined,
   PlusOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   AppstoreOutlined,
   BookOutlined,
-  BulbOutlined,
-  AimOutlined,
   HistoryOutlined,
   FundProjectionScreenOutlined,
+  ScheduleOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
+import { digitalEmployees } from '../mock/data';
+import { BRAND_PRIMARY } from '../theme/brand';
 
 const { Sider, Content, Header } = Layout;
+
+const activeEmployeeCount = digitalEmployees.filter((e) => e.status === 'ACTIVE').length;
+
+const NAVIGABLE_MENU_KEY = '/user/digital-employees';
 
 const UserLayout: React.FC = () => {
   const navigate = useNavigate();
@@ -24,43 +28,27 @@ const UserLayout: React.FC = () => {
   const [collapsed, setCollapsed] = useState(false);
 
   const menuItems = [
-    { key: '/user/chat', icon: <UserOutlined />, label: '个人助手', disabled: true },
-    { key: '/user/match', icon: <TeamOutlined />, label: '人岗匹配' },
-    { key: '/user/marketing', icon: <BulbOutlined />, label: '营销智能体' },
-    { key: '/user/opportunity', icon: <AimOutlined />, label: '翼达（商机挖掘）' },
-    { key: '/user/agents', icon: <AppstoreOutlined />, label: 'Agent World' },
+    {
+      key: '/user/digital-employees',
+      icon: <RobotOutlined />,
+      label: collapsed ? '数字员工' : (
+        <span>数字员工 <Badge count={activeEmployeeCount} size="small" offset={[6, -2]} /></span>
+      ),
+    },
+    { key: '/user/schedule', icon: <ScheduleOutlined />, label: '日程' },
+    { key: 'more', icon: <AppstoreOutlined />, label: '更多' },
     { type: 'divider' as const },
     { key: '/user/knowledge', icon: <BookOutlined />, label: '知识中心' },
-    { key: 'digital-employee-link', icon: <RobotOutlined />, label: <span>AI数字员工 <Badge count={6} size="small" offset={[6, -2]} /></span> },
-    {
-      key: 'knowledge-ops',
-      icon: <FundProjectionScreenOutlined />,
-      label: '知识运营',
-      children: [
-        { key: '/user/knowledge-ops/overview', label: '运营概览' },
-        { key: '/user/knowledge-ops/content', label: '内容管理' },
-      ],
-    },
-    { key: '/user/recent', icon: <HistoryOutlined />, label: '最近对话', disabled: true },
+    { key: 'knowledge-ops', icon: <FundProjectionScreenOutlined />, label: '知识运营' },
+    { key: '/user/recent', icon: <HistoryOutlined />, label: '最近对话' },
   ];
 
-  const getSelectedKey = () => {
-    if (location.pathname === '/user/agents') return '/user/agents';
-    if (location.pathname.startsWith('/user/chat')) return '/user/chat';
-    if (location.pathname.startsWith('/user/digital-employees')) return 'digital-employee-link';
-    return location.pathname;
-  };
+  const selectedMenuKey = location.pathname.startsWith(NAVIGABLE_MENU_KEY)
+    ? NAVIGABLE_MENU_KEY
+    : null;
 
   const handleMenuClick = (key: string) => {
-    if (key === '/user/chat' || key === '/user/recent') return;
-    if (key === 'digital-employee-link') {
-      window.open('/digital-employee/chat', '_blank');
-      return;
-    }
-    if (['/user/match', '/user/marketing', '/user/opportunity', '/user/knowledge', '/user/knowledge-ops/overview', '/user/knowledge-ops/content'].includes(key)) {
-      navigate('/user/agents');
-      return;
-    }
+    if (key !== NAVIGABLE_MENU_KEY) return;
     navigate(key);
   };
 
@@ -80,7 +68,7 @@ const UserLayout: React.FC = () => {
           gap: 10,
           borderBottom: '1px solid #f0f0f0',
         }}>
-          <RobotOutlined style={{ fontSize: 24, color: '#e4393c' }} />
+          <RobotOutlined style={{ fontSize: 24, color: BRAND_PRIMARY }} />
           {!collapsed && <span style={{ fontSize: 16, fontWeight: 600 }}>天翼云数字人</span>}
         </div>
         <div style={{ padding: '12px 16px' }}>
@@ -96,9 +84,16 @@ const UserLayout: React.FC = () => {
         </div>
         <Menu
           mode="inline"
-          selectedKeys={[getSelectedKey()]}
+          selectedKeys={selectedMenuKey ? [selectedMenuKey] : []}
           items={menuItems}
-          onClick={({ key }) => handleMenuClick(key)}
+          onClick={({ key, domEvent }) => {
+            if (key !== NAVIGABLE_MENU_KEY) {
+              domEvent.preventDefault();
+              domEvent.stopPropagation();
+              return;
+            }
+            handleMenuClick(key);
+          }}
           style={{ border: 'none' }}
         />
       </Sider>
@@ -118,7 +113,7 @@ const UserLayout: React.FC = () => {
             onClick={() => setCollapsed(!collapsed)}
           />
           <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-            <Avatar size="small" icon={<UserOutlined />} style={{ background: '#e4393c' }} />
+            <Avatar size="small" icon={<UserOutlined />} style={{ background: BRAND_PRIMARY }} />
           </div>
         </Header>
         <Content style={{ background: '#f5f5f5', overflow: 'auto' }}>

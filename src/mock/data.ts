@@ -59,6 +59,53 @@ export const BUSINESS_LINE_COLORS: Record<string, string> = {
   其他: '#bfbfbf',
 };
 
+/** 天翼云数字员工广场 - 精选场景（按公司业务场景匹配推荐） */
+export interface FeaturedSceneConfig {
+  key: string;
+  expertIds: string[];
+  gradient: string;
+  accent: string;
+}
+
+export const FEATURED_SCENES: FeaturedSceneConfig[] = [
+  {
+    key: '智能客服',
+    expertIds: ['DE-2026001', 'DE-2026000', 'AG-001'],
+    gradient: 'linear-gradient(135deg, #e6f4ff 0%, #fff 100%)',
+    accent: '#1677ff',
+  },
+  {
+    key: '营销拓展',
+    expertIds: ['DE-2026008', 'DE-2026003', 'AG-002'],
+    gradient: 'linear-gradient(135deg, #fff7e6 0%, #fff 100%)',
+    accent: '#fa8c16',
+  },
+  {
+    key: '数据运营',
+    expertIds: ['DE-2026002', 'DE-2026010', 'AG-003'],
+    gradient: 'linear-gradient(135deg, #f9f0ff 0%, #fff 100%)',
+    accent: '#722ed1',
+  },
+  {
+    key: '云网运维',
+    expertIds: ['DE-2026007', 'AG-009', 'AG-008'],
+    gradient: 'linear-gradient(135deg, #e6fffb 0%, #fff 100%)',
+    accent: '#13c2c2',
+  },
+  {
+    key: '财税人资',
+    expertIds: ['DE-2026006', 'DE-2026005', 'DE-2026004'],
+    gradient: 'linear-gradient(135deg, #f6ffed 0%, #fff 100%)',
+    accent: '#52c41a',
+  },
+  {
+    key: '综合办公',
+    expertIds: ['DE-2026009', 'DE-2026000', 'AG-006'],
+    gradient: 'linear-gradient(135deg, #fff0f6 0%, #fff 100%)',
+    accent: '#eb2f96',
+  },
+];
+
 /** 数字员工能力级别（按字段设计文档） */
 export const CAPABILITY_LEVELS = ['工具型', '智能型', '超级型'] as const;
 export type CapabilityLevel = typeof CAPABILITY_LEVELS[number];
@@ -557,6 +604,137 @@ export const digitalEmployees: DigitalEmployee[] = [
     lastActive: '5小时前', onboardDate: '2026-03-01', relatedAgents: ['数据下载'],
     likes: 42, dislikes: 3, heat: 150,
   },
+];
+
+/** 广场专家条目（数字员工 + 智能体统一展示） */
+export interface PlazaExpert {
+  id: string;
+  kind: 'employee' | 'agent';
+  name: string;
+  subtitle: string;
+  description: string;
+  tags: string[];
+  avatar?: string;
+  avatarColor?: string;
+  department: string;
+  businessLine: BusinessLine | '其他';
+  favorites: number;
+  likes: number;
+  heat: number;
+  status?: DigitalEmployee['status'];
+  onboardDate?: string;
+  employee?: DigitalEmployee;
+}
+
+/** 广场智能体（来自 Agent World，并入专家列表） */
+export const PLAZA_AGENTS: PlazaExpert[] = [
+  {
+    id: 'AG-001', kind: 'agent', name: '企业知识问答', subtitle: '智能体',
+    description: '欢迎使用企业知识问答智能体！',
+    tags: ['知识问答', '企业服务'], avatarColor: '#722ed1',
+    department: '数字化运营部', businessLine: '数发',
+    favorites: 2, likes: 2, heat: 670,
+  },
+  {
+    id: 'AG-002', kind: 'agent', name: '价值经营', subtitle: '智能体',
+    description: '价值经营数据智能问答助手',
+    tags: ['经营分析', '数据问答'], avatarColor: '#1677ff',
+    department: '数字化运营部', businessLine: '数发',
+    favorites: 2, likes: 1, heat: 625,
+  },
+  {
+    id: 'AG-003', kind: 'agent', name: '数据运营智能体', subtitle: '智能体',
+    description: '云省协同智能体，运营问题解答、下载数据、智能分析',
+    tags: ['数据运营', '协同办公'], avatarColor: '#13c2c2',
+    department: '数字化运营部', businessLine: '数发',
+    favorites: 2, likes: 2, heat: 469,
+  },
+  {
+    id: 'AG-004', kind: 'agent', name: '数智开发智能体', subtitle: '智能体',
+    description: '数据开发智能体，包含数据开发、任务编排、智能编码',
+    tags: ['数据开发', '智能编码'], avatarColor: '#2f54eb',
+    department: '数字化运营部', businessLine: '数发',
+    favorites: 1, likes: 0, heat: 184,
+  },
+  {
+    id: 'AG-005', kind: 'agent', name: '日程调度智能体测试', subtitle: '智能体',
+    description: '日程调度智能体测试',
+    tags: ['日程调度', '自动化'], avatarColor: '#fa8c16',
+    department: '数字化运营部', businessLine: '数发',
+    favorites: 0, likes: 0, heat: 100,
+  },
+  {
+    id: 'AG-006', kind: 'agent', name: '日程综合调度智能体', subtitle: '智能体',
+    description: '日程综合调度智能体',
+    tags: ['日程调度', '综合办公'], avatarColor: '#fa541c',
+    department: '数字化运营部', businessLine: '数发',
+    favorites: 0, likes: 0, heat: 56,
+  },
+  {
+    id: 'AG-007', kind: 'agent', name: '审计整改填报', subtitle: '智能体',
+    description: '暂无描述',
+    tags: ['审计', '整改填报'], avatarColor: '#52c41a',
+    department: '数字化运营部', businessLine: '审计',
+    favorites: 0, likes: 1, heat: 36,
+  },
+  {
+    id: 'AG-008', kind: 'agent', name: '【IT大脑】模型审核智能体', subtitle: '智能体',
+    description: '模型审核智能体是面向数据模型全生命周期审核的智能化工具',
+    tags: ['IT运维', '模型审核'], avatarColor: '#eb2f96',
+    department: '数字化运营部', businessLine: '研发',
+    favorites: 2, likes: 0, heat: 29,
+  },
+  {
+    id: 'AG-009', kind: 'agent', name: '云省协同智能助手', subtitle: '智能体',
+    description: '一站式提供数据中台相关的知识问答与协同服务',
+    tags: ['云省协同', '数据中台'], avatarColor: '#0958d9',
+    department: '数字化运营部', businessLine: '云网',
+    favorites: 0, likes: 0, heat: 25,
+  },
+  {
+    id: 'AG-010', kind: 'agent', name: '价值经营新', subtitle: '智能体',
+    description: '价值经营数据智能问答助手',
+    tags: ['经营分析', '数据问答'], avatarColor: '#1677ff',
+    department: '数字化运营部', businessLine: '数发',
+    favorites: 0, likes: 0, heat: 24,
+  },
+  {
+    id: 'AG-011', kind: 'agent', name: '智能风控智能体', subtitle: '智能体',
+    description: 'AI风控协同中枢，集成了风险识别、预警与处置能力',
+    tags: ['智能风控', '风险预警'], avatarColor: '#cf1322',
+    department: '数字化运营部', businessLine: '财务',
+    favorites: 0, likes: 0, heat: 11,
+  },
+  {
+    id: 'AG-012', kind: 'agent', name: '审计整改判定', subtitle: '智能体',
+    description: '暂无描述',
+    tags: ['审计', '整改判定'], avatarColor: '#7cb305',
+    department: '数字化运营部', businessLine: '审计',
+    favorites: 0, likes: 0, heat: 11,
+  },
+];
+
+export const digitalEmployeeToPlazaExpert = (emp: DigitalEmployee): PlazaExpert => ({
+  id: emp.id,
+  kind: 'employee',
+  name: emp.name,
+  subtitle: emp.position.split('-').pop() || emp.position,
+  description: emp.description,
+  tags: emp.skills.slice(0, 3),
+  avatar: emp.avatar,
+  department: emp.department,
+  businessLine: getEmployeeBusinessLine(emp),
+  favorites: Math.max(1, Math.round(emp.likes / 15)),
+  likes: emp.likes,
+  heat: emp.heat,
+  status: emp.status,
+  onboardDate: emp.onboardDate,
+  employee: emp,
+});
+
+export const getAllPlazaExperts = (): PlazaExpert[] => [
+  ...digitalEmployees.map(digitalEmployeeToPlazaExpert),
+  ...PLAZA_AGENTS,
 ];
 
 export const skills: Skill[] = [
