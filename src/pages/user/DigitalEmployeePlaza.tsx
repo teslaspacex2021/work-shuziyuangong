@@ -5,20 +5,23 @@ import {
 import {
   SearchOutlined, FireOutlined, PlusOutlined,
   RobotOutlined, MessageOutlined, LeftOutlined, RightOutlined,
-  StarOutlined, FolderAddOutlined, LikeOutlined,
+  StarOutlined, FolderAddOutlined, LikeOutlined, TeamOutlined,
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import {
   digitalEmployees,
   BUSINESS_LINES, FEATURED_SCENES, getAllPlazaExperts,
-  type PlazaExpert,
+  EXPERT_GROUPS, EXPERT_GROUP_CATEGORIES,
+  type PlazaExpert, type ExpertGroup,
 } from '../../mock/data';
 import EmployeeDetailModal from '../../components/EmployeeDetailModal';
+import ExpertGroupDetailModal from '../../components/ExpertGroupDetailModal';
 import { BRAND_PRIMARY, BRAND_PRIMARY_RGB, BRAND_PRIMARY_HOVER } from '../../theme/brand';
 
 const sceneConfigs = FEATURED_SCENES;
 
 type MainTab = 'experts' | 'favorites' | 'created';
+type ContentTab = 'experts' | 'expert-groups';
 type SortMode = 'hot' | 'new';
 
 const SCENES_PER_PAGE = 4;
@@ -29,6 +32,7 @@ const SCENE_CARD_WIDTH = `calc((100% - ${SCENE_GAP * 4}px) / ${SCENE_VISIBLE_SLO
 const INITIAL_FAVORITE_IDS = [
   'DE-2026001', 'DE-2026004', 'DE-2026000',
   'AG-001', 'AG-002', 'AG-003', 'AG-008',
+  'EG-SUPER-001', 'EG-002',
 ];
 const MOCK_CREATED_IDS = new Set([
   'DE-2026003', 'DE-2026008', 'DE-2026009',
@@ -39,10 +43,14 @@ const DigitalEmployeePlaza: React.FC = () => {
   const navigate = useNavigate();
   const [searchText, setSearchText] = useState('');
   const [mainTab, setMainTab] = useState<MainTab>('experts');
+  const [contentTab, setContentTab] = useState<ContentTab>('experts');
   const [categoryFilter, setCategoryFilter] = useState('全部');
   const [sortMode, setSortMode] = useState<SortMode>('hot');
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailExpert, setDetailExpert] = useState<PlazaExpert | null>(null);
+  const [groupDetailOpen, setGroupDetailOpen] = useState(false);
+  const [detailGroup, setDetailGroup] = useState<ExpertGroup | null>(null);
+  const [groupCategoryFilter, setGroupCategoryFilter] = useState('全部');
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
   const [scenePage, setScenePage] = useState(0);
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(() => new Set(INITIAL_FAVORITE_IDS));
@@ -79,6 +87,31 @@ const DigitalEmployeePlaza: React.FC = () => {
 
   const allCategories = ['全部', ...BUSINESS_LINES];
 
+  const filteredExpertGroups = useMemo(() => {
+    let list = [...EXPERT_GROUPS];
+    if (searchText) {
+      const q = searchText.toLowerCase();
+      list = list.filter((g) =>
+        g.name.toLowerCase().includes(q) ||
+        g.subtitle.toLowerCase().includes(q) ||
+        g.description.toLowerCase().includes(q) ||
+        g.tags.some((s) => s.toLowerCase().includes(q))
+      );
+    }
+    if (groupCategoryFilter !== '全部') {
+      list = list.filter((g) => g.category === groupCategoryFilter);
+    }
+    if (mainTab === 'favorites') {
+      list = list.filter((g) => favoriteIds.has(g.id));
+    }
+    if (sortMode === 'hot') {
+      list.sort((a, b) => b.heat - a.heat);
+    } else {
+      list.sort((a, b) => (b.onboardDate || b.id).localeCompare(a.onboardDate || a.id));
+    }
+    return list;
+  }, [searchText, groupCategoryFilter, sortMode, mainTab, favoriteIds]);
+
   const filteredExperts = useMemo(() => {
     let list = [...allExperts];
     if (searchText) {
@@ -109,6 +142,16 @@ const DigitalEmployeePlaza: React.FC = () => {
   const openDetail = (expert: PlazaExpert) => {
     setDetailExpert(expert);
     setDetailOpen(true);
+  };
+
+  const openGroupDetail = (group: ExpertGroup) => {
+    setDetailGroup(group);
+    setGroupDetailOpen(true);
+  };
+
+  const startGroupChat = (group: ExpertGroup, e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigate(`/digital-employee/chat?groupId=${group.id}`);
   };
 
   const startChat = (expert: PlazaExpert, e: React.MouseEvent) => {
@@ -233,10 +276,180 @@ const DigitalEmployeePlaza: React.FC = () => {
     );
   };
 
+  const renderExpertGroupCard = (group: ExpertGroup) => {
+    const isHovered = hoveredCard === group.id;
+    return (
+      <Col xs={24} sm={12} md={8} lg={6} xxl={4} key={group.id}>
+        <div
+          style={{ position: 'relative', height: '100%' }}
+          onMouseEnter={() => setHoveredCard(group.id)}
+          onMouseLeave={() => setHoveredCard(null)}
+        >
+          <div
+            onClick={() => openGroupDetail(group)}
+            style={{
+              background: isHovered ? BRAND_PRIMARY_HOVER : '#fff',
+              borderRadius: 14,
+              border: '1px solid #f0f0f0',
+              padding: '18px 18px 14px',
+              cursor: 'pointer',
+              height: '100%',
+              transition: 'all 0.25s cubic-bezier(0.4,0,0.2,1)',
+              boxShadow: isHovered
+                ? '0 2px 12px rgba(0,0,0,0.06)'
+                : '0 1px 3px rgba(0,0,0,0.03)',
+              overflow: 'hidden',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 12 }}>
+              {group.avatar ? (
+                <Avatar size={44} src={group.avatar} style={{ flexShrink: 0, borderRadius: 10 }} />
+              ) : (
+                <div style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 10,
+                  flexShrink: 0,
+                  background: group.avatarColor || '#531dab',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: 18,
+                  fontWeight: 700,
+                  color: '#fff',
+                }}>
+                  {group.name.charAt(0)}
+                </div>
+              )}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2, flexWrap: 'wrap' }}>
+                  <span style={{ fontWeight: 600, fontSize: 15, color: '#1a1a1a' }}>{group.name}</span>
+                  <Tag style={{
+                    margin: 0, fontSize: 10, lineHeight: '16px', padding: '0 4px', borderRadius: 3,
+                    color: '#531dab', background: '#f9f0ff', border: 'none',
+                  }}>
+                    专家团
+                  </Tag>
+                  {group.isSuper && (
+                    <Tag style={{
+                      margin: 0, fontSize: 10, lineHeight: '16px', padding: '0 4px', borderRadius: 3,
+                      color: '#531dab', background: '#f9f0ff', border: 'none',
+                    }}>
+                      超级
+                    </Tag>
+                  )}
+                </div>
+                <div style={{
+                  fontSize: 12, color: '#8c8c8c',
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                }}>
+                  {group.subtitle}
+                </div>
+              </div>
+            </div>
+            <p style={{
+              fontSize: 13, color: '#8c8c8c', lineHeight: 1.7, margin: '0 0 10px',
+              height: 44, overflow: 'hidden',
+              display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+            }}>
+              {group.description}
+            </p>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
+              {group.tags.map((s) => (
+                <Tag key={s} style={{
+                  margin: 0, fontSize: 11, borderRadius: 4,
+                  background: '#fafafa', color: '#8c8c8c', border: '1px solid #f0f0f0',
+                  lineHeight: '20px', padding: '0 8px',
+                }}>
+                  {s}
+                </Tag>
+              ))}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', marginBottom: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                {group.members.slice(0, 5).map((member, index) => (
+                  member.avatar ? (
+                    <Avatar
+                      key={member.id}
+                      size={26}
+                      src={member.avatar}
+                      style={{
+                        marginLeft: index > 0 ? -8 : 0,
+                        border: '2px solid #fff',
+                        flexShrink: 0,
+                      }}
+                    />
+                  ) : (
+                    <Avatar
+                      key={member.id}
+                      size={26}
+                      style={{
+                        marginLeft: index > 0 ? -8 : 0,
+                        border: '2px solid #fff',
+                        background: member.avatarColor || '#722ed1',
+                        fontSize: 11,
+                        fontWeight: 600,
+                        flexShrink: 0,
+                      }}
+                    >
+                      {member.name.charAt(0)}
+                    </Avatar>
+                  )
+                ))}
+              </div>
+              <span style={{ marginLeft: 8, fontSize: 12, color: '#bfbfbf' }}>
+                {group.members.length} 位成员
+              </span>
+            </div>
+            <div style={{
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              borderTop: '1px solid #f5f5f5', paddingTop: 10, fontSize: 12, color: '#8c99a8',
+            }}>
+              <span><StarOutlined style={{ marginRight: 3 }} />{group.favorites}</span>
+              <span><LikeOutlined style={{ marginRight: 3, color: group.likes > 0 ? '#ff4d4f' : undefined }} />{group.likes}</span>
+              <span><FireOutlined style={{ marginRight: 3, color: '#fa541c' }} />{group.heat}</span>
+            </div>
+          </div>
+
+          <div style={{
+            position: 'absolute', bottom: 0, left: 0, right: 0,
+            background: `linear-gradient(0deg, rgba(${BRAND_PRIMARY_RGB}, 0.48) 0%, rgba(${BRAND_PRIMARY_RGB}, 0.1) 65%, transparent 100%)`,
+            borderRadius: '0 0 14px 14px',
+            padding: '28px 18px 12px',
+            display: 'flex', justifyContent: 'center',
+            opacity: isHovered ? 1 : 0,
+            transform: isHovered ? 'translateY(0)' : 'translateY(6px)',
+            transition: 'all 0.25s cubic-bezier(0.4,0,0.2,1)',
+            pointerEvents: isHovered ? 'auto' : 'none',
+          }}>
+            <Button
+              type="primary"
+              icon={<MessageOutlined />}
+              onClick={(e) => startGroupChat(group, e)}
+              style={{
+                borderRadius: 20, padding: '0 24px', height: 34,
+                background: '#fff', color: BRAND_PRIMARY, border: 'none',
+                fontWeight: 600, fontSize: 13,
+                boxShadow: `0 2px 8px rgba(${BRAND_PRIMARY_RGB}, 0.12)`,
+              }}
+            >
+              召唤
+            </Button>
+          </div>
+        </div>
+      </Col>
+    );
+  };
+
   const mainTabs: { key: MainTab; label: string; icon: React.ReactNode }[] = [
     { key: 'experts', label: '专家', icon: <RobotOutlined /> },
     { key: 'favorites', label: '我的收藏', icon: <StarOutlined /> },
     { key: 'created', label: '我创建的', icon: <FolderAddOutlined /> },
+  ];
+
+  const contentSubTabs: { key: ContentTab; label: string; icon: React.ReactNode }[] = [
+    { key: 'experts', label: '专家', icon: <RobotOutlined /> },
+    { key: 'expert-groups', label: '专家团', icon: <TeamOutlined /> },
   ];
 
   return (
@@ -272,7 +485,7 @@ const DigitalEmployeePlaza: React.FC = () => {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <Input
-            placeholder="搜索专家名称或描述"
+            placeholder={contentTab === 'expert-groups' ? '搜索专家团名称或描述' : '搜索专家名称或描述'}
             prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}
@@ -398,11 +611,32 @@ const DigitalEmployeePlaza: React.FC = () => {
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
               marginBottom: 12,
             }}>
-              <span style={{ fontSize: 14, fontWeight: 600, color: '#1a1a1a' }}>
-                {mainTab === 'favorites' ? '我的收藏' : mainTab === 'created' ? '我创建的' : '专家'}
-              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                {contentSubTabs.map((tab) => {
+                  const isActive = contentTab === tab.key;
+                  return (
+                    <button
+                      key={tab.key}
+                      type="button"
+                      onClick={() => setContentTab(tab.key)}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 6,
+                        border: 'none', background: 'transparent', cursor: 'pointer',
+                        fontSize: 14, fontWeight: isActive ? 600 : 400,
+                        color: isActive ? BRAND_PRIMARY : '#8c8c8c',
+                        padding: 0,
+                      }}
+                    >
+                      {tab.icon}
+                      {tab.label}
+                    </button>
+                  );
+                })}
+              </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 16, fontSize: 13 }}>
-                <Badge color="#52c41a" text={<span style={{ fontSize: 12, color: '#52c41a' }}>在线 {activeCount}</span>} />
+                {contentTab === 'experts' && (
+                  <Badge color="#52c41a" text={<span style={{ fontSize: 12, color: '#52c41a' }}>在线 {activeCount}</span>} />
+                )}
                 <button
                   type="button"
                   onClick={() => setSortMode('hot')}
@@ -427,6 +661,7 @@ const DigitalEmployeePlaza: React.FC = () => {
                 </button>
               </div>
             </div>
+            {contentTab === 'experts' ? (
             <div style={{
               display: 'flex', gap: 4, overflowX: 'auto', flexWrap: 'wrap',
               padding: '2px 0',
@@ -452,8 +687,36 @@ const DigitalEmployeePlaza: React.FC = () => {
                 );
               })}
             </div>
+            ) : (
+              <div style={{
+                display: 'flex', gap: 4, overflowX: 'auto', flexWrap: 'wrap',
+                padding: '2px 0',
+              }}>
+                {EXPERT_GROUP_CATEGORIES.map((cat) => {
+                  const isActive = groupCategoryFilter === cat;
+                  return (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() => setGroupCategoryFilter(cat)}
+                      style={{
+                        flexShrink: 0,
+                        padding: '5px 14px', borderRadius: 6, border: 'none', cursor: 'pointer',
+                        fontSize: 13, fontWeight: isActive ? 600 : 400,
+                        background: '#fff',
+                        color: isActive ? BRAND_PRIMARY : '#595959',
+                        boxShadow: isActive ? 'none' : '0 1px 2px rgba(0,0,0,0.04)',
+                      }}
+                    >
+                      {cat}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
+          {contentTab === 'experts' ? (
           <Row gutter={[16, 16]}>
             {filteredExperts.map(renderExpertCard)}
             {filteredExperts.length === 0 && (
@@ -469,6 +732,19 @@ const DigitalEmployeePlaza: React.FC = () => {
               </Col>
             )}
           </Row>
+          ) : (
+          <Row gutter={[16, 16]}>
+            {filteredExpertGroups.map(renderExpertGroupCard)}
+            {filteredExpertGroups.length === 0 && (
+              <Col span={24}>
+                <Empty
+                  description={mainTab === 'favorites' ? '暂无收藏的专家团' : '暂无匹配的专家团'}
+                  style={{ padding: 60 }}
+                />
+              </Col>
+            )}
+          </Row>
+          )}
         </>
       )}
 
@@ -477,6 +753,13 @@ const DigitalEmployeePlaza: React.FC = () => {
         expert={detailExpert}
         onClose={() => setDetailOpen(false)}
         isFavorited={detailExpert ? favoriteIds.has(detailExpert.id) : false}
+        onToggleFavorite={toggleFavorite}
+      />
+      <ExpertGroupDetailModal
+        open={groupDetailOpen}
+        group={detailGroup}
+        onClose={() => setGroupDetailOpen(false)}
+        isFavorited={detailGroup ? favoriteIds.has(detailGroup.id) : false}
         onToggleFavorite={toggleFavorite}
       />
     </div>

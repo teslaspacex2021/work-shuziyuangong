@@ -737,6 +737,193 @@ export const getAllPlazaExperts = (): PlazaExpert[] => [
   ...PLAZA_AGENTS,
 ];
 
+/** 专家团成员 */
+export interface ExpertGroupMember {
+  id: string;
+  role: string;
+  name: string;
+  avatar?: string;
+  avatarColor?: string;
+  isHost?: boolean;
+}
+
+/** 专家团 */
+export interface ExpertGroup {
+  id: string;
+  name: string;
+  subtitle: string;
+  category: string;
+  description: string;
+  tags: string[];
+  avatar?: string;
+  avatarColor?: string;
+  heat: number;
+  favorites: number;
+  likes: number;
+  members: ExpertGroupMember[];
+  examplePrompts: string[];
+  onboardDate?: string;
+  isSuper?: boolean;
+}
+
+/** 专家团分类筛选 */
+export const EXPERT_GROUP_CATEGORIES = [
+  '全部',
+  '超级专家',
+  '智能客服',
+  '数据运营',
+  '云网运维',
+  '营销拓展',
+  '财税人资',
+] as const;
+
+export const EXPERT_GROUPS: ExpertGroup[] = [
+  {
+    id: 'EG-SUPER-001',
+    name: '超级专家团',
+    subtitle: '天翼云数字人团队',
+    category: '超级专家',
+    description: '汇聚各领域顶尖 AI 专家，跨部门协同解决复杂业务问题。首席顾问统筹全局、领域专家深度研判、策略分析师输出方案、架构师设计落地路径、交付专家推动执行。',
+    tags: ['战略规划', '跨域协作', '复杂项目'],
+    avatarColor: '#531dab',
+    heat: 2500,
+    favorites: 1280,
+    likes: 3560,
+    isSuper: true,
+    onboardDate: '2026-01-01',
+    examplePrompts: [
+      '帮我梳理数字化转型的整体路径和关键里程碑',
+      '跨部门复杂项目如何分工协作、把控风险',
+      '制定一份面向云业务的年度战略规划框架',
+    ],
+    members: [
+      { id: 'EGM-001', role: '首席顾问', name: '云策远', avatarColor: '#531dab', isHost: true },
+      { id: 'EGM-002', role: '领域专家', name: '林知深', avatarColor: '#722ed1' },
+      { id: 'EGM-003', role: '策略分析师', name: '周明策', avatarColor: '#9254de' },
+      { id: 'EGM-004', role: '方案架构师', name: '高见远', avatarColor: '#2f54eb' },
+      { id: 'EGM-005', role: '交付专家', name: '齐活林', avatarColor: '#1677ff' },
+    ],
+  },
+  {
+    id: 'EG-002',
+    name: '数智开发专家团',
+    subtitle: '数字化运营部',
+    category: '数据运营',
+    description: '面向数据开发与交付场景，产品经理梳理需求、架构师设计方案并拆分任务、研发工程师实现代码、QA 验证质量，支持快速迭代交付。',
+    tags: ['数据开发', '任务编排', '智能编码'],
+    avatarColor: '#1d39c4',
+    heat: 1840,
+    favorites: 890,
+    likes: 2100,
+    onboardDate: '2025-11-01',
+    examplePrompts: [
+      '帮我梳理数据中台指标开发需求',
+      '设计一个 ETL 任务编排方案',
+      'Review 数据开发脚本并给出优化建议',
+    ],
+    members: [
+      { id: 'EGM-101', role: '交付总监', name: '齐活林', avatarColor: '#1d39c4', isHost: true },
+      { id: 'EGM-102', role: '架构师', name: '高见远', avatarColor: '#2f54eb' },
+      { id: 'EGM-103', role: '产品经理', name: '徐知味', avatarColor: '#1677ff' },
+      { id: 'EGM-104', role: '研发工程师', name: '方知行', avatarColor: '#0958d9' },
+      { id: 'EGM-105', role: 'QA工程师', name: '王验明', avatarColor: '#13c2c2' },
+    ],
+  },
+  {
+    id: 'EG-003',
+    name: '智能客服专家团',
+    subtitle: '客户服务部',
+    category: '智能客服',
+    description: '面向客服场景的多角色 AI 团队，智能客服响应咨询、知识专家检索产品文档、工单专员处理售后问题，支持 7×24 小时服务。',
+    tags: ['智能问答', '工单处理', '知识检索'],
+    avatarColor: '#cf1322',
+    heat: 1560,
+    favorites: 620,
+    likes: 980,
+    onboardDate: '2025-12-15',
+    examplePrompts: [
+      '客户咨询云主机计费规则如何解答',
+      '帮我归类并处理这批售后工单',
+      '检索天翼云存储产品相关 FAQ',
+    ],
+    members: [
+      { id: 'EGM-201', role: '客服主管', name: '小翼·客服', avatarColor: '#cf1322', isHost: true },
+      { id: 'EGM-202', role: '知识专家', name: '小翼·智能助手', avatarColor: '#1677ff' },
+      { id: 'EGM-203', role: '工单专员', name: '李工单', avatarColor: '#722ed1' },
+      { id: 'EGM-204', role: '质检顾问', name: '王质检', avatarColor: '#fa541c' },
+    ],
+  },
+  {
+    id: 'EG-004',
+    name: '云网运维专家团',
+    subtitle: 'IT运维部',
+    category: '云网运维',
+    description: '覆盖故障诊断、日志分析、系统巡检与变更评审，SRE 工程师定位问题、运维专家执行修复、架构师评估变更风险。',
+    tags: ['故障诊断', '日志分析', '系统巡检'],
+    avatarColor: '#13c2c2',
+    heat: 980,
+    favorites: 450,
+    likes: 720,
+    onboardDate: '2026-02-01',
+    examplePrompts: [
+      '分析这批告警日志的根因',
+      '制定本周云网系统巡检清单',
+      '评估这次版本变更的风险点',
+    ],
+    members: [
+      { id: 'EGM-301', role: '运维总监', name: '小翼·运维', avatarColor: '#13c2c2', isHost: true },
+      { id: 'EGM-302', role: 'SRE工程师', name: '张稳行', avatarColor: '#08979c' },
+      { id: 'EGM-303', role: '日志分析师', name: '赵溯源', avatarColor: '#2f54eb' },
+    ],
+  },
+  {
+    id: 'EG-005',
+    name: '财税合规专家团',
+    subtitle: '财务共享中心',
+    category: '财税人资',
+    description: '提供报销审核、财务分析、审计合规与制度检索支持，适用于企业日常财税与人事管理场景。',
+    tags: ['报销审核', '财务分析', '审计合规'],
+    avatarColor: '#08979c',
+    heat: 560,
+    favorites: 280,
+    likes: 410,
+    onboardDate: '2026-02-20',
+    examplePrompts: [
+      '审核这批差旅报销单据',
+      '生成本月经营费用分析摘要',
+      '检索审计整改相关制度要求',
+    ],
+    members: [
+      { id: 'EGM-401', role: '财务主管', name: '小翼·财务', avatarColor: '#08979c', isHost: true },
+      { id: 'EGM-402', role: '审计专员', name: '小翼·审计', avatarColor: '#13c2c2' },
+      { id: 'EGM-403', role: 'HR顾问', name: '小翼·HR', avatarColor: '#1677ff' },
+    ],
+  },
+  {
+    id: 'EG-006',
+    name: '营销拓展专家团',
+    subtitle: '数字化运营部',
+    category: '营销拓展',
+    description: '从商机挖掘、营销策划到客户画像分析，支持市场拓展与客户经营全链路智能协作。',
+    tags: ['商机挖掘', '营销策划', '客户画像'],
+    avatarColor: '#fa8c16',
+    heat: 720,
+    favorites: 360,
+    likes: 580,
+    onboardDate: '2026-01-20',
+    examplePrompts: [
+      '分析政企客户商机线索优先级',
+      '为云产品推广写一份营销方案',
+      '生成目标客户画像与触达策略',
+    ],
+    members: [
+      { id: 'EGM-501', role: '营销总监', name: '小翼·营销', avatarColor: '#fa8c16', isHost: true },
+      { id: 'EGM-502', role: '商机分析师', name: '小翼·商机', avatarColor: '#fa541c' },
+      { id: 'EGM-503', role: '客户运营', name: '陈拓客', avatarColor: '#eb2f96' },
+    ],
+  },
+];
+
 export const skills: Skill[] = [
   { id: 'SK001', name: '智能问答', category: '知识与交互', level: 'L3', description: '基于知识库的智能问答能力，支持多轮对话', source: '翼答', bindCount: 5, status: '已启用' },
   { id: 'SK002', name: '文案撰写', category: '内容创作', level: 'L3', description: '多场景营销文案、报告、邮件等文本生成', source: '写作助手', bindCount: 3, status: '已启用' },
