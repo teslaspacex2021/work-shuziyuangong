@@ -220,7 +220,278 @@ export interface DigitalEmployee {
 
   /** 运行配置——关联系统列表（可多条） */
   runSystems?: RunSystemConfig[];
+
+  /** 对话功能开关（二期） */
+  featureFlags?: EmployeeFeatureFlags;
+  /** 猜你想问模板问题 */
+  suggestedQuestions?: string[];
 }
+
+/** 数字员工对话功能开关（未配置则视为关闭，入口不可见） */
+export interface EmployeeFeatureFlags {
+  attachmentUpload: boolean;
+  deepThinking: boolean;
+  webSearch: boolean;
+  skill: boolean;
+  mcp: boolean;
+  thinkTank: boolean;
+  suggestedQuestions: boolean;
+}
+
+export const DEFAULT_FEATURE_FLAGS: EmployeeFeatureFlags = {
+  attachmentUpload: false,
+  deepThinking: false,
+  webSearch: false,
+  skill: false,
+  mcp: false,
+  thinkTank: false,
+  suggestedQuestions: false,
+};
+
+export const FEATURE_FLAG_META: {
+  key: keyof EmployeeFeatureFlags;
+  label: string;
+  description: string;
+}[] = [
+  { key: 'attachmentUpload', label: '附件上传', description: '用户可在对话框上传附件' },
+  { key: 'deepThinking', label: '深度思考', description: '开启深度推理模式' },
+  { key: 'webSearch', label: '联网搜索', description: '允许全网/联网检索' },
+  { key: 'skill', label: 'Skill', description: '允许调用已配置 Skill' },
+  { key: 'mcp', label: 'MCP', description: '允许调用 MCP 工具' },
+  { key: 'thinkTank', label: '智库', description: '允许检索企业智库/知识库' },
+  { key: 'suggestedQuestions', label: '猜你想问', description: '开启后自动生成并展示快捷提问模板' },
+];
+
+export const getEmployeeFeatureFlags = (emp?: DigitalEmployee | null): EmployeeFeatureFlags => ({
+  ...DEFAULT_FEATURE_FLAGS,
+  ...(emp?.featureFlags ?? {}),
+});
+
+/** 检索/召回文件项（第三屏展示） */
+export interface RetrievalFileItem {
+  id: string;
+  name: string;
+  type: 'docx' | 'pdf' | 'xlsx' | 'pptx' | 'txt' | 'other';
+  snippet: string;
+  size?: string;
+  url?: string;
+}
+
+export const mockRetrievalFiles: RetrievalFileItem[] = [
+  {
+    id: 'RF001',
+    name: '集团翼办使用手册.docx',
+    type: 'docx',
+    snippet: '平台登录、个人首页设置以及待办、邮件等核心模块的操作说明，适用于集团翼办日常办公场景。',
+    size: '2.4 MB',
+  },
+  {
+    id: 'RF002',
+    name: '安全公司督办系统操作手册(3).docx',
+    type: 'docx',
+    snippet: '系统首页概览，包含当前跟踪、已完成与超期任务看板，以及督办流程发起与办结说明。',
+    size: '1.8 MB',
+  },
+  {
+    id: 'RF003',
+    name: '天翼云-解决方案-202307V3 1.pdf',
+    type: 'pdf',
+    snippet: '面向政企与国企客户的云基础设施解决方案，涵盖弹性计算、安全合规与行业实践案例。',
+    size: '5.1 MB',
+  },
+  {
+    id: 'RF004',
+    name: '协同办公竞品分析报告.pdf',
+    type: 'pdf',
+    snippet: '分析钉钉、企微、飞书等协同办公产品市场格局、功能对比与差异化竞争策略建议。',
+    size: '3.2 MB',
+  },
+];
+
+/** 运营平台 — 问答会话 */
+export interface ConversationSession {
+  id: string;
+  userId: string;
+  userName: string;
+  department: string;
+  employeeId: string;
+  employeeName: string;
+  employeeCode: string;
+  title: string;
+  messageCount: number;
+  likeCount: number;
+  dislikeCount: number;
+  status: '正常' | '异常' | '已归档';
+  createTime: string;
+  updateTime: string;
+  messages: {
+    role: 'user' | 'assistant';
+    content: string;
+    time: string;
+    feedback?: 'like' | 'dislike' | null;
+    retrievedFiles?: RetrievalFileItem[];
+    recalledFiles?: RetrievalFileItem[];
+  }[];
+}
+
+export const conversationSessions: ConversationSession[] = [
+  {
+    id: 'CS001',
+    userId: 'U004',
+    userName: '宇雷',
+    department: '客户服务部',
+    employeeId: 'DE-2026001',
+    employeeName: '小翼·客服',
+    employeeCode: 'SZ-KF-KF-0001',
+    title: '如何处理超期工单催办？',
+    messageCount: 4,
+    likeCount: 1,
+    dislikeCount: 0,
+    status: '正常',
+    createTime: '2026-07-14 09:12',
+    updateTime: '2026-07-14 09:15',
+    messages: [
+      { role: 'user', content: '客户工单已经超期两天了，怎么催办？', time: '09:12' },
+      {
+        role: 'assistant',
+        content: '您可以在督办系统中按「超期」筛选后发起催办。我已为您检索到相关操作手册。',
+        time: '09:13',
+        feedback: 'like',
+        retrievedFiles: mockRetrievalFiles.slice(0, 2),
+        recalledFiles: [mockRetrievalFiles[1]],
+      },
+      { role: 'user', content: '把操作手册发给我', time: '09:14' },
+      {
+        role: 'assistant',
+        content: '好的，附件已附上《安全公司督办系统操作手册》，您可预览或下载。',
+        time: '09:15',
+        recalledFiles: [mockRetrievalFiles[1]],
+      },
+    ],
+  },
+  {
+    id: 'CS002',
+    userId: 'U002',
+    userName: '张部长',
+    department: '经营分析部',
+    employeeId: 'DE-2026009',
+    employeeName: '小翼·文档',
+    employeeCode: 'SZ-BG-WD-0009',
+    title: '翼办登录与待办模块说明',
+    messageCount: 2,
+    likeCount: 0,
+    dislikeCount: 1,
+    status: '正常',
+    createTime: '2026-07-13 16:40',
+    updateTime: '2026-07-13 16:42',
+    messages: [
+      { role: 'user', content: '集团翼办怎么登录，待办在哪里？', time: '16:40' },
+      {
+        role: 'assistant',
+        content: '登录后进入个人首页即可查看待办与邮件模块，详细步骤见使用手册。',
+        time: '16:42',
+        feedback: 'dislike',
+        retrievedFiles: [mockRetrievalFiles[0]],
+        recalledFiles: [mockRetrievalFiles[0]],
+      },
+    ],
+  },
+  {
+    id: 'CS003',
+    userId: 'U003',
+    userName: '李主管',
+    department: '人力资源部',
+    employeeId: 'DE-2026000',
+    employeeName: '小翼·智能助手',
+    employeeCode: 'SZ-BG-ZH-0000',
+    title: '天翼云政企解决方案材料',
+    messageCount: 2,
+    likeCount: 1,
+    dislikeCount: 0,
+    status: '正常',
+    createTime: '2026-07-12 11:05',
+    updateTime: '2026-07-12 11:08',
+    messages: [
+      { role: 'user', content: '有没有天翼云面向政企的方案材料？', time: '11:05' },
+      {
+        role: 'assistant',
+        content: '已为您找到《天翼云-解决方案-202307V3》，可预览下载。',
+        time: '11:08',
+        feedback: 'like',
+        retrievedFiles: mockRetrievalFiles.slice(2, 4),
+        recalledFiles: [mockRetrievalFiles[2]],
+      },
+    ],
+  },
+];
+
+/** 点赞点踩统一反馈（对齐数字人） */
+export interface MessageFeedback {
+  id: string;
+  sessionId: string;
+  messageId: string;
+  employeeId: string;
+  employeeCode: string;
+  userId: string;
+  feedbackType: 'like' | 'dislike';
+  reasonCode?: 'off_topic' | 'fact_error' | 'attitude' | 'other';
+  reasonText?: string;
+  createTime: string;
+}
+
+export const DISLIKE_REASON_OPTIONS = [
+  { value: 'off_topic', label: '答非所问' },
+  { value: 'fact_error', label: '事实错误' },
+  { value: 'attitude', label: '态度问题' },
+  { value: 'other', label: '其他' },
+] as const;
+
+/** 产出指标入湖宽表样例（集团规范） */
+export interface IndicatorLakeRecord {
+  monthPeriod: string;
+  provinceCode: string;
+  belongUnit: string;
+  employeeCode: string;
+  employeeName: string;
+  businessLine: string;
+  indicatorCode: string;
+  indicatorName: string;
+  calcLogic: string;
+  listItemsJson: string;
+  dataSource: string;
+  syncStatus: '待同步' | '已同步' | '失败';
+}
+
+export const indicatorLakeRecords: IndicatorLakeRecord[] = [
+  {
+    monthPeriod: '202607',
+    provinceCode: 'BJ',
+    belongUnit: '天翼云-客户服务部',
+    employeeCode: 'SZ-KF-KF-0001',
+    employeeName: '小翼·客服',
+    businessLine: '客服',
+    indicatorCode: 'SZ-KF-KF-0001-000001',
+    indicatorName: '工单处理量',
+    calcLogic: '有效处理工单数',
+    listItemsJson: '{"success":128,"manual_transfer":4,"date":"2026-07-13"}',
+    dataSource: '客服工单系统',
+    syncStatus: '已同步',
+  },
+  {
+    monthPeriod: '202607',
+    provinceCode: 'BJ',
+    belongUnit: '天翼云-客户服务部',
+    employeeCode: 'SZ-KF-KF-0001',
+    employeeName: '小翼·客服',
+    businessLine: '客服',
+    indicatorCode: 'SZ-KF-KF-0001-000002',
+    indicatorName: '处理效率',
+    calcLogic: '成功量/(成功量+转人工量)',
+    listItemsJson: '{"success":128,"manual_transfer":4,"rate":0.97}',
+    dataSource: '政企AI工作台',
+    syncStatus: '待同步',
+  },
+];
 
 export interface Skill {
   id: string;
@@ -442,6 +713,20 @@ export interface ScheduledTask {
   lastRun?: string;
   nextRun: string;
   description: string;
+  /** 生效开始日期 YYYY-MM-DD */
+  effectiveFrom?: string;
+  /** 生效结束日期 YYYY-MM-DD，空表示长期有效 */
+  effectiveTo?: string;
+}
+
+export interface ScheduledTaskRun {
+  id: string;
+  taskId: string;
+  status: '已完成' | '执行中' | '已失败' | '已跳过';
+  startTime: string;
+  finishTime?: string;
+  duration?: string;
+  result?: string;
 }
 
 export interface EmployeeEditApproval {
@@ -456,6 +741,9 @@ export interface EmployeeEditApproval {
   applicant: string;
 }
 
+/** 专用定时任务对话助手（新建定时任务入口唤起） */
+export const SCHEDULE_ASSISTANT_ID = 'DE-SCHEDULE';
+
 export const digitalEmployees: DigitalEmployee[] = [
   {
     id: 'DE-2026000', employeeNumber: 'DE-2026000', name: '小翼·智能助手', avatar: 'https://api.dicebear.com/7.x/personas/svg?seed=assistant2026&backgroundColor=b7eb8f', department: '综合服务部', position: '综合支撑-办公室-智能综合',
@@ -467,6 +755,39 @@ export const digitalEmployees: DigitalEmployee[] = [
     level: 'L3', tokensQuota: 10000000, tokensUsed: 1200000, taskCompleteRate: 98.0,
     lastActive: '在线', onboardDate: '2026-01-01', relatedAgents: ['翼答', '通用问答智能体'],
     likes: 520, dislikes: 5, heat: 2500,
+    featureFlags: {
+      attachmentUpload: true, deepThinking: true, webSearch: true,
+      skill: true, mcp: true, thinkTank: true, suggestedQuestions: true,
+    },
+    suggestedQuestions: [
+      '帮我处理今日待办工作',
+      '生成本周工作总结',
+      '分析最近的业务数据',
+      '查看最新的知识更新',
+      '如何唤起其他数字员工？',
+      '公司软考有什么政策？',
+    ],
+  },
+  {
+    id: SCHEDULE_ASSISTANT_ID, employeeNumber: 'DE-SCHEDULE', name: '小翼·定时任务助手', avatar: '/avatars/schedule-assistant.svg', department: '综合服务部', position: '综合支撑-办公室-日程助手',
+    status: 'ACTIVE', employmentStatus: '在职', owner: '系统', ownerType: '自有',
+    skills: ['任务调度', '流程引导', '智能问答'],
+    skillIds: ['SK001'],
+    knowledgeIds: ['KB001'],
+    description: '我是小翼·定时任务助手，专门帮您通过对话创建与配置周期性自动化任务。可召唤其他数字员工作为执行专家。',
+    level: 'L3', tokensQuota: 3000000, tokensUsed: 180000, taskCompleteRate: 97.5,
+    lastActive: '在线', onboardDate: '2026-03-01', relatedAgents: ['通用问答智能体'],
+    likes: 86, dislikes: 1, talk: 320,
+    featureFlags: {
+      attachmentUpload: true, deepThinking: true, webSearch: true,
+      skill: true, mcp: true, thinkTank: true, suggestedQuestions: true,
+    },
+    suggestedQuestions: [
+      '帮我创建一个每天早上8点由小翼·客服执行的每日客户工单处理任务',
+      '每周一9点让小翼·营销自动生成周报',
+      '每月1日对小翼·财务执行月度报销检查',
+      '创建一个每天6点的数据质量巡检定时任务',
+    ],
   },
   {
     id: 'DE-2026001', employeeNumber: 'DE-2026001', name: '小翼·客服', avatar: 'https://api.dicebear.com/7.x/personas/svg?seed=kefu&backgroundColor=b6e3f4', department: '客户服务部', position: '业务支撑-客服-智能客服',
@@ -492,6 +813,16 @@ export const digitalEmployees: DigitalEmployee[] = [
       { systemName: 'CRM 客户关系管理系统', systemLevel: '集团级系统', permission: '工单读写、客户信息只读', estimatedTokens: 2000000, estimatedConcurrency: 100 },
       { systemName: '客服工单系统', systemLevel: '公司级系统', permission: '工单读写', estimatedTokens: 1500000, estimatedConcurrency: 80 },
     ],
+    featureFlags: {
+      attachmentUpload: true, deepThinking: true, webSearch: false,
+      skill: true, mcp: false, thinkTank: true, suggestedQuestions: true,
+    },
+    suggestedQuestions: [
+      '如何处理超期工单？',
+      '今日待办工单有多少？',
+      '客户投诉升级流程是什么？',
+      '查看督办系统操作手册',
+    ],
   },
   {
     id: 'DE-2026002', employeeNumber: 'DE-2026002', name: '小翼·数据', avatar: 'https://api.dicebear.com/7.x/personas/svg?seed=shuju&backgroundColor=c0aede', department: '数据运营中心', position: '综合支撑-数发-数据标注',
@@ -514,6 +845,15 @@ export const digitalEmployees: DigitalEmployee[] = [
     level: 'L3', tokensQuota: 4000000, tokensUsed: 2800000, taskCompleteRate: 93.8,
     lastActive: '30分钟前', onboardDate: '2026-01-20', relatedAgents: ['营销智能体', '写作助手'],
     likes: 256, dislikes: 15, heat: 1120,
+    featureFlags: {
+      attachmentUpload: true, deepThinking: false, webSearch: true,
+      skill: true, mcp: false, thinkTank: true, suggestedQuestions: true,
+    },
+    suggestedQuestions: [
+      '生成本周营销周报',
+      '分析竞品协同办公市场格局',
+      '帮我写一篇产品推广文案',
+    ],
   },
   {
     id: 'DE-2026004', employeeNumber: 'DE-2026004', name: '小翼·审计', avatar: 'https://api.dicebear.com/7.x/personas/svg?seed=shenji&backgroundColor=d1f4d1', department: '审计部', position: '党群监督-审计-内部审计',
@@ -592,6 +932,15 @@ export const digitalEmployees: DigitalEmployee[] = [
     level: 'L2', tokensQuota: 2500000, tokensUsed: 1800000, taskCompleteRate: 94.5,
     lastActive: '45分钟前', onboardDate: '2026-01-25', relatedAgents: ['文件助手'],
     likes: 156, dislikes: 6, heat: 720,
+    featureFlags: {
+      attachmentUpload: true, deepThinking: true, webSearch: false,
+      skill: false, mcp: false, thinkTank: true, suggestedQuestions: true,
+    },
+    suggestedQuestions: [
+      '帮我总结这份文档的要点',
+      '查找集团翼办使用手册',
+      '天翼云政企解决方案在哪？',
+    ],
   },
   {
     id: 'DE-2026010', name: '小翼·经分', avatar: 'https://api.dicebear.com/7.x/personas/svg?seed=jingfen&backgroundColor=ffdfbf', department: '经营分析部', position: '综合支撑-企发-经营分析',
@@ -1301,10 +1650,49 @@ export const employeeEditApprovals: EmployeeEditApproval[] = [
 ];
 
 export const scheduledTasks: ScheduledTask[] = [
-  { id: 'ST001', name: '每日客户工单处理', employeeId: 'DE-2026001', employeeName: '小翼·客服', cron: '0 8 * * *', cronLabel: '每天 08:00', enabled: true, lastRun: '2026-03-17 08:00', nextRun: '2026-03-18 08:00', description: '自动处理前一天未完成的客户工单' },
-  { id: 'ST002', name: '周报自动生成', employeeId: 'DE-2026003', employeeName: '小翼·营销', cron: '0 9 * * 1', cronLabel: '每周一 09:00', enabled: true, lastRun: '2026-03-17 09:00', nextRun: '2026-03-24 09:00', description: '自动生成上周营销周报' },
-  { id: 'ST003', name: '月度报销检查', employeeId: 'DE-2026006', employeeName: '小翼·财务', cron: '0 9 1 * *', cronLabel: '每月1日 09:00', enabled: true, lastRun: '2026-03-01 09:00', nextRun: '2026-04-01 09:00', description: '自动执行月度报销单据合规检查' },
-  { id: 'ST004', name: '数据质量巡检', employeeId: 'DE-2026002', employeeName: '小翼·数据', cron: '0 6 * * *', cronLabel: '每天 06:00', enabled: false, lastRun: '2026-03-15 06:00', nextRun: '-', description: '每日自动检查数据质量' },
+  { id: 'ST001', name: '每日客户工单处理', employeeId: 'DE-2026001', employeeName: '小翼·客服', cron: '0 8 * * *', cronLabel: '每天 08:00', enabled: true, lastRun: '2026-03-17 08:00', nextRun: '2026-03-18 08:00', description: '自动处理前一天未完成的客户工单', effectiveFrom: '2026-03-01', effectiveTo: '2026-12-31' },
+  { id: 'ST002', name: '周报自动生成', employeeId: 'DE-2026003', employeeName: '小翼·营销', cron: '0 9 * * 1', cronLabel: '每周一 09:00', enabled: true, lastRun: '2026-03-17 09:00', nextRun: '2026-03-24 09:00', description: '自动生成上周营销周报', effectiveFrom: '2026-01-01' },
+  { id: 'ST003', name: '月度报销检查', employeeId: 'DE-2026006', employeeName: '小翼·财务', cron: '0 9 1 * *', cronLabel: '每月1日 09:00', enabled: true, lastRun: '2026-03-01 09:00', nextRun: '2026-04-01 09:00', description: '自动执行月度报销单据合规检查', effectiveFrom: '2026-01-01', effectiveTo: '2026-12-31' },
+  { id: 'ST004', name: '数据质量巡检', employeeId: 'DE-2026002', employeeName: '小翼·数据', cron: '0 6 * * *', cronLabel: '每天 06:00', enabled: false, lastRun: '2026-03-15 06:00', nextRun: '-', description: '每日自动检查数据质量', effectiveFrom: '2026-02-01', effectiveTo: '2026-06-30' },
+];
+
+const SCHEDULE_STORAGE_KEY = 'ai-de-created-schedules';
+
+export function loadCreatedScheduledTasks(): ScheduledTask[] {
+  try {
+    const raw = sessionStorage.getItem(SCHEDULE_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as ScheduledTask[];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+export function persistCreatedScheduledTask(task: ScheduledTask): void {
+  const prev = loadCreatedScheduledTasks().filter((t) => t.id !== task.id);
+  sessionStorage.setItem(SCHEDULE_STORAGE_KEY, JSON.stringify([task, ...prev]));
+}
+
+export function getAllScheduledTasks(): ScheduledTask[] {
+  const created = loadCreatedScheduledTasks();
+  const createdIds = new Set(created.map((t) => t.id));
+  return [...created, ...scheduledTasks.filter((t) => !createdIds.has(t.id))];
+}
+
+export const scheduledTaskRuns: ScheduledTaskRun[] = [
+  { id: 'STR001', taskId: 'ST001', status: '已完成', startTime: '2026-03-17 08:00', finishTime: '2026-03-17 08:12', duration: '12分钟', result: '处理未完成工单 86 条，自动结单 72 条' },
+  { id: 'STR002', taskId: 'ST001', status: '已完成', startTime: '2026-03-16 08:00', finishTime: '2026-03-16 08:15', duration: '15分钟', result: '处理未完成工单 94 条，转人工 8 条' },
+  { id: 'STR003', taskId: 'ST001', status: '已失败', startTime: '2026-03-15 08:00', finishTime: '2026-03-15 08:03', duration: '3分钟', result: '工单系统接口超时，已自动重试排队' },
+  { id: 'STR004', taskId: 'ST001', status: '已完成', startTime: '2026-03-14 08:00', finishTime: '2026-03-14 08:10', duration: '10分钟', result: '处理未完成工单 61 条' },
+  { id: 'STR005', taskId: 'ST001', status: '已完成', startTime: '2026-03-13 08:00', finishTime: '2026-03-13 08:09', duration: '9分钟', result: '处理未完成工单 55 条' },
+  { id: 'STR006', taskId: 'ST002', status: '已完成', startTime: '2026-03-17 09:00', finishTime: '2026-03-17 09:28', duration: '28分钟', result: '已生成营销周报并推送运营负责人' },
+  { id: 'STR007', taskId: 'ST002', status: '已完成', startTime: '2026-03-10 09:00', finishTime: '2026-03-10 09:25', duration: '25分钟', result: '周报生成成功，附件 12 页' },
+  { id: 'STR008', taskId: 'ST002', status: '已跳过', startTime: '2026-03-03 09:00', result: '员工暂停执行，自动跳过本次调度' },
+  { id: 'STR009', taskId: 'ST003', status: '已完成', startTime: '2026-03-01 09:00', finishTime: '2026-03-01 17:20', duration: '8小时20分', result: '检查报销 342 笔，异常 12 笔' },
+  { id: 'STR010', taskId: 'ST003', status: '已完成', startTime: '2026-02-01 09:00', finishTime: '2026-02-01 16:40', duration: '7小时40分', result: '检查报销 298 笔，异常 9 笔' },
+  { id: 'STR011', taskId: 'ST004', status: '已完成', startTime: '2026-03-15 06:00', finishTime: '2026-03-15 06:18', duration: '18分钟', result: '发现 3 处空值率异常，已写入告警' },
+  { id: 'STR012', taskId: 'ST004', status: '已完成', startTime: '2026-03-14 06:00', finishTime: '2026-03-14 06:14', duration: '14分钟', result: '数据质量巡检通过' },
 ];
 
 export const conversations: ConversationItem[] = [
@@ -1461,6 +1849,7 @@ export const rolePermissions: Record<SystemRole, string[]> = {
     'performance', 'performance.view', 'performance.initiate', 'performance.evaluate',
     'task-logs', 'tasklog.view', 'tasklog.export',
     'feedback', 'feedback.view', 'feedback.handle',
+    'conversations', 'conversation.view', 'conversation.manage',
     'pending',
     'approval:approve', 'approval:reject',
     'system:settings',
@@ -1480,6 +1869,7 @@ export const rolePermissions: Record<SystemRole, string[]> = {
     'performance', 'performance.view', 'performance.evaluate',
     'task-logs', 'tasklog.view',
     'feedback', 'feedback.view', 'feedback.handle',
+    'conversations', 'conversation.view', 'conversation.manage',
     'pending',
     'approval:approve', 'approval:reject',
   ],
@@ -1506,12 +1896,14 @@ export const rolePermissions: Record<SystemRole, string[]> = {
     'performance', 'performance.view', 'performance.initiate', 'performance.evaluate',
     'task-logs', 'tasklog.view',
     'feedback', 'feedback.view',
+    'conversations', 'conversation.view',
     'pending',
     'approval:approve', 'approval:reject',
   ],
   '审计角色': [
     'employees', 'employee.browse',
     'task-logs', 'tasklog.view', 'tasklog.export',
+    'conversations', 'conversation.view',
     'pending',
   ],
 };

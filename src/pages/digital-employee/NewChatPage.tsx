@@ -1,14 +1,14 @@
 import React, { useState, useMemo } from 'react';
 import {
-  Input, Button, Tooltip, Modal, Avatar, Badge, Tag,
+  Input, Button, Modal, Avatar, Badge, Tag,
   Card, Row, Col, Empty,
 } from 'antd';
 import {
-  SendOutlined, SearchOutlined, PaperClipOutlined,
-  ThunderboltOutlined, RobotOutlined, IdcardOutlined,
+  SearchOutlined, RobotOutlined, IdcardOutlined,
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
-import { digitalEmployees } from '../../mock/data';
+import { digitalEmployees, getEmployeeFeatureFlags } from '../../mock/data';
+import ChatInputComposer from '../../components/ChatInputComposer';
 
 const DEFAULT_EMPLOYEE_ID = 'DE-2026000';
 
@@ -19,13 +19,6 @@ const statusLabel: Record<string, string> = {
   ACTIVE: '在线', TRAINING: '训练中', SUSPENDED: '已暂停', TERMINATED: '已停用',
 };
 
-const quickActions = [
-  '帮我处理今日待办工作',
-  '生成本周工作总结',
-  '分析最近的业务数据',
-  '查看最新的知识更新',
-];
-
 const bottomEmployeeIds = ['DE-2026000', 'DE-2026001', 'DE-2026003', 'DE-2026004', 'DE-2026005'];
 
 const NewChatPage: React.FC = () => {
@@ -34,11 +27,25 @@ const NewChatPage: React.FC = () => {
   const [selectedEmployeeId, setSelectedEmployeeId] = useState(DEFAULT_EMPLOYEE_ID);
   const [summonVisible, setSummonVisible] = useState(false);
   const [summonSearch, setSummonSearch] = useState('');
+  const [suggestBatch, setSuggestBatch] = useState(0);
 
   const selectedEmployee = useMemo(
     () => digitalEmployees.find((e) => e.id === selectedEmployeeId) || null,
     [selectedEmployeeId],
   );
+
+  const featureFlags = useMemo(
+    () => getEmployeeFeatureFlags(selectedEmployee),
+    [selectedEmployee],
+  );
+
+  const suggestedQuestions = useMemo(() => {
+    const list = selectedEmployee?.suggestedQuestions?.length
+      ? selectedEmployee.suggestedQuestions
+      : ['帮我处理今日待办工作', '生成本周工作总结', '分析最近的业务数据', '查看最新的知识更新'];
+    const start = (suggestBatch * 4) % Math.max(list.length, 1);
+    return [...list, ...list].slice(start, start + 4);
+  }, [selectedEmployee, suggestBatch]);
 
   const bottomEmployees = useMemo(
     () => bottomEmployeeIds
@@ -81,12 +88,10 @@ const NewChatPage: React.FC = () => {
       display: 'flex', flexDirection: 'column', height: 'calc(100vh - 56px)',
       background: '#fff',
     }}>
-      {/* Main Content */}
       <div style={{
         flex: 1, display: 'flex', flexDirection: 'column',
         alignItems: 'center', justifyContent: 'center', padding: '40px 24px 0',
       }}>
-        {/* Welcome Text */}
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
           <div style={{
             fontSize: 48, fontWeight: 800, color: '#1677ff',
@@ -104,103 +109,60 @@ const NewChatPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Quick Actions */}
-        <div style={{
-          display: 'flex', flexWrap: 'wrap', gap: 12,
-          justifyContent: 'center', marginBottom: 32, maxWidth: 700,
-        }}>
-          {quickActions.map((q) => (
+        {featureFlags.suggestedQuestions && (
+          <div style={{
+            display: 'flex', flexWrap: 'wrap', gap: 12,
+            justifyContent: 'center', marginBottom: 32, maxWidth: 700,
+          }}>
+            {suggestedQuestions.map((q) => (
+              <div
+                key={q}
+                onClick={() => handleQuickAction(q)}
+                style={{
+                  padding: '8px 16px', borderRadius: 20,
+                  border: '1px solid #e8e8e8', background: '#fff',
+                  fontSize: 14, color: '#333', cursor: 'pointer',
+                  transition: 'all 0.2s',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = '#1677ff';
+                  e.currentTarget.style.color = '#1677ff';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = '#e8e8e8';
+                  e.currentTarget.style.color = '#333';
+                }}
+              >
+                {q}
+              </div>
+            ))}
             <div
-              key={q}
-              onClick={() => handleQuickAction(q)}
-              style={{
-                padding: '8px 16px', borderRadius: 20,
-                border: '1px solid #e8e8e8', background: '#fff',
-                fontSize: 14, color: '#333', cursor: 'pointer',
-                transition: 'all 0.2s',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = '#1677ff';
-                e.currentTarget.style.color = '#1677ff';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = '#e8e8e8';
-                e.currentTarget.style.color = '#333';
-              }}
+              style={{ padding: '8px 16px', fontSize: 14, color: '#1677ff', cursor: 'pointer' }}
+              onClick={() => setSuggestBatch((b) => b + 1)}
             >
-              {q}
+              ↻ 换一换
             </div>
-          ))}
-          <div style={{
-            padding: '8px 16px', fontSize: 14, color: '#1677ff', cursor: 'pointer',
-          }}>
-            ↻ 换一换
           </div>
-        </div>
+        )}
 
-        {/* Input Area */}
-        <div style={{ width: '100%', maxWidth: 700, marginBottom: 24 }}>
-          <div style={{
-            border: '1px solid #e8e8e8', borderRadius: 12, padding: '12px 16px',
-            background: '#fff', boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-          }}>
-            <Input
-              placeholder="请输入指令或问题和我对话吧"
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              onPressEnter={handleSend}
-              variant="borderless"
-              style={{ fontSize: 15, marginBottom: 8 }}
-              suffix={
-                <Button
-                  type="primary"
-                  shape="circle"
-                  icon={<SendOutlined />}
-                  size="small"
-                  onClick={handleSend}
-                  style={{ background: '#333' }}
-                />
-              }
-            />
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Tooltip title="上传文件">
-                <Button type="text" icon={<PaperClipOutlined />} size="small" style={{ color: '#999' }} />
-              </Tooltip>
-              <Button
-                size="small"
-                style={{
-                  borderRadius: 6, borderColor: '#ff4d4f', color: '#ff4d4f', fontWeight: 500,
-                }}
-                icon={<ThunderboltOutlined />}
-              >
-                深度思考
-              </Button>
-              <Button
-                size="small"
-                style={{
-                  borderRadius: 6, borderColor: '#52c41a', color: '#52c41a', fontWeight: 500,
-                }}
-                icon={<SearchOutlined />}
-              >
-                全网搜索
-              </Button>
-              <Button
-                size="small"
-                type="dashed"
-                icon={<RobotOutlined />}
-                onClick={() => setSummonVisible(true)}
-                style={{
-                  borderRadius: 6, color: '#1677ff', borderColor: '#1677ff', fontWeight: 500,
-                }}
-              >
-                {selectedEmployee ? selectedEmployee.name : '选择数字员工'}
-              </Button>
-            </div>
-          </div>
+        <div style={{ width: '100%', maxWidth: 720, marginBottom: 24 }}>
+          <ChatInputComposer
+            value={inputValue}
+            onChange={setInputValue}
+            onSend={handleSend}
+            placeholder={
+              selectedEmployee
+                ? `向${selectedEmployee.name}提问，例如：如何修改 OA 密码？公文格式规范有哪些？`
+                : '请输入指令或问题和我对话吧'
+            }
+            featureFlags={featureFlags}
+            showAllWhenNoFlags={false}
+            onSummonEmployee={() => setSummonVisible(true)}
+            summonLabel="切换专家"
+          />
         </div>
       </div>
 
-      {/* Bottom Shortcuts */}
       <div style={{
         borderTop: '1px solid #f0f0f0', padding: '12px 24px',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -233,7 +195,6 @@ const NewChatPage: React.FC = () => {
         </Button>
       </div>
 
-      {/* Select Employee Modal */}
       <Modal
         title={<span><RobotOutlined style={{ marginRight: 8 }} />选择数字员工</span>}
         open={summonVisible}

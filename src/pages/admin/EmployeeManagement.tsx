@@ -1,23 +1,24 @@
 import React, { useState } from 'react';
 import {
   Card, Table, Tag, Button, Space, Avatar, Modal, Input, Select,
-  Row, Col, Statistic, Checkbox, Badge, message, Tabs,
-  Tooltip,
+  Row, Col, Statistic, Badge, message, Switch, Tooltip, Empty,
 } from 'antd';
 import {
   SearchOutlined, SettingOutlined, TeamOutlined,
   ThunderboltOutlined, DatabaseOutlined, FileTextOutlined,
   BookOutlined, InfoCircleOutlined, SyncOutlined,
   CheckCircleOutlined, ExperimentOutlined,
-  PlusOutlined,
+  PlusOutlined, ControlOutlined, DeleteOutlined,
 } from '@ant-design/icons';
 import {
   digitalEmployees, skills, knowledgeBases,
   hasEmployeeNumber, getEffectiveEmploymentStatus,
-  type DigitalEmployee, type Skill, type KnowledgeBase,
+  FEATURE_FLAG_META, DEFAULT_FEATURE_FLAGS, getEmployeeFeatureFlags,
+  type DigitalEmployee, type EmployeeFeatureFlags,
 } from '../../mock/data';
 import EmployeeFormModal, { fullHeightModalStyles, type EmployeeFormValues } from '../../components/EmployeeFormModal';
 import EmployeeFieldSections from '../../components/EmployeeFieldSections';
+import AiToolPickerModal, { type AiToolPickerItem, type AiToolPickerType } from '../../components/AiToolPickerModal';
 
 const levelColor: Record<string, string> = {
   L1: '#8c8c8c', L2: '#2f54eb', L3: '#1677ff', L4: '#13c2c2',
@@ -57,11 +58,12 @@ const EmployeeManagement: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<string | undefined>(undefined);
   const [addVisible, setAddVisible] = useState(false);
   const [configVisible, setConfigVisible] = useState(false);
-  const [configTab, setConfigTab] = useState('skills');
   const [detailVisible, setDetailVisible] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<DigitalEmployee | null>(null);
   const [selectedSkillIds, setSelectedSkillIds] = useState<string[]>([]);
   const [selectedKBIds, setSelectedKBIds] = useState<string[]>([]);
+  const [featureFlags, setFeatureFlags] = useState<EmployeeFeatureFlags>({ ...DEFAULT_FEATURE_FLAGS });
+  const [pickerType, setPickerType] = useState<AiToolPickerType | null>(null);
 
   const filtered = employees.filter((e) => {
     const empNo = e.employeeNumber ?? '';
@@ -79,12 +81,44 @@ const EmployeeManagement: React.FC = () => {
   const trainingCount = employees.filter((e) => e.status === 'TRAINING').length;
   const inServiceCount = employees.filter((e) => getEffectiveEmploymentStatus(e) === '在职').length;
 
-  const openConfig = (emp: DigitalEmployee, tab: string = 'skills') => {
+  const openConfig = (emp: DigitalEmployee) => {
     setSelectedEmployee(emp);
     setSelectedSkillIds([...emp.skillIds]);
     setSelectedKBIds([...emp.knowledgeIds]);
-    setConfigTab(tab);
+    setFeatureFlags(getEmployeeFeatureFlags(emp));
     setConfigVisible(true);
+  };
+
+  const removeSkill = (id: string) => {
+    setSelectedSkillIds((prev) => prev.filter((x) => x !== id));
+  };
+
+  const removeKnowledge = (id: string) => {
+    setSelectedKBIds((prev) => prev.filter((x) => x !== id));
+  };
+
+  const skillPickerItems: AiToolPickerItem[] = skills.map((s) => ({
+    id: s.id,
+    name: s.name,
+    desc: `${s.category} · ${s.description}`,
+    icon: '⚡',
+    color: levelColor[s.level] || '#1677ff',
+    selected: selectedSkillIds.includes(s.id),
+  }));
+
+  const knowledgePickerItems: AiToolPickerItem[] = knowledgeBases.map((kb) => ({
+    id: kb.id,
+    name: kb.name,
+    desc: `${kb.type} · ${kb.description}`,
+    icon: kb.type === '知识卡片' ? '📄' : kb.type === '数据集' ? '📊' : '📘',
+    color: kb.type === '知识卡片' ? '#52c41a' : kb.type === '数据集' ? '#722ed1' : '#1677ff',
+    selected: selectedKBIds.includes(kb.id),
+  }));
+
+  const handlePickerSelectionChange = (type: AiToolPickerType, selected: AiToolPickerItem[]) => {
+    const ids = selected.map((item) => item.id);
+    if (type === 'skill') setSelectedSkillIds(ids);
+    if (type === 'knowledge') setSelectedKBIds(ids);
   };
 
   const saveConfig = () => {
@@ -93,7 +127,13 @@ const EmployeeManagement: React.FC = () => {
     setEmployees((prev) =>
       prev.map((e) =>
         e.id === selectedEmployee.id
-          ? { ...e, skillIds: selectedSkillIds, skills: newSkillNames, knowledgeIds: selectedKBIds }
+          ? {
+              ...e,
+              skillIds: selectedSkillIds,
+              skills: newSkillNames,
+              knowledgeIds: selectedKBIds,
+              featureFlags: { ...featureFlags },
+            }
           : e,
       ),
     );
@@ -161,6 +201,8 @@ const EmployeeManagement: React.FC = () => {
       securityPassed: values.securityPassed,
       logAuditCompliant: values.logAuditCompliant,
       runSystems: values.runSystems.filter((s) => s.systemName.trim()),
+      featureFlags: { ...DEFAULT_FEATURE_FLAGS },
+      suggestedQuestions: [],
     };
     setEmployees((prev) => [newEmp, ...prev]);
     message.success(`已创建数字员工「${newEmp.name}」，可设为在职`);
@@ -234,67 +276,10 @@ const EmployeeManagement: React.FC = () => {
     },
   ];
 
-  const renderSkillCard = (skill: Skill) => (
-    <Col span={12} key={skill.id}>
-      <Card
-        size="small"
-        hoverable
-        style={{
-          borderRadius: 8,
-          borderColor: selectedSkillIds.includes(skill.id) ? '#1677ff' : '#f0f0f0',
-          background: selectedSkillIds.includes(skill.id) ? '#f0f5ff' : '#fff',
-        }}
-      >
-        <Checkbox value={skill.id} style={{ width: '100%' }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontWeight: 500 }}>{skill.name}</span>
-              <Tag color={levelColor[skill.level]} style={{ fontSize: 10, color: '#fff' }}>
-                {skill.level}
-              </Tag>
-              <Tag style={{ fontSize: 10 }}>{skill.category}</Tag>
-            </div>
-            <div style={{ fontSize: 12, color: '#999', marginTop: 2 }}>{skill.description}</div>
-            <div style={{ fontSize: 11, color: '#1677ff', marginTop: 2 }}>来源：{skill.source}</div>
-          </div>
-        </Checkbox>
-      </Card>
-    </Col>
-  );
-
-  const renderKbCard = (kb: KnowledgeBase) => (
-    <Col span={12} key={kb.id}>
-      <Card
-        size="small"
-        hoverable
-        style={{
-          borderRadius: 8,
-          borderColor: selectedKBIds.includes(kb.id) ? '#1677ff' : '#f0f0f0',
-          background: selectedKBIds.includes(kb.id) ? '#f0f5ff' : '#fff',
-        }}
-      >
-        <Checkbox value={kb.id} style={{ width: '100%' }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              {typeIcon[kb.type]}
-              <span style={{ fontWeight: 500 }}>{kb.name}</span>
-              <Tag
-                color={kb.status === '已发布' ? 'success' : kb.status === '学习中' ? 'processing' : 'warning'}
-                style={{ fontSize: 10 }}
-              >
-                {kb.status === '学习中' && <SyncOutlined spin style={{ marginRight: 2 }} />}
-                {kb.status}
-              </Tag>
-            </div>
-            <div style={{ fontSize: 12, color: '#999', marginTop: 2 }}>{kb.description}</div>
-            <div style={{ fontSize: 11, color: '#1677ff', marginTop: 2 }}>
-              {kb.type} · {kb.docCount} 篇文档 · 更新于 {kb.lastUpdate}
-            </div>
-          </div>
-        </Checkbox>
-      </Card>
-    </Col>
-  );
+  const selectedSkills = skills.filter((s) => selectedSkillIds.includes(s.id));
+  const selectedKBs = knowledgeBases.filter((k) => selectedKBIds.includes(k.id));
+  const availableSkills = skills.filter((s) => !selectedSkillIds.includes(s.id));
+  const availableKBs = knowledgeBases.filter((k) => !selectedKBIds.includes(k.id));
 
   return (
     <div>
@@ -374,82 +359,209 @@ const EmployeeManagement: React.FC = () => {
         onSubmit={createEmployee}
       />
 
-      {/* Unified Config Modal with Tabs */}
+      {/* Config Modal: left skills/knowledge tabs, right feature config */}
       <Modal
         title={`配置 — ${selectedEmployee?.name}`}
         open={configVisible}
         onCancel={() => setConfigVisible(false)}
         onOk={saveConfig}
         okText="提交审批"
-        width={720}
+        width={1080}
+        styles={{ body: { paddingTop: 12 } }}
       >
         {selectedEmployee && (
-          <div>
-            <div style={{ display: 'flex', gap: 12, marginBottom: 16, padding: 12, background: '#f5f5f5', borderRadius: 8 }}>
-              <Avatar size={48} src={selectedEmployee.avatar} />
+          <div style={{ display: 'flex', gap: 0, minHeight: 420, border: '1px solid #f0f0f0', borderRadius: 8, overflow: 'hidden' }}>
+            <div style={{ flex: 1, minWidth: 0, padding: '12px 16px 16px', overflow: 'auto' }}>
+              <div style={{ fontWeight: 600, marginBottom: 4, fontSize: 15 }}>基础配置</div>
+              <div style={{ fontSize: 12, color: '#999', marginBottom: 16 }}>
+                仅展示已配置项；点击加号添加，点击删除移除
+              </div>
+
+              <div style={{ marginBottom: 24 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                  <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <ThunderboltOutlined style={{ color: '#e4393c' }} />
+                    技能配置
+                    <Tag style={{ marginLeft: 4 }}>{selectedSkills.length}</Tag>
+                  </div>
+                  <Button
+                    type="dashed"
+                    size="small"
+                    icon={<PlusOutlined />}
+                    disabled={!availableSkills.length}
+                    onClick={() => setPickerType('skill')}
+                  >
+                    添加技能
+                  </Button>
+                </div>
+                {!selectedSkills.length ? (
+                  <Empty
+                    image={Empty.PRESENTED_IMAGE_SIMPLE}
+                    description="暂未配置技能，点击右上角添加"
+                    style={{ margin: '12px 0' }}
+                  />
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {selectedSkills.map((skill) => (
+                      <div
+                        key={skill.id}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 12,
+                          padding: '10px 12px',
+                          border: '1px solid #f0f0f0',
+                          borderRadius: 8,
+                          background: '#fff',
+                        }}
+                      >
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                            <span style={{ fontWeight: 500 }}>{skill.name}</span>
+                            <Tag color={levelColor[skill.level]} style={{ fontSize: 10, color: '#fff', margin: 0 }}>
+                              {skill.level}
+                            </Tag>
+                            <Tag style={{ fontSize: 10, margin: 0 }}>{skill.category}</Tag>
+                          </div>
+                          <div style={{ fontSize: 12, color: '#999', marginTop: 2 }}>{skill.description}</div>
+                        </div>
+                        <Button
+                          type="text"
+                          danger
+                          size="small"
+                          icon={<DeleteOutlined />}
+                          aria-label={`移除技能 ${skill.name}`}
+                          onClick={() => removeSkill(skill.id)}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               <div>
-                <div style={{ fontWeight: 600, fontSize: 15 }}>{selectedEmployee.name}</div>
-                <div style={{ fontSize: 13, color: '#666' }}>{selectedEmployee.department} · {selectedEmployee.position}</div>
-                <div style={{ fontSize: 12, color: '#999', marginTop: 2 }}>{selectedEmployee.description}</div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                  <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <DatabaseOutlined style={{ color: '#1677ff' }} />
+                    知识配置
+                    <Tag style={{ marginLeft: 4 }}>{selectedKBs.length}</Tag>
+                  </div>
+                  <Button
+                    type="dashed"
+                    size="small"
+                    icon={<PlusOutlined />}
+                    disabled={!availableKBs.length}
+                    onClick={() => setPickerType('knowledge')}
+                  >
+                    添加知识
+                  </Button>
+                </div>
+                {!selectedKBs.length ? (
+                  <Empty
+                    image={Empty.PRESENTED_IMAGE_SIMPLE}
+                    description="暂未配置知识，点击右上角添加"
+                    style={{ margin: '12px 0' }}
+                  />
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {selectedKBs.map((kb) => (
+                      <div
+                        key={kb.id}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 12,
+                          padding: '10px 12px',
+                          border: '1px solid #f0f0f0',
+                          borderRadius: 8,
+                          background: '#fff',
+                        }}
+                      >
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                            {typeIcon[kb.type]}
+                            <span style={{ fontWeight: 500 }}>{kb.name}</span>
+                            <Tag
+                              color={kb.status === '已发布' ? 'success' : kb.status === '学习中' ? 'processing' : 'warning'}
+                              style={{ fontSize: 10, margin: 0 }}
+                            >
+                              {kb.status === '学习中' && <SyncOutlined spin style={{ marginRight: 2 }} />}
+                              {kb.status}
+                            </Tag>
+                          </div>
+                          <div style={{ fontSize: 12, color: '#999', marginTop: 2 }}>{kb.description}</div>
+                          <div style={{ fontSize: 11, color: '#1677ff', marginTop: 2 }}>
+                            {kb.type} · {kb.docCount} 篇文档
+                          </div>
+                        </div>
+                        <Button
+                          type="text"
+                          danger
+                          size="small"
+                          icon={<DeleteOutlined />}
+                          aria-label={`移除知识 ${kb.name}`}
+                          onClick={() => removeKnowledge(kb.id)}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
-            <Tabs
-              activeKey={configTab}
-              onChange={setConfigTab}
-              items={[
-                {
-                  key: 'skills',
-                  label: <span><ThunderboltOutlined /> 技能配置</span>,
-                  children: (
-                    <div>
-                      <div style={{ fontWeight: 500, marginBottom: 12 }}>
-                        <InfoCircleOutlined style={{ marginRight: 4 }} />
-                        勾选技能后，该数字员工将根据用户输入自动匹配并调用对应技能：
+
+            <div
+              style={{
+                width: 300,
+                flexShrink: 0,
+                borderLeft: '1px solid #f0f0f0',
+                background: '#fafafa',
+                padding: '16px 14px',
+                overflow: 'auto',
+              }}
+            >
+              <div style={{ fontWeight: 600, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <ControlOutlined />
+                功能配置
+              </div>
+              <div style={{ fontSize: 12, color: '#999', marginBottom: 14, lineHeight: 1.5 }}>
+                仅开启的功能会在用户端对话框底部展示入口，关闭后入口不可见
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {FEATURE_FLAG_META
+                  .filter((item) => item.key !== 'deepThinking' && item.key !== 'webSearch')
+                  .map((item) => (
+                    <Card key={item.key} size="small" style={{ borderRadius: 8 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontWeight: 500, fontSize: 13 }}>{item.label}</div>
+                          <div style={{ fontSize: 11, color: '#999', marginTop: 2 }}>{item.description}</div>
+                        </div>
+                        <Switch
+                          size="small"
+                          checked={featureFlags[item.key]}
+                          checkedChildren="开"
+                          unCheckedChildren="关"
+                          onChange={(checked) =>
+                            setFeatureFlags((prev) => ({ ...prev, [item.key]: checked }))
+                          }
+                        />
                       </div>
-                      <Checkbox.Group
-                        value={selectedSkillIds}
-                        onChange={(vals) => setSelectedSkillIds(vals as string[])}
-                        style={{ width: '100%' }}
-                      >
-                        <Row gutter={[12, 12]}>
-                          {skills.map(renderSkillCard)}
-                        </Row>
-                      </Checkbox.Group>
-                      <div style={{ marginTop: 12, fontSize: 12, color: '#999' }}>
-                        已选择 {selectedSkillIds.length} 项技能
-                      </div>
-                    </div>
-                  ),
-                },
-                {
-                  key: 'knowledge',
-                  label: <span><DatabaseOutlined /> 知识配置</span>,
-                  children: (
-                    <div>
-                      <div style={{ fontWeight: 500, marginBottom: 12 }}>
-                        <InfoCircleOutlined style={{ marginRight: 4 }} />
-                        勾选知识资源，数字员工将基于这些知识来回答问题和处理任务：
-                      </div>
-                      <Checkbox.Group
-                        value={selectedKBIds}
-                        onChange={(vals) => setSelectedKBIds(vals as string[])}
-                        style={{ width: '100%' }}
-                      >
-                        <Row gutter={[12, 12]}>
-                          {knowledgeBases.map(renderKbCard)}
-                        </Row>
-                      </Checkbox.Group>
-                      <div style={{ marginTop: 12, fontSize: 12, color: '#999' }}>
-                        已选择 {selectedKBIds.length} 个知识资源
-                      </div>
-                    </div>
-                  ),
-                },
-              ]}
-            />
+                    </Card>
+                  ))}
+              </div>
+            </div>
           </div>
         )}
       </Modal>
+
+      <AiToolPickerModal
+        open={!!pickerType}
+        type={pickerType}
+        items={pickerType === 'skill' ? skillPickerItems : pickerType === 'knowledge' ? knowledgePickerItems : undefined}
+        showCreate={pickerType === 'skill'}
+        onClose={() => setPickerType(null)}
+        onSelectionChange={handlePickerSelectionChange}
+      />
 
       {/* Detail Modal */}
       <Modal

@@ -8,7 +8,7 @@ import {
   CheckCircleOutlined, ClockCircleOutlined, WarningOutlined,
   ScheduleOutlined, SyncOutlined, FileTextOutlined,
 } from '@ant-design/icons';
-import { taskLogs, digitalEmployees, type TaskLogItem } from '../../mock/data';
+import { taskLogs, digitalEmployees, indicatorLakeRecords, type TaskLogItem } from '../../mock/data';
 
 const statusIcon: Record<string, React.ReactNode> = {
   '待执行': <ClockCircleOutlined style={{ color: '#999' }} />,
@@ -243,6 +243,55 @@ const TaskLogs: React.FC = () => {
           </>
         )}
       </Modal>
+
+      <Card
+        style={{ borderRadius: 12, marginTop: 20 }}
+        title="产出指标入湖（集团宽表）"
+        extra={
+          <Button
+            type="link"
+            onClick={() => message.success('已触发同步至刘伟统一日志服务（演示）')}
+          >
+            同步入湖
+          </Button>
+        }
+      >
+        <p style={{ color: '#666', marginBottom: 12, fontSize: 13 }}>
+          按集团「数字员工指标统一宽表」规范存储，经省侧汇总后进入全网数据交换枢纽 / 集团大数据湖。
+        </p>
+        <Table
+          size="small"
+          rowKey={(r) => r.indicatorCode}
+          pagination={false}
+          dataSource={indicatorLakeRecords}
+          scroll={{ x: 1200 }}
+          columns={[
+            { title: '月账期', dataIndex: 'monthPeriod', width: 90 },
+            { title: '省份', dataIndex: 'provinceCode', width: 70 },
+            { title: '归属单位', dataIndex: 'belongUnit', width: 160, ellipsis: true },
+            { title: '员工编码', dataIndex: 'employeeCode', width: 140, render: (t: string) => <span style={{ fontFamily: 'monospace', fontSize: 12 }}>{t}</span> },
+            { title: '员工名称', dataIndex: 'employeeName', width: 110 },
+            { title: '条线', dataIndex: 'businessLine', width: 70 },
+            { title: '指标编码', dataIndex: 'indicatorCode', width: 180, ellipsis: true },
+            { title: '指标名称', dataIndex: 'indicatorName', width: 110 },
+            {
+              title: '清单项(JSON)',
+              dataIndex: 'listItemsJson',
+              ellipsis: true,
+              render: (t: string) => <span style={{ fontFamily: 'monospace', fontSize: 11 }}>{t}</span>,
+            },
+            { title: '数据来源', dataIndex: 'dataSource', width: 120 },
+            {
+              title: '同步状态',
+              dataIndex: 'syncStatus',
+              width: 90,
+              render: (s: string) => (
+                <Tag color={s === '已同步' ? 'success' : s === '失败' ? 'error' : 'processing'}>{s}</Tag>
+              ),
+            },
+          ]}
+        />
+      </Card>
     </div>
   );
 };

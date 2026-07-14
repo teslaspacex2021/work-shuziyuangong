@@ -13,21 +13,31 @@ import {
   PlusOutlined, ContactsOutlined, ClockCircleOutlined,
   ScheduleOutlined, TeamOutlined, ApartmentOutlined,
   MessageOutlined, UploadOutlined, IdcardOutlined,
+  GlobalOutlined, ApiOutlined, ToolOutlined,
+  DownloadOutlined, EyeOutlined, FileWordOutlined, FilePdfOutlined,
 } from '@ant-design/icons';
 import { useSearchParams, useLocation } from 'react-router-dom';
 import {
   digitalEmployees, conversations, tasks, skills, knowledgeBases,
-  scheduledTasks,
-  type ConversationItem, type ScheduledTask,
+  getAllScheduledTasks, persistCreatedScheduledTask, mockRetrievalFiles, getEmployeeFeatureFlags,
+  DISLIKE_REASON_OPTIONS, SCHEDULE_ASSISTANT_ID,
+  type ConversationItem, type ScheduledTask, type RetrievalFileItem,
 } from '../../mock/data';
+import ThirdScreenPanel from '../../components/ThirdScreenPanel';
+import ChatInputComposer from '../../components/ChatInputComposer';
 
 const { TextArea } = Input;
 
 interface ChatMsg {
+  id: string;
   role: 'user' | 'assistant';
   content: string;
   time: string;
   usedSkills?: string[];
+  retrievedFiles?: RetrievalFileItem[];
+  recalledFiles?: RetrievalFileItem[];
+  feedback?: 'like' | 'dislike' | null;
+  feedbackReason?: string;
 }
 
 const statusColor: Record<string, string> = {
@@ -58,6 +68,14 @@ const quickActions = [
   '查看最新的知识更新',
 ];
 
+const genMsgId = () => `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+const fileTypeIcon = (type: RetrievalFileItem['type']) => {
+  if (type === 'docx') return <FileWordOutlined style={{ color: '#2b579a', fontSize: 20 }} />;
+  if (type === 'pdf') return <FilePdfOutlined style={{ color: '#e4393c', fontSize: 20 }} />;
+  return <FileTextOutlined style={{ color: '#1677ff', fontSize: 20 }} />;
+};
+
 interface DeptNode {
   key: string;
   name: string;
@@ -82,9 +100,18 @@ const ChatPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const location = useLocation();
   const isUserLayout = location.pathname.startsWith('/user/');
-  const initialEmployeeId = searchParams.get('employeeId') || '';
-  const isNewChat = searchParams.get('newChat') === '1';
+  const isCreateScheduleIntent = searchParams.get('intent') === 'createSchedule';
+  const initialEmployeeId = searchParams.get('employeeId')
+    || (isCreateScheduleIntent ? SCHEDULE_ASSISTANT_ID : '');
+  const isNewChat = searchParams.get('newChat') === '1' || isCreateScheduleIntent;
   const initialMsg = searchParams.get('msg') || '';
+
+  const SCHEDULE_SUGGESTIONS = [
+    '帮我创建一个每天早上8点由小翼·客服执行的每日客户工单处理任务',
+    '每周一9点让小翼·营销自动生成周报',
+    '每月1日对小翼·财务执行月度报销检查',
+    '创建一个每天6点的数据质量巡检定时任务',
+  ];
 
   const [selectedConvId, setSelectedConvId] = useState<string>(
     () => initialEmployeeId || (!isUserLayout && !isNewChat ? (conversations[0]?.employeeId || '') : ''),
@@ -103,15 +130,30 @@ const ChatPage: React.FC = () => {
   const [selectedTreeNode, setSelectedTreeNode] = useState('');
 
   const [scheduleVisible, setScheduleVisible] = useState(false);
-  const [scheduleList, setScheduleList] = useState(scheduledTasks);
+  const [scheduleList, setScheduleList] = useState(() => getAllScheduledTasks());
   const [addScheduleVisible, setAddScheduleVisible] = useState(false);
   const [scheduleForm] = Form.useForm();
+  const scheduleBootstrapped = useRef(false);
 
   const [feedbackVisible, setFeedbackVisible] = useState(false);
   const [feedbackForm] = Form.useForm();
 
   const [summonEmployeeVisible, setSummonEmployeeVisible] = useState(false);
   const [summonSearch, setSummonSearch] = useState('');
+  /** 定时任务助手场景下「召唤专家」选中的执行员工（不切换当前对话） */
+  const [scheduleSummonedExpertId, setScheduleSummonedExpertId] = useState<string | null>(null);
+
+  const [thirdScreenOpen, setThirdScreenOpen] = useState(false);
+  const [thirdScreenFiles, setThirdScreenFiles] = useState<RetrievalFileItem[]>([]);
+  const [previewFile, setPreviewFile] = useState<RetrievalFileItem | null>(null);
+  const [deepThinkingOn] = useState(false);
+  const [webSearchOn] = useState(false);
+  const [suggestBatch, setSuggestBatch] = useState(0);
+  const [dislikeVisible, setDislikeVisible] = useState(false);
+  const [dislikeMsgKey, setDislikeMsgKey] = useState<{ empId: string; msgId: string } | null>(null);
+  const [dislikeForm] = Form.useForm();
+  const [retrieving, setRetrieving] = useState(false);
+  const [retrievingFiles, setRetrievingFiles] = useState<RetrievalFileItem[]>([]);
 
   useEffect(() => {
     if (initialEmployeeId && !activeConvIds.includes(initialEmployeeId)) {
@@ -126,9 +168,12 @@ const ChatPage: React.FC = () => {
   }, [isNewChat, initialEmployeeId, isUserLayout]);
 
   const isDigitalEmployeeNewChat = !isUserLayout && isNewChat;
-  const isNewConversationMode = (isUserLayout && !initialEmployeeId && !selectedConvId) || isDigitalEmployeeNewChat;
+  const isNewConversationMode =
+    isCreateScheduleIntent
+    || (isUserLayout && !initialEmployeeId && !selectedConvId)
+    || isDigitalEmployeeNewChat;
 
-  const activeEmployeeId = (isDigitalEmployeeNewChat && initialEmployeeId)
+  const activeEmployeeId = ((isDigitalEmployeeNewChat || isCreateScheduleIntent) && initialEmployeeId)
     ? initialEmployeeId
     : selectedConvId;
 
@@ -136,6 +181,30 @@ const ChatPage: React.FC = () => {
     () => digitalEmployees.find((e) => e.id === activeEmployeeId) || null,
     [activeEmployeeId],
   );
+
+  const featureFlags = useMemo(
+    () => getEmployeeFeatureFlags(selectedEmployee),
+    [selectedEmployee],
+  );
+
+  const displaySuggestedQuestions = useMemo(() => {
+    const list = isCreateScheduleIntent
+      ? SCHEDULE_SUGGESTIONS
+      : selectedEmployee?.suggestedQuestions?.length
+        ? selectedEmployee.suggestedQuestions
+        : (isUserLayout
+          ? ['要如何销售？', '公司对于软考有什么政策', '天翼云科技公司英文名称', '部门业务通知单 与 工作联系单 的区别']
+          : quickActions);
+    const start = (suggestBatch * 4) % Math.max(list.length, 1);
+    return [...list, ...list].slice(start, start + 4);
+  }, [selectedEmployee, suggestBatch, isUserLayout, isCreateScheduleIntent]);
+
+  const openThirdScreen = (files: RetrievalFileItem[], preview?: RetrievalFileItem | null) => {
+    setThirdScreenFiles(files);
+    setPreviewFile(preview ?? null);
+    setThirdScreenOpen(true);
+    setShowDetail(false);
+  };
 
   const allConversations = useMemo(() => {
     return activeConvIds.map((empId) => {
@@ -159,23 +228,43 @@ const ChatPage: React.FC = () => {
   }, [chatHistories, activeEmployeeId]);
 
   useEffect(() => {
-    if (activeEmployeeId && selectedEmployee && !chatHistories[activeEmployeeId]) {
+    if (!activeEmployeeId || !selectedEmployee) return;
+
+    if (isCreateScheduleIntent && !scheduleBootstrapped.current) {
+      scheduleBootstrapped.current = true;
+      setSelectedConvId(activeEmployeeId);
+      setActiveConvIds((prev) => (prev.includes(activeEmployeeId) ? prev : [activeEmployeeId, ...prev]));
       setChatHistories((prev) => ({
         ...prev,
         [activeEmployeeId]: [{
+          id: genMsgId(),
+          role: 'assistant',
+          content: `您好！我是 **${selectedEmployee.name}**，专门协助您创建周期性自动化任务。\n\n您可以：\n1. 直接用自然语言描述任务（例如：「每天早上8点处理客户工单」）\n2. 点击底部 **召唤专家**，选中要执行任务的数字员工\n\n我会整理任务名称、执行专家、执行频率并完成创建。`,
+          time: new Date().toLocaleTimeString(),
+        }],
+      }));
+      return;
+    }
+
+    if (!isCreateScheduleIntent && !chatHistories[activeEmployeeId]) {
+      setChatHistories((prev) => ({
+        ...prev,
+        [activeEmployeeId]: [{
+          id: genMsgId(),
           role: 'assistant',
           content: `您好！我是 **${selectedEmployee.name}**，${selectedEmployee.description}\n\n请问有什么可以帮您？`,
           time: new Date().toLocaleTimeString(),
         }],
       }));
     }
-  }, [activeEmployeeId, selectedEmployee, chatHistories]);
+  }, [activeEmployeeId, selectedEmployee, chatHistories, isCreateScheduleIntent]);
 
   const [initialMsgSent, setInitialMsgSent] = useState(false);
   useEffect(() => {
     if (initialMsg && activeEmployeeId && selectedEmployee && !initialMsgSent && chatHistories[activeEmployeeId]) {
       setInitialMsgSent(true);
       const userMsg: ChatMsg = {
+        id: genMsgId(),
         role: 'user',
         content: initialMsg,
         time: new Date().toLocaleTimeString(),
@@ -184,19 +273,36 @@ const ChatPage: React.FC = () => {
         ...prev,
         [activeEmployeeId]: [...(prev[activeEmployeeId] || []), userMsg],
       }));
+      const empId = activeEmployeeId;
+      const flags = getEmployeeFeatureFlags(selectedEmployee);
+      setLoading(true);
+      if (flags.thinkTank) {
+        setRetrieving(true);
+        setRetrievingFiles(mockRetrievalFiles.slice(0, 2));
+      }
       setTimeout(() => {
         const resp = mockResponses[Math.floor(Math.random() * mockResponses.length)];
         const usedSkills = selectedEmployee.skills.slice(0, Math.floor(Math.random() * 2) + 1);
+        const retrieved = flags.thinkTank ? mockRetrievalFiles.slice(0, 3) : undefined;
+        const recalled = flags.thinkTank || flags.attachmentUpload
+          ? [mockRetrievalFiles[Math.floor(Math.random() * mockRetrievalFiles.length)]]
+          : undefined;
         setChatHistories((prev) => ({
           ...prev,
-          [activeEmployeeId]: [...(prev[activeEmployeeId] || []), {
+          [empId]: [...(prev[empId] || []), {
+            id: genMsgId(),
             role: 'assistant' as const,
             content: resp,
             time: new Date().toLocaleTimeString(),
             usedSkills,
+            retrievedFiles: retrieved,
+            recalledFiles: recalled,
           }],
         }));
-      }, 1000 + Math.random() * 500);
+        setRetrieving(false);
+        setRetrievingFiles([]);
+        setLoading(false);
+      }, 1200 + Math.random() * 500);
     }
   }, [initialMsg, activeEmployeeId, selectedEmployee, chatHistories, initialMsgSent]);
 
@@ -257,11 +363,72 @@ const ChatPage: React.FC = () => {
     setContactsVisible(false);
   };
 
+  const scheduleSummonedExpert = useMemo(
+    () => digitalEmployees.find((e) => e.id === scheduleSummonedExpertId) || null,
+    [scheduleSummonedExpertId],
+  );
+
+  const buildScheduleFromText = (text: string): ScheduledTask => {
+    const matchedEmp = scheduleSummonedExpert
+      || digitalEmployees.find((e) => text.includes(e.name) && e.id !== SCHEDULE_ASSISTANT_ID)
+      || digitalEmployees.find((e) => e.id === 'DE-2026001')
+      || digitalEmployees.find((e) => e.id !== SCHEDULE_ASSISTANT_ID)
+      || digitalEmployees[0];
+    let cronLabel = '每天 09:00';
+    let cron = '0 9 * * *';
+    if (/每天.*8|早上.?8|早8/.test(text)) {
+      cronLabel = '每天 08:00';
+      cron = '0 8 * * *';
+    } else if (/每天.*6|早6|凌晨.?6/.test(text)) {
+      cronLabel = '每天 06:00';
+      cron = '0 6 * * *';
+    } else if (/每周一/.test(text)) {
+      cronLabel = '每周一 09:00';
+      cron = '0 9 * * 1';
+    } else if (/每月1|每月一/.test(text)) {
+      cronLabel = '每月1日 09:00';
+      cron = '0 9 1 * *';
+    } else if (/每周五/.test(text)) {
+      cronLabel = '每周五 17:00';
+      cron = '0 17 * * 5';
+    }
+
+    let name = '对话创建定时任务';
+    if (text.includes('工单')) name = '每日客户工单处理';
+    else if (text.includes('周报')) name = '周报自动生成';
+    else if (text.includes('报销')) name = '月度报销检查';
+    else if (text.includes('巡检') || text.includes('数据质量')) name = '数据质量巡检';
+    else {
+      const short = text.replace(/帮我|创建|一个|定时任务|任务/g, '').trim();
+      if (short.length >= 4 && short.length <= 24) name = short;
+    }
+
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const nextRun = `${tomorrow.toISOString().slice(0, 10)} ${cronLabel.includes('08:00') ? '08:00' : cronLabel.includes('06:00') ? '06:00' : cronLabel.includes('17:00') ? '17:00' : '09:00'}`;
+
+    const today = new Date().toISOString().slice(0, 10);
+    return {
+      id: `ST${String(scheduleList.length + 1).padStart(3, '0')}`,
+      name,
+      employeeId: matchedEmp.id,
+      employeeName: matchedEmp.name,
+      cron,
+      cronLabel,
+      enabled: true,
+      nextRun,
+      description: text.slice(0, 80),
+      effectiveFrom: today,
+    };
+  };
+
   const handleSend = () => {
     if (!inputValue.trim() || loading || !activeEmployeeId || !selectedEmployee) return;
+    const userText = inputValue.trim();
     const userMsg: ChatMsg = {
+      id: genMsgId(),
       role: 'user',
-      content: inputValue.trim(),
+      content: userText,
       time: new Date().toLocaleTimeString(),
     };
     setChatHistories((prev) => ({
@@ -272,21 +439,119 @@ const ChatPage: React.FC = () => {
     setLoading(true);
 
     const empId = activeEmployeeId;
+    const flags = getEmployeeFeatureFlags(selectedEmployee);
+
+    if (isCreateScheduleIntent) {
+      setTimeout(() => {
+        const task = buildScheduleFromText(userText);
+        persistCreatedScheduledTask(task);
+        setScheduleList((prev) => [task, ...prev.filter((t) => t.id !== task.id)]);
+        const reply = [
+          '已根据您的描述创建定时任务，配置如下：',
+          '',
+          `**任务名称**：${task.name}`,
+          `**执行专家**：${task.employeeName}${scheduleSummonedExpert ? '（已召唤选中）' : ''}`,
+          `**执行频率**：${task.cronLabel}`,
+          `**Cron**：\`${task.cron}\``,
+          `**生效日期**：${task.effectiveFrom || '-'}${task.effectiveTo ? ` ~ ${task.effectiveTo}` : ' 起'}`,
+          `**下次执行**：${task.nextRun}`,
+          `**状态**：已启用`,
+          '',
+          '任务已生效。您可返回「定时任务」页面查看与管理，或继续告诉我其他需要创建的定时任务。',
+        ].join('\n');
+        setChatHistories((prev) => ({
+          ...prev,
+          [empId]: [...(prev[empId] || []), {
+            id: genMsgId(),
+            role: 'assistant',
+            content: reply,
+            time: new Date().toLocaleTimeString(),
+          }],
+        }));
+        message.success(`定时任务「${task.name}」已创建`);
+        setLoading(false);
+      }, 900);
+      return;
+    }
+
+    if (flags.thinkTank) {
+      setRetrieving(true);
+      setRetrievingFiles(mockRetrievalFiles.slice(0, 2));
+    }
+
     setTimeout(() => {
       const resp = mockResponses[Math.floor(Math.random() * mockResponses.length)];
       const emp = digitalEmployees.find((e) => e.id === empId);
-      const usedSkills = emp ? emp.skills.slice(0, Math.floor(Math.random() * 2) + 1) : [];
+      const usedSkills = flags.skill && emp
+        ? emp.skills.slice(0, Math.floor(Math.random() * 2) + 1)
+        : [];
+      const retrieved = flags.thinkTank ? mockRetrievalFiles.slice(0, 4) : undefined;
+      const recalled = flags.thinkTank
+        ? mockRetrievalFiles.slice(0, 1 + Math.floor(Math.random() * 2))
+        : undefined;
       setChatHistories((prev) => ({
         ...prev,
         [empId]: [...(prev[empId] || []), {
+          id: genMsgId(),
           role: 'assistant',
-          content: resp,
+          content: resp + (deepThinkingOn ? '\n\n（已启用深度思考）' : '') + (webSearchOn ? '\n\n（已参考联网搜索结果）' : ''),
           time: new Date().toLocaleTimeString(),
-          usedSkills,
+          usedSkills: usedSkills.length ? usedSkills : undefined,
+          retrievedFiles: retrieved,
+          recalledFiles: recalled,
         }],
       }));
+      setRetrieving(false);
+      setRetrievingFiles([]);
       setLoading(false);
-    }, 1000 + Math.random() * 500);
+    }, 1200 + Math.random() * 600);
+  };
+
+  const applyMessageFeedback = (
+    empId: string,
+    msgId: string,
+    feedback: 'like' | 'dislike' | null,
+    reason?: string,
+  ) => {
+    setChatHistories((prev) => ({
+      ...prev,
+      [empId]: (prev[empId] || []).map((m) =>
+        m.id === msgId
+          ? { ...m, feedback, feedbackReason: reason }
+          : m,
+      ),
+    }));
+  };
+
+  const handleLike = (empId: string, msg: ChatMsg) => {
+    const next = msg.feedback === 'like' ? null : 'like';
+    applyMessageFeedback(empId, msg.id, next);
+    if (next === 'like') message.success('感谢反馈，已记录点赞（对齐数字人统一反馈入湖）');
+  };
+
+  const openDislike = (empId: string, msg: ChatMsg) => {
+    if (msg.feedback === 'dislike') {
+      applyMessageFeedback(empId, msg.id, null);
+      return;
+    }
+    setDislikeMsgKey({ empId, msgId: msg.id });
+    dislikeForm.resetFields();
+    setDislikeVisible(true);
+  };
+
+  const submitDislike = () => {
+    dislikeForm.validateFields().then((values) => {
+      if (!dislikeMsgKey) return;
+      applyMessageFeedback(
+        dislikeMsgKey.empId,
+        dislikeMsgKey.msgId,
+        'dislike',
+        values.reasonCode,
+      );
+      message.success('已提交点踩反馈，将同步至统一日志服务');
+      setDislikeVisible(false);
+      setDislikeMsgKey(null);
+    });
   };
 
   const toggleSchedule = (id: string) => {
@@ -306,6 +571,7 @@ const ChatPage: React.FC = () => {
         enabled: true,
         nextRun: '待计算',
         description: values.description || '',
+        effectiveFrom: new Date().toISOString().slice(0, 10),
       };
       setScheduleList((prev) => [...prev, newTask]);
       message.success('定时任务已创建');
@@ -453,9 +719,13 @@ const ChatPage: React.FC = () => {
 
             {/* Suggested Questions */}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'center', marginBottom: 32, maxWidth: 700 }}>
-              {(isUserLayout
-                ? ['要如何销售？', '公司对于软考有什么政策', '天翼云科技公司英文名称', '部门业务通知单 与 工作联系单 的区别']
-                : ['帮我处理今日待办工作', '生成本周工作总结', '分析最近的业务数据', '查看最新的知识更新']
+              {(selectedEmployee && featureFlags.suggestedQuestions
+                ? displaySuggestedQuestions
+                : !selectedEmployee
+                  ? (isUserLayout
+                    ? ['要如何销售？', '公司对于软考有什么政策', '天翼云科技公司英文名称', '部门业务通知单 与 工作联系单 的区别']
+                    : quickActions)
+                  : []
               ).map((q) => (
                 <div
                   key={q}
@@ -471,62 +741,39 @@ const ChatPage: React.FC = () => {
                   {q}
                 </div>
               ))}
-              <div style={{ padding: '8px 16px', fontSize: 14, color: '#1677ff', cursor: 'pointer' }}>
-                ↻ 换一换
-              </div>
+              {(!selectedEmployee || featureFlags.suggestedQuestions) && (
+                <div
+                  style={{ padding: '8px 16px', fontSize: 14, color: '#1677ff', cursor: 'pointer' }}
+                  onClick={() => setSuggestBatch((b) => b + 1)}
+                >
+                  ↻ 换一换
+                </div>
+              )}
             </div>
 
-            {/* Input Area */}
-            <div style={{ width: '100%', maxWidth: 700, marginBottom: 24 }}>
-              <div style={{
-                border: '1px solid #e8e8e8', borderRadius: 12, padding: '12px 16px',
-                background: '#fff', boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-              }}>
-                <Input
-                  placeholder="请输入指令或问题和我对话吧"
-                  value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
-                  variant="borderless"
-                  style={{ fontSize: 15, marginBottom: 8 }}
-                  suffix={
-                    <Button
-                      type="primary"
-                      shape="circle"
-                      icon={<SendOutlined />}
-                      size="small"
-                      style={{ background: '#333' }}
-                    />
+            {/* Input Area — 对齐数字人门户对话框 */}
+            <div style={{ width: '100%', maxWidth: 720, marginBottom: 24 }}>
+              <ChatInputComposer
+                value={inputValue}
+                onChange={setInputValue}
+                onSend={() => {
+                  if (!inputValue.trim()) return;
+                  if (!selectedEmployee) {
+                    setSummonEmployeeVisible(true);
+                    return;
                   }
-                />
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <Tooltip title="上传文件">
-                    <Button type="text" icon={<PaperClipOutlined />} size="small" style={{ color: '#999' }} />
-                  </Tooltip>
-                  <Button
-                    size="small"
-                    style={{ borderRadius: 6, borderColor: '#ff4d4f', color: '#ff4d4f', fontWeight: 500 }}
-                    icon={<ThunderboltOutlined />}
-                  >
-                    深度思考
-                  </Button>
-                  <Button
-                    size="small"
-                    style={{ borderRadius: 6, borderColor: '#52c41a', color: '#52c41a', fontWeight: 500 }}
-                    icon={<SearchOutlined />}
-                  >
-                    全网搜索
-                  </Button>
-                  <Button
-                    size="small"
-                    type="dashed"
-                    icon={<RobotOutlined />}
-                    onClick={() => setSummonEmployeeVisible(true)}
-                    style={{ borderRadius: 6, color: '#1677ff', borderColor: '#1677ff', fontWeight: 500 }}
-                  >
-                    {isUserLayout ? '唤起数字员工' : '选择数字员工'}
-                  </Button>
-                </div>
-              </div>
+                  handleSend();
+                }}
+                placeholder={
+                  isUserLayout
+                    ? '向天翼云数字人提问，例如：如何修改 OA 密码？公文格式规范有哪些？'
+                    : '请输入指令或问题和我对话吧'
+                }
+                featureFlags={null}
+                showAllWhenNoFlags
+                onSummonEmployee={() => setSummonEmployeeVisible(true)}
+                summonLabel={isUserLayout ? '切换专家' : '选择数字员工'}
+              />
             </div>
           </div>
 
@@ -592,7 +839,7 @@ const ChatPage: React.FC = () => {
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <Badge dot color={statusColor[selectedEmployee.status]} offset={[-2, 32]}>
-                <Avatar size={36} src={selectedEmployee.avatar} />
+                <Avatar size={36} src={selectedEmployee.avatar} icon={<RobotOutlined />} />
               </Badge>
               <div>
                 <div style={{ fontWeight: 600, fontSize: 15 }}>{selectedEmployee.name}</div>
@@ -618,7 +865,10 @@ const ChatPage: React.FC = () => {
               <Button
                 type="text"
                 icon={<InfoCircleOutlined />}
-                onClick={() => setShowDetail(!showDetail)}
+                onClick={() => {
+                  setShowDetail(!showDetail);
+                  if (!showDetail) setThirdScreenOpen(false);
+                }}
                 style={{ color: showDetail ? '#1677ff' : undefined }}
               >
                 查看详情
@@ -630,11 +880,11 @@ const ChatPage: React.FC = () => {
             {/* Chat Messages */}
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
               <div style={{ flex: 1, overflow: 'auto', padding: '20px 24px' }}>
-                {currentMessages.length <= 1 && (
+                {currentMessages.length <= 1 && featureFlags.suggestedQuestions && (
                   <div style={{ marginBottom: 20 }}>
-                    <p style={{ color: '#999', fontSize: 13, marginBottom: 12 }}>快捷操作：</p>
+                    <p style={{ color: '#999', fontSize: 13, marginBottom: 12 }}>猜你想问：</p>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                      {quickActions.map((action) => (
+                      {displaySuggestedQuestions.map((action) => (
                         <Tag
                           key={action}
                           onClick={() => setInputValue(action)}
@@ -646,13 +896,19 @@ const ChatPage: React.FC = () => {
                           {action}
                         </Tag>
                       ))}
+                      <Tag
+                        onClick={() => setSuggestBatch((b) => b + 1)}
+                        style={{ cursor: 'pointer', borderRadius: 16, padding: '4px 14px', color: '#1677ff', borderColor: '#1677ff' }}
+                      >
+                        ↻ 换一换
+                      </Tag>
                     </div>
                   </div>
                 )}
 
-                {currentMessages.map((msg, idx) => (
+                {currentMessages.map((msg) => (
                   <div
-                    key={idx}
+                    key={msg.id}
                     style={{
                       display: 'flex', justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start',
                       marginBottom: 16, gap: 10,
@@ -677,6 +933,62 @@ const ChatPage: React.FC = () => {
                           return <span key={i}>{part}</span>;
                         })}
                       </div>
+
+                      {msg.role === 'assistant' && msg.retrievedFiles && msg.retrievedFiles.length > 0 && (
+                        <div
+                          onClick={() => openThirdScreen(msg.retrievedFiles!)}
+                          style={{
+                            marginTop: 8, padding: '8px 12px', borderRadius: 8,
+                            background: '#f0f5ff', border: '1px solid #d6e4ff',
+                            cursor: 'pointer', fontSize: 12, color: '#1677ff',
+                          }}
+                        >
+                          <SearchOutlined style={{ marginRight: 6 }} />
+                          已检索 {msg.retrievedFiles.length} 个相关文件，点击查看检索结果
+                        </div>
+                      )}
+
+                      {msg.role === 'assistant' && msg.recalledFiles && msg.recalledFiles.length > 0 && (
+                        <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                          {msg.recalledFiles.map((file) => (
+                            <div
+                              key={file.id}
+                              style={{
+                                display: 'flex', alignItems: 'center', gap: 10,
+                                padding: '8px 12px', borderRadius: 8, background: '#fff',
+                                border: '1px solid #f0f0f0', boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+                              }}
+                            >
+                              {fileTypeIcon(file.type)}
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontSize: 13, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  {file.name}
+                                </div>
+                                <div style={{ fontSize: 11, color: '#999' }}>{file.size || file.type.toUpperCase()}</div>
+                              </div>
+                              <Space size={4}>
+                                <Tooltip title="预览">
+                                  <Button
+                                    type="text"
+                                    size="small"
+                                    icon={<EyeOutlined />}
+                                    onClick={() => openThirdScreen(msg.recalledFiles!, file)}
+                                  />
+                                </Tooltip>
+                                <Tooltip title="下载">
+                                  <Button
+                                    type="text"
+                                    size="small"
+                                    icon={<DownloadOutlined />}
+                                    onClick={() => message.success(`开始下载：${file.name}`)}
+                                  />
+                                </Tooltip>
+                              </Space>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
                       {msg.role === 'assistant' && msg.usedSkills && msg.usedSkills.length > 0 && (
                         <div style={{ marginTop: 4, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
                           <span style={{ fontSize: 11, color: '#999' }}>调用技能：</span>
@@ -692,9 +1004,32 @@ const ChatPage: React.FC = () => {
                         <span style={{ fontSize: 11, color: '#bbb' }}>{msg.time}</span>
                         {msg.role === 'assistant' && (
                           <Space size={4}>
-                            <Tooltip title="复制"><CopyOutlined style={{ fontSize: 12, color: '#bbb', cursor: 'pointer' }} onClick={() => message.success('已复制')} /></Tooltip>
-                            <Tooltip title="点赞"><LikeOutlined style={{ fontSize: 12, color: '#bbb', cursor: 'pointer' }} /></Tooltip>
-                            <Tooltip title="不满意"><DislikeOutlined style={{ fontSize: 12, color: '#bbb', cursor: 'pointer' }} /></Tooltip>
+                            <Tooltip title="复制">
+                              <CopyOutlined
+                                style={{ fontSize: 12, color: '#bbb', cursor: 'pointer' }}
+                                onClick={() => message.success('已复制')}
+                              />
+                            </Tooltip>
+                            <Tooltip title="点赞">
+                              <LikeOutlined
+                                style={{
+                                  fontSize: 12,
+                                  color: msg.feedback === 'like' ? '#1677ff' : '#bbb',
+                                  cursor: 'pointer',
+                                }}
+                                onClick={() => handleLike(activeEmployeeId, msg)}
+                              />
+                            </Tooltip>
+                            <Tooltip title="点踩">
+                              <DislikeOutlined
+                                style={{
+                                  fontSize: 12,
+                                  color: msg.feedback === 'dislike' ? '#ff4d4f' : '#bbb',
+                                  cursor: 'pointer',
+                                }}
+                                onClick={() => openDislike(activeEmployeeId, msg)}
+                              />
+                            </Tooltip>
                           </Space>
                         )}
                       </div>
@@ -705,17 +1040,39 @@ const ChatPage: React.FC = () => {
                   </div>
                 ))}
 
-                {loading && (
+                {(loading || retrieving) && (
                   <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
-                    <Avatar size={32} style={{ background: '#1677ff', flexShrink: 0 }}><RobotOutlined /></Avatar>
-                    <div style={{
-                      background: '#fff', padding: '12px 16px',
-                      borderRadius: '16px 16px 16px 4px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
-                    }}>
-                      <div>
-                        <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: '#999', margin: '0 2px', animation: 'blink 1.4s infinite both' }} />
-                        <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: '#999', margin: '0 2px', animation: 'blink 1.4s infinite both', animationDelay: '0.2s' }} />
-                        <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: '#999', margin: '0 2px', animation: 'blink 1.4s infinite both', animationDelay: '0.4s' }} />
+                    <Avatar size={32} src={selectedEmployee.avatar} style={{ flexShrink: 0 }} />
+                    <div style={{ maxWidth: '70%' }}>
+                      <div style={{
+                        background: '#fff', padding: '12px 16px',
+                        borderRadius: '16px 16px 16px 4px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+                      }}>
+                        {retrieving && featureFlags.thinkTank ? (
+                          <div>
+                            <div style={{ fontSize: 13, color: '#666', marginBottom: 8 }}>
+                              <SearchOutlined style={{ marginRight: 6, color: '#1677ff' }} />
+                              正在检索相关文件与知识…
+                            </div>
+                            {retrievingFiles.map((f) => (
+                              <div key={f.id} style={{ fontSize: 12, color: '#8c8c8c', marginBottom: 4 }}>
+                                · {f.name}
+                              </div>
+                            ))}
+                            <a
+                              style={{ fontSize: 12 }}
+                              onClick={() => openThirdScreen(retrievingFiles.length ? retrievingFiles : mockRetrievalFiles)}
+                            >
+                              查看检索过程
+                            </a>
+                          </div>
+                        ) : (
+                          <div>
+                            <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: '#999', margin: '0 2px', animation: 'blink 1.4s infinite both' }} />
+                            <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: '#999', margin: '0 2px', animation: 'blink 1.4s infinite both', animationDelay: '0.2s' }} />
+                            <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: '#999', margin: '0 2px', animation: 'blink 1.4s infinite both', animationDelay: '0.4s' }} />
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -723,31 +1080,46 @@ const ChatPage: React.FC = () => {
                 <div ref={chatEndRef} />
               </div>
 
-              {/* Input Bar */}
+              {/* Input Bar — 对齐数字人门户对话框 */}
               <div style={{ background: '#fff', padding: '12px 20px 16px', borderTop: '1px solid #f0f0f0' }}>
-                <div style={{ marginBottom: 8 }}>
-                  <Button
-                    type="dashed"
-                    icon={<RobotOutlined />}
-                    onClick={() => setSummonEmployeeVisible(true)}
-                    style={{ borderRadius: 8, color: '#1677ff', borderColor: '#1677ff' }}
-                  >
-                    {isUserLayout ? `当前：${selectedEmployee?.name || '选择数字员工'}` : (selectedEmployee?.name || '选择数字员工')}
-                  </Button>
-                </div>
-                <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
-                  <Tooltip title="上传文件"><Button type="text" icon={<PaperClipOutlined />} /></Tooltip>
-                  <TextArea
-                    value={inputValue}
-                    onChange={(e) => setInputValue(e.target.value)}
-                    onPressEnter={(e) => { if (!e.shiftKey) { e.preventDefault(); handleSend(); } }}
-                    placeholder={`向 ${selectedEmployee.name} 发送消息...`}
-                    autoSize={{ minRows: 1, maxRows: 4 }}
-                    style={{ borderRadius: 8, resize: 'none' }}
-                  />
-                  <Tooltip title="语音输入"><Button type="text" icon={<AudioOutlined />} /></Tooltip>
-                  <Button type="primary" icon={<SendOutlined />} onClick={handleSend} loading={loading} style={{ borderRadius: 8 }} />
-                </div>
+                {isCreateScheduleIntent && scheduleSummonedExpert && (
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10,
+                    padding: '8px 12px', background: '#fff7e6', borderRadius: 8, border: '1px solid #ffd591',
+                  }}>
+                    <Avatar size={28} src={scheduleSummonedExpert.avatar} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 500 }}>
+                        已召唤执行专家：{scheduleSummonedExpert.name}
+                      </div>
+                      <div style={{ fontSize: 12, color: '#999' }}>
+                        {scheduleSummonedExpert.department} · {scheduleSummonedExpert.position}
+                      </div>
+                    </div>
+                    <Button
+                      type="link"
+                      size="small"
+                      onClick={() => setScheduleSummonedExpertId(null)}
+                    >
+                      取消选中
+                    </Button>
+                  </div>
+                )}
+                <ChatInputComposer
+                  value={inputValue}
+                  onChange={setInputValue}
+                  onSend={handleSend}
+                  loading={loading}
+                  placeholder={
+                    isCreateScheduleIntent
+                      ? '描述要创建的定时任务，或先召唤执行专家…'
+                      : `向${selectedEmployee.name}提问，例如：如何修改 OA 密码？公文格式规范有哪些？`
+                  }
+                  featureFlags={featureFlags}
+                  showAllWhenNoFlags={false}
+                  onSummonEmployee={() => setSummonEmployeeVisible(true)}
+                  summonLabel={isCreateScheduleIntent ? '召唤专家' : '切换专家'}
+                />
               </div>
             </div>
 
@@ -932,6 +1304,15 @@ const ChatPage: React.FC = () => {
                 />
               </div>
             </div>
+
+            <ThirdScreenPanel
+              open={thirdScreenOpen}
+              files={thirdScreenFiles}
+              previewFile={previewFile}
+              onClose={() => { setThirdScreenOpen(false); setPreviewFile(null); }}
+              onPreview={(file) => setPreviewFile(file)}
+              onBackToList={() => setPreviewFile(null)}
+            />
           </div>
         </div>
       )}
@@ -1248,13 +1629,23 @@ const ChatPage: React.FC = () => {
 
       {/* Summon Digital Employee Modal */}
       <Modal
-        title={<span><RobotOutlined style={{ marginRight: 8 }} />选择数字员工</span>}
+        title={
+          <span>
+            <RobotOutlined style={{ marginRight: 8 }} />
+            {isCreateScheduleIntent ? '召唤专家（选择执行员工）' : '选择数字员工'}
+          </span>
+        }
         open={summonEmployeeVisible}
         onCancel={() => { setSummonEmployeeVisible(false); setSummonSearch(''); }}
         footer={null}
         width={800}
         styles={{ body: { padding: '16px 24px' } }}
       >
+        {isCreateScheduleIntent && (
+          <div style={{ fontSize: 13, color: '#666', marginBottom: 12 }}>
+            选中专家后仍停留在定时任务助手对话中，该专家将作为任务的执行员工。
+          </div>
+        )}
         <Input
           placeholder="搜索数字员工名称、岗位、部门..."
           prefix={<SearchOutlined />}
@@ -1265,14 +1656,32 @@ const ChatPage: React.FC = () => {
         />
         <div style={{ maxHeight: 460, overflow: 'auto' }}>
           <Row gutter={[12, 12]}>
-            {summonFilteredEmployees.map((emp) => (
+            {(isCreateScheduleIntent
+              ? summonFilteredEmployees.filter((e) => e.id !== SCHEDULE_ASSISTANT_ID)
+              : summonFilteredEmployees
+            ).map((emp) => (
               <Col key={emp.id} xs={24} sm={12} md={8}>
                 <Card
                   size="small"
                   hoverable
-                  style={{ borderRadius: 10 }}
+                  style={{
+                    borderRadius: 10,
+                    borderColor: isCreateScheduleIntent && scheduleSummonedExpertId === emp.id
+                      ? '#e4393c'
+                      : undefined,
+                    background: isCreateScheduleIntent && scheduleSummonedExpertId === emp.id
+                      ? '#fff1f0'
+                      : undefined,
+                  }}
                   styles={{ body: { padding: '14px 16px' } }}
                   onClick={() => {
+                    if (isCreateScheduleIntent) {
+                      setScheduleSummonedExpertId(emp.id);
+                      message.success(`已选中执行专家：${emp.name}`);
+                      setSummonEmployeeVisible(false);
+                      setSummonSearch('');
+                      return;
+                    }
                     startChatWithEmployee(emp.id);
                     setSummonEmployeeVisible(false);
                     setSummonSearch('');
@@ -1301,13 +1710,39 @@ const ChatPage: React.FC = () => {
                 </Card>
               </Col>
             ))}
-            {summonFilteredEmployees.length === 0 && (
+            {(isCreateScheduleIntent
+              ? summonFilteredEmployees.filter((e) => e.id !== SCHEDULE_ASSISTANT_ID)
+              : summonFilteredEmployees
+            ).length === 0 && (
               <Col span={24}>
                 <Empty description="暂无匹配的数字员工" style={{ padding: 40 }} />
               </Col>
             )}
           </Row>
         </div>
+      </Modal>
+
+      {/* Unified dislike feedback (aligned with digital human) */}
+      <Modal
+        title="点踩反馈"
+        open={dislikeVisible}
+        onOk={submitDislike}
+        onCancel={() => { setDislikeVisible(false); setDislikeMsgKey(null); }}
+        okText="提交"
+        width={440}
+      >
+        <p style={{ color: '#666', marginBottom: 16 }}>请选择不满意的原因，反馈将按数字人统一规范写入日志服务：</p>
+        <Form form={dislikeForm} layout="vertical">
+          <Form.Item name="reasonCode" label="原因" rules={[{ required: true, message: '请选择原因' }]}>
+            <Select
+              placeholder="请选择"
+              options={DISLIKE_REASON_OPTIONS.map((o) => ({ label: o.label, value: o.value }))}
+            />
+          </Form.Item>
+          <Form.Item name="reasonText" label="补充说明">
+            <Input.TextArea rows={3} placeholder="可选，补充更多细节" maxLength={200} showCount />
+          </Form.Item>
+        </Form>
       </Modal>
     </div>
   );
