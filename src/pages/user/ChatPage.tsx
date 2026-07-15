@@ -5,15 +5,14 @@ import {
   Card, Form, Select, Row, Col, Upload,
 } from 'antd';
 import {
-  SendOutlined, SearchOutlined, InfoCircleOutlined,
-  PaperClipOutlined, AudioOutlined, LikeOutlined,
+  SearchOutlined, InfoCircleOutlined,
+  LikeOutlined,
   DislikeOutlined, CopyOutlined, RobotOutlined,
   UserOutlined, ThunderboltOutlined, BookOutlined,
   CloseOutlined, DatabaseOutlined, FileTextOutlined,
   PlusOutlined, ContactsOutlined,
   TeamOutlined, ApartmentOutlined,
   MessageOutlined, UploadOutlined, IdcardOutlined,
-  GlobalOutlined, ApiOutlined, ToolOutlined,
   DownloadOutlined, EyeOutlined, FileWordOutlined, FilePdfOutlined,
 } from '@ant-design/icons';
 import { useSearchParams, useLocation } from 'react-router-dom';
@@ -25,8 +24,6 @@ import {
 } from '../../mock/data';
 import ThirdScreenPanel from '../../components/ThirdScreenPanel';
 import ChatInputComposer from '../../components/ChatInputComposer';
-
-const { TextArea } = Input;
 
 interface ChatMsg {
   id: string;

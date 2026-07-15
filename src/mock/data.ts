@@ -777,7 +777,7 @@ export const digitalEmployees: DigitalEmployee[] = [
     description: '我是小翼·定时任务助手，专门帮您通过对话创建与配置周期性自动化任务。可召唤其他数字员工作为执行专家。',
     level: 'L3', tokensQuota: 3000000, tokensUsed: 180000, taskCompleteRate: 97.5,
     lastActive: '在线', onboardDate: '2026-03-01', relatedAgents: ['通用问答智能体'],
-    likes: 86, dislikes: 1, talk: 320,
+    likes: 86, dislikes: 1, heat: 320,
     featureFlags: {
       attachmentUpload: true, deepThinking: true, webSearch: true,
       skill: true, mcp: true, thinkTank: true, suggestedQuestions: true,
