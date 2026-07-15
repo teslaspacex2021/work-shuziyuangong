@@ -66,7 +66,10 @@ const NewChatPage: React.FC = () => {
 
   const handleSend = () => {
     if (!inputValue.trim()) return;
-    navigate(`/digital-employee/chat?employeeId=${selectedEmployeeId}&newChat=1&msg=${encodeURIComponent(inputValue.trim())}`);
+    // 进入对话记录页，定位到当前选中的数字员工并带上首条消息
+    navigate(
+      `/digital-employee/chat?employeeId=${selectedEmployeeId}&msg=${encodeURIComponent(inputValue.trim())}`,
+    );
   };
 
   const handleSelectEmployee = (empId: string) => {
@@ -158,7 +161,7 @@ const NewChatPage: React.FC = () => {
             featureFlags={featureFlags}
             showAllWhenNoFlags={false}
             onSummonEmployee={() => setSummonVisible(true)}
-            summonLabel="切换专家"
+            summonLabel="召唤员工"
           />
         </div>
       </div>

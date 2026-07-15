@@ -209,7 +209,7 @@ const ChatInputComposer: React.FC<ChatInputComposerProps> = ({
             onFocus={() => setFocused(true)}
             onBlur={() => setFocused(false)}
             placeholder={placeholder}
-            rows={3}
+            rows={Math.min(10, Math.max(3, (value.match(/\n/g)?.length ?? 0) + 1))}
             style={{
               display: 'block',
               width: '100%',

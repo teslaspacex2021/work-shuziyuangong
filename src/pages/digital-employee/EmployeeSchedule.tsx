@@ -2,12 +2,13 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
   Card, Table, Tag, Button, Space, Switch, Modal, Form, Input, Select,
   Row, Col, Statistic, message, Typography, Empty, Divider, DatePicker,
+  Avatar, Badge,
 } from 'antd';
 import {
   PlusOutlined, ScheduleOutlined, ClockCircleOutlined,
   CheckCircleOutlined, PauseCircleOutlined,
   HistoryOutlined, CloseCircleOutlined, MinusCircleOutlined,
-  SyncOutlined, MessageOutlined,
+  SyncOutlined, MessageOutlined, SearchOutlined, RobotOutlined, IdcardOutlined,
 } from '@ant-design/icons';
 import { useLocation, useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
@@ -16,6 +17,32 @@ import {
   type ScheduledTask, type ScheduledTaskRun,
 } from '../../mock/data';
 import { BRAND_PRIMARY } from '../../theme/brand';
+
+/** 新建定时任务时带入对话输入框的结构化提示词 */
+function buildCreateScheduleDraft(employeeName: string): string {
+  const today = dayjs().format('YYYY-MM-DD');
+  const endDate = dayjs().add(6, 'month').format('YYYY-MM-DD');
+  return [
+    '请帮我创建一个定时任务，参数如下：',
+    '',
+    `【任务标题】${employeeName}·日常任务`,
+    `【执行员工】${employeeName}`,
+    '【执行频率】每天 08:00',
+    '【Cron表达式】0 8 * * *',
+    '【任务描述】请补充具体执行内容，例如：汇总待办、生成日报、巡检异常等',
+    `【生效日期】${today} ~ ${endDate}`,
+    '【启用状态】启用',
+    '',
+    '请按以上配置创建；如需调整标题、频率或描述，直接改上面字段后发送即可。',
+  ].join('\n');
+}
+
+const empStatusColor: Record<string, string> = {
+  ACTIVE: '#52c41a', TRAINING: '#1677ff', SUSPENDED: '#faad14', TERMINATED: '#ff4d4f',
+};
+const empStatusLabel: Record<string, string> = {
+  ACTIVE: '在线', TRAINING: '训练中', SUSPENDED: '已暂停', TERMINATED: '已停用',
+};
 
 const CRON_OPTIONS = [
   { value: '每天 08:00', cron: '0 8 * * *' },
@@ -47,15 +74,37 @@ const EmployeeSchedule: React.FC = () => {
   const [detailVisible, setDetailVisible] = useState(false);
   const [selectedTask, setSelectedTask] = useState<ScheduledTask | null>(null);
   const [editForm] = Form.useForm();
+  const [pickVisible, setPickVisible] = useState(false);
+  const [pickSearch, setPickSearch] = useState('');
 
   useEffect(() => {
     setTasks(getAllScheduledTasks());
   }, [location.key]);
 
-  const goCreateViaChat = () => {
+  const pickableEmployees = useMemo(() => {
+    const list = digitalEmployees.filter((e) => e.id !== SCHEDULE_ASSISTANT_ID);
+    if (!pickSearch.trim()) return list;
+    const q = pickSearch.toLowerCase();
+    return list.filter((e) =>
+      e.name.toLowerCase().includes(q)
+      || e.position.toLowerCase().includes(q)
+      || e.department.toLowerCase().includes(q),
+    );
+  }, [pickSearch]);
+
+  const openCreatePicker = () => {
+    setPickSearch('');
+    setPickVisible(true);
+  };
+
+  const goCreateViaChat = (employeeId: string) => {
     const base = location.pathname.startsWith('/user/') ? '/user' : '/digital-employee';
+    const emp = digitalEmployees.find((e) => e.id === employeeId);
+    const draft = buildCreateScheduleDraft(emp?.name || '数字员工');
+    setPickVisible(false);
+    setPickSearch('');
     navigate(
-      `${base}/chat?employeeId=${SCHEDULE_ASSISTANT_ID}&intent=createSchedule&newChat=1`,
+      `${base}/chat?employeeId=${employeeId}&draft=${encodeURIComponent(draft)}`,
     );
   };
 
@@ -240,17 +289,79 @@ const EmployeeSchedule: React.FC = () => {
         style={{ borderRadius: 12 }}
         title="定时任务列表"
         extra={
-          <Button type="primary" icon={<PlusOutlined />} onClick={goCreateViaChat}>
+          <Button type="primary" icon={<PlusOutlined />} onClick={openCreatePicker}>
             新建定时任务
           </Button>
         }
       >
         <div style={{ marginBottom: 12, fontSize: 13, color: '#999' }}>
           <MessageOutlined style={{ marginRight: 6 }} />
-          点击「新建定时任务」将进入与数字员工的对话页，通过自然语言创建定时任务
+          点击「新建定时任务」先选择执行员工，再进入其对应对话页，通过自然语言创建定时任务
         </div>
         <Table dataSource={tasks} columns={columns} rowKey="id" pagination={false} />
       </Card>
+
+      <Modal
+        title={<span><RobotOutlined style={{ marginRight: 8 }} />选择执行定时任务的数字员工</span>}
+        open={pickVisible}
+        onCancel={() => { setPickVisible(false); setPickSearch(''); }}
+        footer={null}
+        width={800}
+        styles={{ body: { padding: '16px 24px' } }}
+      >
+        <Input
+          placeholder="搜索数字员工名称、岗位、部门..."
+          prefix={<SearchOutlined />}
+          value={pickSearch}
+          onChange={(e) => setPickSearch(e.target.value)}
+          allowClear
+          style={{ marginBottom: 16, borderRadius: 8 }}
+        />
+        <div style={{ maxHeight: 460, overflow: 'auto' }}>
+          <Row gutter={[12, 12]}>
+            {pickableEmployees.map((emp) => (
+              <Col key={emp.id} xs={24} sm={12} md={8}>
+                <Card
+                  size="small"
+                  hoverable
+                  style={{ borderRadius: 10 }}
+                  styles={{ body: { padding: '14px 16px' } }}
+                  onClick={() => goCreateViaChat(emp.id)}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <Badge dot color={empStatusColor[emp.status]} offset={[-2, 32]}>
+                      <Avatar size={40} src={emp.avatar} style={{ flexShrink: 0 }} />
+                    </Badge>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ fontWeight: 600, fontSize: 14 }}>{emp.name}</span>
+                        <Tag
+                          color={empStatusColor[emp.status]}
+                          style={{ fontSize: 10, lineHeight: '16px', padding: '0 4px', margin: 0, borderRadius: 4 }}
+                        >
+                          {empStatusLabel[emp.status]}
+                        </Tag>
+                      </div>
+                      <div style={{
+                        fontSize: 12, color: '#999', marginTop: 2,
+                        display: 'flex', alignItems: 'center', gap: 4,
+                      }}>
+                        <IdcardOutlined style={{ fontSize: 11 }} />
+                        {emp.department} · {emp.position}
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              </Col>
+            ))}
+            {pickableEmployees.length === 0 && (
+              <Col span={24}>
+                <Empty description="暂无匹配的数字员工" style={{ padding: 40 }} />
+              </Col>
+            )}
+          </Row>
+        </div>
+      </Modal>
 
       <Modal
         title={

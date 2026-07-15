@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   Avatar, Tag, Button, Input, Tooltip, Badge, Space, Empty,
   Descriptions, Tabs, List, Divider, message, Modal,
-  Card, Switch, Form, Select, Row, Col, Upload,
+  Card, Form, Select, Row, Col, Upload,
 } from 'antd';
 import {
   SendOutlined, SearchOutlined, InfoCircleOutlined,
@@ -10,8 +10,8 @@ import {
   DislikeOutlined, CopyOutlined, RobotOutlined,
   UserOutlined, ThunderboltOutlined, BookOutlined,
   CloseOutlined, DatabaseOutlined, FileTextOutlined,
-  PlusOutlined, ContactsOutlined, ClockCircleOutlined,
-  ScheduleOutlined, TeamOutlined, ApartmentOutlined,
+  PlusOutlined, ContactsOutlined,
+  TeamOutlined, ApartmentOutlined,
   MessageOutlined, UploadOutlined, IdcardOutlined,
   GlobalOutlined, ApiOutlined, ToolOutlined,
   DownloadOutlined, EyeOutlined, FileWordOutlined, FilePdfOutlined,
@@ -105,6 +105,7 @@ const ChatPage: React.FC = () => {
     || (isCreateScheduleIntent ? SCHEDULE_ASSISTANT_ID : '');
   const isNewChat = searchParams.get('newChat') === '1' || isCreateScheduleIntent;
   const initialMsg = searchParams.get('msg') || '';
+  const initialDraft = searchParams.get('draft') || '';
 
   const SCHEDULE_SUGGESTIONS = [
     '帮我创建一个每天早上8点由小翼·客服执行的每日客户工单处理任务',
@@ -118,7 +119,7 @@ const ChatPage: React.FC = () => {
   );
   const [convSearchText, setConvSearchText] = useState('');
   const [showDetail, setShowDetail] = useState(false);
-  const [inputValue, setInputValue] = useState('');
+  const [inputValue, setInputValue] = useState(initialDraft);
   const [loading, setLoading] = useState(false);
   const [chatHistories, setChatHistories] = useState<Record<string, ChatMsg[]>>({});
   const [activeConvIds, setActiveConvIds] = useState<string[]>(conversations.map((c) => c.employeeId));
@@ -129,10 +130,7 @@ const ChatPage: React.FC = () => {
   const [contactSearch, setContactSearch] = useState('');
   const [selectedTreeNode, setSelectedTreeNode] = useState('');
 
-  const [scheduleVisible, setScheduleVisible] = useState(false);
   const [scheduleList, setScheduleList] = useState(() => getAllScheduledTasks());
-  const [addScheduleVisible, setAddScheduleVisible] = useState(false);
-  const [scheduleForm] = Form.useForm();
   const scheduleBootstrapped = useRef(false);
 
   const [feedbackVisible, setFeedbackVisible] = useState(false);
@@ -162,10 +160,16 @@ const ChatPage: React.FC = () => {
   }, [initialEmployeeId]);
 
   useEffect(() => {
-    if (!isUserLayout && isNewChat && initialEmployeeId) {
+    if (initialEmployeeId) {
       setSelectedConvId(initialEmployeeId);
     }
-  }, [isNewChat, initialEmployeeId, isUserLayout]);
+  }, [initialEmployeeId]);
+
+  useEffect(() => {
+    if (initialDraft) {
+      setInputValue(initialDraft);
+    }
+  }, [initialDraft]);
 
   const isDigitalEmployeeNewChat = !isUserLayout && isNewChat;
   const isNewConversationMode =
@@ -554,32 +558,6 @@ const ChatPage: React.FC = () => {
     });
   };
 
-  const toggleSchedule = (id: string) => {
-    setScheduleList((prev) => prev.map((s) => s.id === id ? { ...s, enabled: !s.enabled } : s));
-    message.success('定时任务状态已更新');
-  };
-
-  const addSchedule = () => {
-    scheduleForm.validateFields().then((values) => {
-      const newTask: ScheduledTask = {
-        id: `ST${String(scheduleList.length + 1).padStart(3, '0')}`,
-        name: values.name,
-        employeeId: values.employeeId,
-        employeeName: digitalEmployees.find((e) => e.id === values.employeeId)?.name || '',
-        cron: values.cron,
-        cronLabel: values.cronLabel,
-        enabled: true,
-        nextRun: '待计算',
-        description: values.description || '',
-        effectiveFrom: new Date().toISOString().slice(0, 10),
-      };
-      setScheduleList((prev) => [...prev, newTask]);
-      message.success('定时任务已创建');
-      setAddScheduleVisible(false);
-      scheduleForm.resetFields();
-    });
-  };
-
   const handleFeedbackSubmit = () => {
     feedbackForm.validateFields().then(() => {
       message.success('感谢您的反馈，我们会尽快处理！');
@@ -630,12 +608,6 @@ const ChatPage: React.FC = () => {
               <PlusOutlined
                 style={{ fontSize: 16, color: '#999', cursor: 'pointer' }}
                 onClick={() => setContactsVisible(true)}
-              />
-            </Tooltip>
-            <Tooltip title="定时任务">
-              <ScheduleOutlined
-                style={{ fontSize: 16, color: '#999', cursor: 'pointer' }}
-                onClick={() => setScheduleVisible(true)}
               />
             </Tooltip>
             <SearchOutlined style={{ fontSize: 16, color: '#999', cursor: 'pointer' }} />
@@ -1471,100 +1443,6 @@ const ChatPage: React.FC = () => {
             )}
           </div>
         </div>
-      </Modal>
-
-      {/* Scheduled Tasks Modal */}
-      <Modal
-        title={<span><ScheduleOutlined style={{ marginRight: 8 }} />定时任务</span>}
-        open={scheduleVisible}
-        onCancel={() => setScheduleVisible(false)}
-        footer={null}
-        width={650}
-      >
-        <div style={{ marginBottom: 16, textAlign: 'right' }}>
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => setAddScheduleVisible(true)}>新建定时任务</Button>
-        </div>
-        <List
-          dataSource={scheduleList}
-          renderItem={(item) => (
-            <List.Item
-              actions={[
-                <Switch
-                  key="switch"
-                  checked={item.enabled}
-                  onChange={() => toggleSchedule(item.id)}
-                  size="small"
-                />,
-              ]}
-            >
-              <List.Item.Meta
-                avatar={<ClockCircleOutlined style={{ fontSize: 20, color: item.enabled ? '#1677ff' : '#999' }} />}
-                title={
-                  <Space>
-                    <span>{item.name}</span>
-                    <Tag>{item.cronLabel}</Tag>
-                    {!item.enabled && <Tag color="default">已暂停</Tag>}
-                  </Space>
-                }
-                description={
-                  <div style={{ fontSize: 12 }}>
-                    <div>执行员工：{item.employeeName} · {item.description}</div>
-                    <div style={{ color: '#999' }}>
-                      {item.lastRun ? `上次执行：${item.lastRun}` : '未执行过'} · 下次执行：{item.nextRun}
-                    </div>
-                  </div>
-                }
-              />
-            </List.Item>
-          )}
-        />
-      </Modal>
-
-      {/* Add Schedule Modal */}
-      <Modal
-        title="新建定时任务"
-        open={addScheduleVisible}
-        onOk={addSchedule}
-        onCancel={() => { setAddScheduleVisible(false); scheduleForm.resetFields(); }}
-        okText="创建"
-        width={500}
-      >
-        <Form form={scheduleForm} layout="vertical" style={{ marginTop: 16 }}>
-          <Form.Item name="name" label="任务名称" rules={[{ required: true, message: '请输入任务名称' }]}>
-            <Input placeholder="请输入任务名称" />
-          </Form.Item>
-          <Form.Item name="employeeId" label="执行员工" rules={[{ required: true, message: '请选择执行员工' }]}>
-            <Select
-              placeholder="选择数字员工"
-              options={digitalEmployees.filter((e) => e.status === 'ACTIVE').map((e) => ({ label: `${e.name} (${e.department})`, value: e.id }))}
-            />
-          </Form.Item>
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="cronLabel" label="执行频率" rules={[{ required: true, message: '请选择频率' }]}>
-                <Select
-                  placeholder="选择频率"
-                  options={[
-                    { label: '每天 08:00', value: '每天 08:00' },
-                    { label: '每天 09:00', value: '每天 09:00' },
-                    { label: '每周一 09:00', value: '每周一 09:00' },
-                    { label: '每周五 17:00', value: '每周五 17:00' },
-                    { label: '每月1日 09:00', value: '每月1日 09:00' },
-                    { label: '每月15日 09:00', value: '每月15日 09:00' },
-                  ]}
-                />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="cron" label="Cron表达式">
-                <Input placeholder="可选，如 0 8 * * *" />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Form.Item name="description" label="任务描述">
-            <Input.TextArea rows={2} placeholder="描述该定时任务的执行内容" />
-          </Form.Item>
-        </Form>
       </Modal>
 
       {/* Feedback Modal */}
