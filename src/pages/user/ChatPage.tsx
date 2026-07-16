@@ -1611,7 +1611,26 @@ const ChatPage: React.FC = () => {
           <Form.Item name="reasonCode" label="原因" rules={[{ required: true, message: '请选择原因' }]}>
             <Select
               placeholder="请选择"
-              options={DISLIKE_REASON_OPTIONS.map((o) => ({ label: o.label, value: o.value }))}
+              optionLabelProp="label"
+              options={DISLIKE_REASON_OPTIONS.map((o) => ({
+                label: o.label,
+                value: o.value,
+                title: o.description,
+              }))}
+              optionRender={(option) => {
+                const item = DISLIKE_REASON_OPTIONS.find((o) => o.value === option.value);
+                return (
+                  <div style={{ padding: '2px 0' }}>
+                    <div style={{ fontWeight: 500 }}>{option.label}</div>
+                    {item && (
+                      <div style={{ fontSize: 12, color: '#999', lineHeight: 1.4, whiteSpace: 'normal' }}>
+                        {item.description}
+                      </div>
+                    )}
+                  </div>
+                );
+              }}
+              listHeight={360}
             />
           </Form.Item>
           <Form.Item name="reasonText" label="补充说明">

@@ -17,6 +17,7 @@ import {
   type ScheduledTask, type ScheduledTaskRun,
 } from '../../mock/data';
 import { BRAND_PRIMARY } from '../../theme/brand';
+import { fullHeightModalStyles } from '../../components/EmployeeFormModal';
 
 /** 新建定时任务时带入对话输入框的结构化提示词 */
 function buildCreateScheduleDraft(employeeName: string): string {
@@ -373,7 +374,12 @@ const EmployeeSchedule: React.FC = () => {
         open={detailVisible}
         onCancel={closeDetail}
         width={1080}
-        styles={{ body: { padding: 0 } }}
+        centered={false}
+        style={{ top: 0, paddingBottom: 0, maxWidth: '100vw' }}
+        styles={{
+          ...fullHeightModalStyles,
+          body: { ...fullHeightModalStyles.body, padding: 0, overflow: 'hidden' },
+        }}
         footer={[
           <Button key="cancel" onClick={closeDetail}>
             取消
@@ -384,8 +390,8 @@ const EmployeeSchedule: React.FC = () => {
         ]}
       >
         {selectedTask && (
-          <div style={{ display: 'flex', minHeight: 480 }}>
-            <div style={{ flex: 1, minWidth: 0, padding: '20px 24px', overflow: 'auto' }}>
+          <div style={{ display: 'flex', height: '100%', minHeight: 0 }}>
+            <div style={{ flex: 1, minWidth: 0, minHeight: 0, padding: '20px 24px', overflow: 'hidden' }}>
               <div style={{ fontWeight: 600, marginBottom: 16, fontSize: 15 }}>基本信息</div>
               <Form form={editForm} layout="vertical">
                 <Form.Item
@@ -449,6 +455,7 @@ const EmployeeSchedule: React.FC = () => {
                 background: '#fafafa',
                 display: 'flex',
                 flexDirection: 'column',
+                minHeight: 0,
               }}
             >
               <div
@@ -459,12 +466,13 @@ const EmployeeSchedule: React.FC = () => {
                   display: 'flex',
                   alignItems: 'center',
                   gap: 8,
+                  flexShrink: 0,
                 }}
               >
                 <HistoryOutlined />
                 运行历史 ({runHistory.length})
               </div>
-              <div style={{ flex: 1, overflow: 'auto', padding: '8px 12px 16px' }}>
+              <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', padding: '8px 12px 16px' }}>
                 {!runHistory.length ? (
                   <Empty
                     image={Empty.PRESENTED_IMAGE_SIMPLE}

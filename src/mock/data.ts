@@ -434,17 +434,74 @@ export interface MessageFeedback {
   employeeCode: string;
   userId: string;
   feedbackType: 'like' | 'dislike';
-  reasonCode?: 'off_topic' | 'fact_error' | 'attitude' | 'other';
+  reasonCode?: DislikeReasonCode;
   reasonText?: string;
   createTime: string;
 }
 
-export const DISLIKE_REASON_OPTIONS = [
-  { value: 'off_topic', label: '答非所问' },
-  { value: 'fact_error', label: '事实错误' },
-  { value: 'attitude', label: '态度问题' },
-  { value: 'other', label: '其他' },
-] as const;
+/** 用户反馈类型（点踩原因） */
+export type DislikeReasonCode =
+  | 'inaccurate'
+  | 'off_topic'
+  | 'templated'
+  | 'too_slow'
+  | 'poor_ux'
+  | 'missing_capability'
+  | 'render_issue'
+  | 'context_error'
+  | 'hallucination';
+
+export const DISLIKE_REASON_OPTIONS: {
+  value: DislikeReasonCode;
+  label: string;
+  description: string;
+}[] = [
+  {
+    value: 'inaccurate',
+    label: '结果不准确',
+    description: '查询的结果数据、引用的知识/数据集不准确或与预期不符',
+  },
+  {
+    value: 'off_topic',
+    label: '答非所问',
+    description: '推荐的产品、客户与需求脱节，或答案与问题毫无关联',
+  },
+  {
+    value: 'templated',
+    label: '方案模板化',
+    description: '生成的解决方案过于模板化，缺乏针对性难以直接使用',
+  },
+  {
+    value: 'too_slow',
+    label: '耗时长',
+    description: '生成回答内容等待的时间过长，影响工作效率',
+  },
+  {
+    value: 'poor_ux',
+    label: '交互体验差',
+    description: '操作步骤繁琐、功能入口难找或问题理解需多次反复澄清',
+  },
+  {
+    value: 'missing_capability',
+    label: '能力有缺失',
+    description: '查不到所需业务知识、话术评分维度不完善',
+  },
+  {
+    value: 'render_issue',
+    label: '内容渲染问题',
+    description: '如回答过程中输出中断、重复输出、脚标问题',
+  },
+  {
+    value: 'context_error',
+    label: '上下文关联错误',
+    description: '连续提问回答中，本条内容与之前的问答记录毫无关联',
+  },
+  {
+    value: 'hallucination',
+    label: '输出幻觉',
+    description: '输出了虚假不存在的内容（包括不存在的文件名、图片）',
+  },
+];
 
 /** 产出指标入湖宽表样例（集团规范） */
 export interface IndicatorLakeRecord {
