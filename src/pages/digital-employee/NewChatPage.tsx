@@ -40,12 +40,20 @@ const NewChatPage: React.FC = () => {
   );
 
   const suggestedQuestions = useMemo(() => {
-    const list = selectedEmployee?.suggestedQuestions?.length
-      ? selectedEmployee.suggestedQuestions
-      : ['帮我处理今日待办工作', '生成本周工作总结', '分析最近的业务数据', '查看最新的知识更新'];
+    // 新对话欢迎区：门户级引导问法；会话内追问由 ChatPage 按意图生成
+    const list = [
+      '帮我处理今日待办工作',
+      '生成本周工作总结',
+      '分析最近的业务数据',
+      '查看最新的知识更新',
+      '如何唤起其他数字员工？',
+      '公司软考有什么政策？',
+      '帮我梳理本周重点事项',
+      '有哪些可用的数字员工？',
+    ];
     const start = (suggestBatch * 4) % Math.max(list.length, 1);
     return [...list, ...list].slice(start, start + 4);
-  }, [selectedEmployee, suggestBatch]);
+  }, [suggestBatch]);
 
   const bottomEmployees = useMemo(
     () => bottomEmployeeIds

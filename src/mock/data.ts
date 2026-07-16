@@ -259,7 +259,7 @@ export const FEATURE_FLAG_META: {
   { key: 'skill', label: 'Skill', description: '允许调用已配置 Skill' },
   { key: 'mcp', label: 'MCP', description: '允许调用 MCP 工具' },
   { key: 'thinkTank', label: '智库', description: '允许检索企业智库/知识库' },
-  { key: 'suggestedQuestions', label: '猜你想问', description: '开启后自动生成并展示快捷提问模板' },
+  { key: 'suggestedQuestions', label: '猜你想问', description: '开启后在会话 AI 回复下方按对话意图展示追问模板' },
 ];
 
 export const getEmployeeFeatureFlags = (emp?: DigitalEmployee | null): EmployeeFeatureFlags => ({

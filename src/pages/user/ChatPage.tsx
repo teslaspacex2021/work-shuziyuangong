@@ -35,6 +35,8 @@ interface ChatMsg {
   recalledFiles?: RetrievalFileItem[];
   feedback?: 'like' | 'dislike' | null;
   feedbackReason?: string;
+  /** 会话级「猜你想问」：由当轮对话意图生成，挂在该条 AI 回复下 */
+  suggestedQuestions?: string[];
 }
 
 const statusColor: Record<string, string> = {
@@ -64,6 +66,88 @@ const quickActions = [
   '分析最近的业务数据',
   '查看最新的知识更新',
 ];
+
+const SCHEDULE_SUGGESTIONS = [
+  '帮我创建一个每天早上8点由小翼·客服执行的每日客户工单处理任务',
+  '每周一9点让小翼·营销自动生成周报',
+  '每月1日对小翼·财务执行月度报销检查',
+  '创建一个每天6点的数据质量巡检定时任务',
+  '帮我改一下任务执行频率',
+  '再创建一个每周五下班前的周报汇总任务',
+  '列出刚才创建的定时任务配置',
+  '如何暂停或启用已有定时任务？',
+];
+
+/** 根据用户本轮输入意图生成会话级追问模板（非员工静态配置） */
+const buildIntentSuggestedQuestions = (userText: string, opts?: { scheduleIntent?: boolean }): string[] => {
+  if (opts?.scheduleIntent) return SCHEDULE_SUGGESTIONS;
+
+  const t = userText.trim();
+  if (/工单|超期|待办|投诉|客服|升级/.test(t)) {
+    return [
+      '如何处理超期工单？',
+      '今日待办工单有多少？',
+      '客户投诉升级流程是什么？',
+      '查看督办系统操作手册',
+      '超期工单需要通知谁？',
+      '如何批量关闭已完成工单？',
+      '工单超时的考核规则是什么？',
+      '帮我汇总本周投诉趋势',
+    ];
+  }
+  if (/报销|财务|发票|预算|对账/.test(t)) {
+    return [
+      '本月报销进度如何？',
+      '发票验真要注意什么？',
+      '预算超支怎么处理？',
+      '如何导出对账明细？',
+      '差旅报销的材料清单有哪些？',
+      '费用科目如何正确归类？',
+      '帮我核对一笔异常报销',
+      '财务审批时效一般多久？',
+    ];
+  }
+  if (/营销|周报|文案|推广|竞品/.test(t)) {
+    return [
+      '生成本周营销周报',
+      '帮我写一篇产品推广文案',
+      '分析竞品协同办公市场格局',
+      '本周活动转化数据怎么样？',
+      '给我三个可用的短标题',
+      '如何优化落地页转化？',
+      '竞品最新动态有哪些？',
+      '帮我整理一份投放复盘提纲',
+    ];
+  }
+  if (/知识|手册|规范|政策|OA|公文/.test(t)) {
+    return [
+      '相关制度原文在哪里？',
+      '有没有操作步骤说明？',
+      '类似场景的历史案例有哪些？',
+      '需要走哪些审批节点？',
+      '帮我摘要这份规范的要点',
+      '常见易错点是什么？',
+      '如何申请权限开通？',
+      '有没有配套的培训材料？',
+    ];
+  }
+  return [
+    '能再详细说明一下吗？',
+    '相关操作步骤是什么？',
+    '有没有类似的历史案例？',
+    '需要我帮你生成一份摘要吗？',
+    '下一步建议怎么做？',
+    '这个问题还有哪些注意点？',
+    '能否给出可直接落地的清单？',
+    '帮我把结论整理成纪要',
+  ];
+};
+
+const sliceSuggestBatch = (list: string[], batch: number, size = 4) => {
+  if (!list.length) return [];
+  const start = (batch * size) % list.length;
+  return [...list, ...list].slice(start, start + size);
+};
 
 const genMsgId = () => `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
@@ -103,13 +187,6 @@ const ChatPage: React.FC = () => {
   const isNewChat = searchParams.get('newChat') === '1' || isCreateScheduleIntent;
   const initialMsg = searchParams.get('msg') || '';
   const initialDraft = searchParams.get('draft') || '';
-
-  const SCHEDULE_SUGGESTIONS = [
-    '帮我创建一个每天早上8点由小翼·客服执行的每日客户工单处理任务',
-    '每周一9点让小翼·营销自动生成周报',
-    '每月1日对小翼·财务执行月度报销检查',
-    '创建一个每天6点的数据质量巡检定时任务',
-  ];
 
   const [selectedConvId, setSelectedConvId] = useState<string>(
     () => initialEmployeeId || (!isUserLayout && !isNewChat ? (conversations[0]?.employeeId || '') : ''),
@@ -188,17 +265,13 @@ const ChatPage: React.FC = () => {
     [selectedEmployee],
   );
 
-  const displaySuggestedQuestions = useMemo(() => {
-    const list = isCreateScheduleIntent
-      ? SCHEDULE_SUGGESTIONS
-      : selectedEmployee?.suggestedQuestions?.length
-        ? selectedEmployee.suggestedQuestions
-        : (isUserLayout
-          ? ['要如何销售？', '公司对于软考有什么政策', '天翼云科技公司英文名称', '部门业务通知单 与 工作联系单 的区别']
-          : quickActions);
-    const start = (suggestBatch * 4) % Math.max(list.length, 1);
-    return [...list, ...list].slice(start, start + 4);
-  }, [selectedEmployee, suggestBatch, isUserLayout, isCreateScheduleIntent]);
+  /** 未选员工时的门户欢迎区快捷问（非会话级） */
+  const welcomeSuggestedQuestions = useMemo(() => {
+    const list = isUserLayout
+      ? ['要如何销售？', '公司对于软考有什么政策', '天翼云科技公司英文名称', '部门业务通知单 与 工作联系单 的区别']
+      : quickActions;
+    return sliceSuggestBatch(list, suggestBatch);
+  }, [suggestBatch, isUserLayout]);
 
   const openThirdScreen = (files: RetrievalFileItem[], preview?: RetrievalFileItem | null) => {
     setThirdScreenFiles(files);
@@ -228,6 +301,27 @@ const ChatPage: React.FC = () => {
     return chatHistories[activeEmployeeId] || [];
   }, [chatHistories, activeEmployeeId]);
 
+  const lastAssistantMsgId = useMemo(() => {
+    for (let i = currentMessages.length - 1; i >= 0; i -= 1) {
+      if (currentMessages[i].role === 'assistant') return currentMessages[i].id;
+    }
+    return null;
+  }, [currentMessages]);
+
+  const sessionSuggestPool = useMemo(() => {
+    const lastAssistant = [...currentMessages].reverse().find((m) => m.role === 'assistant');
+    return lastAssistant?.suggestedQuestions || [];
+  }, [currentMessages]);
+
+  const displaySessionSuggestedQuestions = useMemo(
+    () => sliceSuggestBatch(sessionSuggestPool, suggestBatch),
+    [sessionSuggestPool, suggestBatch],
+  );
+
+  useEffect(() => {
+    setSuggestBatch(0);
+  }, [activeEmployeeId, lastAssistantMsgId]);
+
   useEffect(() => {
     if (!activeEmployeeId || !selectedEmployee) return;
 
@@ -242,6 +336,7 @@ const ChatPage: React.FC = () => {
           role: 'assistant',
           content: `您好！我是 **${selectedEmployee.name}**，专门协助您创建周期性自动化任务。\n\n您可以：\n1. 直接用自然语言描述任务（例如：「每天早上8点处理客户工单」）\n2. 点击底部 **召唤专家**，选中要执行任务的数字员工\n\n我会整理任务名称、执行专家、执行频率并完成创建。`,
           time: new Date().toLocaleTimeString(),
+          suggestedQuestions: buildIntentSuggestedQuestions('', { scheduleIntent: true }),
         }],
       }));
       return;
@@ -298,6 +393,9 @@ const ChatPage: React.FC = () => {
             usedSkills,
             retrievedFiles: retrieved,
             recalledFiles: recalled,
+            suggestedQuestions: flags.suggestedQuestions
+              ? buildIntentSuggestedQuestions(initialMsg)
+              : undefined,
           }],
         }));
         setRetrieving(false);
@@ -467,6 +565,9 @@ const ChatPage: React.FC = () => {
             role: 'assistant',
             content: reply,
             time: new Date().toLocaleTimeString(),
+            suggestedQuestions: flags.suggestedQuestions
+              ? buildIntentSuggestedQuestions(userText, { scheduleIntent: true })
+              : undefined,
           }],
         }));
         message.success(`定时任务「${task.name}」已创建`);
@@ -500,6 +601,9 @@ const ChatPage: React.FC = () => {
           usedSkills: usedSkills.length ? usedSkills : undefined,
           retrievedFiles: retrieved,
           recalledFiles: recalled,
+          suggestedQuestions: flags.suggestedQuestions
+            ? buildIntentSuggestedQuestions(userText)
+            : undefined,
         }],
       }));
       setRetrieving(false);
@@ -686,16 +790,9 @@ const ChatPage: React.FC = () => {
               <div style={{ fontSize: 15, color: '#666' }}>{isUserLayout ? '请问有什么可以帮您的吗？' : '请选择一位数字员工开始对话吧'}</div>
             </div>
 
-            {/* Suggested Questions */}
+            {/* Suggested Questions — 仅未选员工的门户欢迎区 */}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'center', marginBottom: 32, maxWidth: 700 }}>
-              {(selectedEmployee && featureFlags.suggestedQuestions
-                ? displaySuggestedQuestions
-                : !selectedEmployee
-                  ? (isUserLayout
-                    ? ['要如何销售？', '公司对于软考有什么政策', '天翼云科技公司英文名称', '部门业务通知单 与 工作联系单 的区别']
-                    : quickActions)
-                  : []
-              ).map((q) => (
+              {welcomeSuggestedQuestions.map((q) => (
                 <div
                   key={q}
                   onClick={() => setInputValue(q)}
@@ -710,14 +807,12 @@ const ChatPage: React.FC = () => {
                   {q}
                 </div>
               ))}
-              {(!selectedEmployee || featureFlags.suggestedQuestions) && (
-                <div
-                  style={{ padding: '8px 16px', fontSize: 14, color: '#1677ff', cursor: 'pointer' }}
-                  onClick={() => setSuggestBatch((b) => b + 1)}
-                >
-                  ↻ 换一换
-                </div>
-              )}
+              <div
+                style={{ padding: '8px 16px', fontSize: 14, color: '#1677ff', cursor: 'pointer' }}
+                onClick={() => setSuggestBatch((b) => b + 1)}
+              >
+                ↻ 换一换
+              </div>
             </div>
 
             {/* Input Area — 对齐数字人门户对话框 */}
@@ -849,32 +944,6 @@ const ChatPage: React.FC = () => {
             {/* Chat Messages */}
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
               <div style={{ flex: 1, overflow: 'auto', padding: '20px 24px' }}>
-                {currentMessages.length <= 1 && featureFlags.suggestedQuestions && (
-                  <div style={{ marginBottom: 20 }}>
-                    <p style={{ color: '#999', fontSize: 13, marginBottom: 12 }}>猜你想问：</p>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                      {displaySuggestedQuestions.map((action) => (
-                        <Tag
-                          key={action}
-                          onClick={() => setInputValue(action)}
-                          style={{
-                            cursor: 'pointer', borderRadius: 16, padding: '4px 14px',
-                            border: '1px solid #d9d9d9', background: '#fff', fontSize: 13,
-                          }}
-                        >
-                          {action}
-                        </Tag>
-                      ))}
-                      <Tag
-                        onClick={() => setSuggestBatch((b) => b + 1)}
-                        style={{ cursor: 'pointer', borderRadius: 16, padding: '4px 14px', color: '#1677ff', borderColor: '#1677ff' }}
-                      >
-                        ↻ 换一换
-                      </Tag>
-                    </div>
-                  </div>
-                )}
-
                 {currentMessages.map((msg) => (
                   <div
                     key={msg.id}
@@ -1002,6 +1071,36 @@ const ChatPage: React.FC = () => {
                           </Space>
                         )}
                       </div>
+
+                      {msg.role === 'assistant'
+                        && msg.id === lastAssistantMsgId
+                        && featureFlags.suggestedQuestions
+                        && displaySessionSuggestedQuestions.length > 0
+                        && !loading && (
+                        <div style={{ marginTop: 12 }}>
+                          <p style={{ color: '#999', fontSize: 13, marginBottom: 8 }}>猜你想问：</p>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                            {displaySessionSuggestedQuestions.map((action) => (
+                              <Tag
+                                key={action}
+                                onClick={() => setInputValue(action)}
+                                style={{
+                                  cursor: 'pointer', borderRadius: 16, padding: '4px 14px',
+                                  border: '1px solid #d9d9d9', background: '#fff', fontSize: 13,
+                                }}
+                              >
+                                {action}
+                              </Tag>
+                            ))}
+                            <Tag
+                              onClick={() => setSuggestBatch((b) => b + 1)}
+                              style={{ cursor: 'pointer', borderRadius: 16, padding: '4px 14px', color: '#1677ff', borderColor: '#1677ff' }}
+                            >
+                              ↻ 换一换
+                            </Tag>
+                          </div>
+                        </div>
+                      )}
                     </div>
                     {msg.role === 'user' && (
                       <Avatar size={32} style={{ background: '#e4393c', flexShrink: 0 }}><UserOutlined /></Avatar>
