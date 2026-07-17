@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Dropdown, message } from 'antd';
 import {
   SendOutlined,
@@ -12,7 +12,7 @@ import {
 } from '@ant-design/icons';
 import type { EmployeeFeatureFlags } from '../mock/data';
 import { BRAND_PRIMARY } from '../theme/brand';
-import AiToolPickerModal, { type AiToolPickerType } from './AiToolPickerModal';
+import AiToolPickerModal, { type AiToolPickerItem, type AiToolPickerType } from './AiToolPickerModal';
 
 export interface ChatInputComposerProps {
   value: string;
@@ -29,6 +29,7 @@ export interface ChatInputComposerProps {
   onOpenThinkTank?: () => void;
   onOpenSkill?: () => void;
   onOpenMcp?: () => void;
+  mcpItems?: AiToolPickerItem[];
   maxWidth?: number | string;
 }
 
@@ -87,12 +88,25 @@ const ChatInputComposer: React.FC<ChatInputComposerProps> = ({
   onOpenThinkTank,
   onOpenSkill,
   onOpenMcp,
+  mcpItems,
   maxWidth,
 }) => {
   const [modelKey, setModelKey] = useState('auto');
   const [focused, setFocused] = useState(false);
   const [pickerType, setPickerType] = useState<AiToolPickerType | null>(null);
-  const [selectedCounts, setSelectedCounts] = useState({ skill: 3, knowledge: 0, mcp: 3 });
+  const [selectedCounts, setSelectedCounts] = useState({
+    skill: 3,
+    knowledge: 0,
+    mcp: mcpItems ? mcpItems.filter((item) => item.selected).length : 3,
+  });
+
+  useEffect(() => {
+    if (!mcpItems) return;
+    setSelectedCounts((prev) => ({
+      ...prev,
+      mcp: mcpItems.filter((item) => item.selected).length,
+    }));
+  }, [mcpItems]);
 
   const openPicker = (type: AiToolPickerType) => {
     setPickerType(type);
@@ -331,6 +345,7 @@ const ChatInputComposer: React.FC<ChatInputComposerProps> = ({
       <AiToolPickerModal
         open={!!pickerType}
         type={pickerType}
+        items={pickerType === 'mcp' ? mcpItems : undefined}
         onClose={() => setPickerType(null)}
         onSelectionChange={(type, selected) => {
           setSelectedCounts((prev) => ({ ...prev, [type]: selected.length }));

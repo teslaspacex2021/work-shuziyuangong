@@ -14,6 +14,7 @@ import {
   TeamOutlined, ApartmentOutlined,
   MessageOutlined, UploadOutlined, IdcardOutlined,
   DownloadOutlined, EyeOutlined, FileWordOutlined, FilePdfOutlined,
+  CheckCircleFilled, DownOutlined, UpOutlined, LoadingOutlined,
 } from '@ant-design/icons';
 import { useSearchParams, useLocation } from 'react-router-dom';
 import {
@@ -24,6 +25,7 @@ import {
 } from '../../mock/data';
 import ThirdScreenPanel from '../../components/ThirdScreenPanel';
 import ChatInputComposer from '../../components/ChatInputComposer';
+import { BRAND_PRIMARY } from '../../theme/brand';
 
 interface ChatMsg {
   id: string;
@@ -37,7 +39,168 @@ interface ChatMsg {
   feedbackReason?: string;
   /** 会话级「猜你想问」：由当轮对话意图生成，挂在该条 AI 回复下 */
   suggestedQuestions?: string[];
+  /** AI 思考过程步骤（可收起） */
+  thinkingSteps?: string[];
 }
+
+const DEFAULT_THINKING_STEPS = [
+  '提问总结模型',
+  '用户问题分类器',
+  '检索相关知识与技能',
+  '组织回答要点',
+  '生成最终回复',
+];
+
+const SCHEDULE_THINKING_STEPS = [
+  '提问总结模型',
+  '用户问题分类器',
+  '提取用户调度创建信息',
+  '定时说明获取',
+  '调度任务名称提取',
+  '调度任务说明提取',
+];
+
+function buildThinkingSteps(opts?: { scheduleIntent?: boolean }): string[] {
+  return opts?.scheduleIntent ? [...SCHEDULE_THINKING_STEPS] : [...DEFAULT_THINKING_STEPS];
+}
+
+const THINKING_STEP_INTERVAL_MS = 480;
+
+/** 可收起 / 流式逐步完成的思考过程 */
+const ThinkingProcess: React.FC<{
+  steps: string[];
+  /** streaming：逐步展开；done：可收起查看 */
+  mode?: 'streaming' | 'done';
+  /** streaming 模式下已揭示的步骤数（含当前进行中） */
+  revealedCount?: number;
+  defaultExpanded?: boolean;
+}> = ({
+  steps,
+  mode = 'done',
+  revealedCount,
+  defaultExpanded = false,
+}) => {
+  const [expanded, setExpanded] = useState(defaultExpanded || mode === 'streaming');
+  const isStreaming = mode === 'streaming';
+  const visibleCount = isStreaming
+    ? Math.min(revealedCount ?? 0, steps.length)
+    : steps.length;
+
+  useEffect(() => {
+    if (isStreaming) setExpanded(true);
+  }, [isStreaming]);
+
+  if (!steps.length) return null;
+
+  const showCollapsed = !isStreaming && !expanded;
+  const currentIndex = isStreaming && visibleCount > 0 ? visibleCount - 1 : -1;
+  const allDoneInStream = isStreaming && visibleCount >= steps.length;
+
+  return (
+    <div style={{ marginBottom: 8, maxWidth: '100%' }}>
+      {showCollapsed ? (
+        <button
+          type="button"
+          onClick={() => setExpanded(true)}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 8,
+            height: 32,
+            padding: '0 12px',
+            border: '1px solid #e8e8e8',
+            borderRadius: 8,
+            background: '#f7f8fa',
+            color: '#666',
+            fontSize: 13,
+            cursor: 'pointer',
+            fontFamily: 'inherit',
+          }}
+        >
+          <span>已完成思考</span>
+          <DownOutlined style={{ fontSize: 10, color: '#999' }} />
+        </button>
+      ) : (
+        <div style={{
+          border: '1px solid #e8e8e8',
+          borderRadius: 10,
+          background: '#fff',
+          overflow: 'hidden',
+          transition: 'box-shadow 0.2s',
+        }}>
+          <button
+            type="button"
+            onClick={() => { if (!isStreaming) setExpanded(false); }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              width: '100%',
+              padding: '10px 14px',
+              border: 'none',
+              borderBottom: '1px solid #f0f0f0',
+              background: '#fafafa',
+              cursor: isStreaming ? 'default' : 'pointer',
+              fontFamily: 'inherit',
+            }}
+          >
+            <span style={{ fontSize: 13, fontWeight: 600, color: '#333' }}>
+              {isStreaming
+                ? (allDoneInStream ? '思考完成' : '思考过程')
+                : '思考过程'}
+            </span>
+            {!isStreaming && <UpOutlined style={{ fontSize: 10, color: '#999' }} />}
+            {isStreaming && !allDoneInStream && (
+              <LoadingOutlined style={{ fontSize: 12, color: BRAND_PRIMARY }} />
+            )}
+          </button>
+          <div style={{ padding: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {steps.slice(0, Math.max(visibleCount, 0)).map((step, index) => {
+              const isCurrent = isStreaming && index === currentIndex && !allDoneInStream;
+              const isDone = !isStreaming || index < currentIndex || allDoneInStream;
+              return (
+                <div
+                  key={`${step}-${index}`}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 10,
+                    padding: '10px 12px',
+                    borderRadius: 8,
+                    border: `1px solid ${isCurrent ? '#ffccc7' : '#f0f0f0'}`,
+                    background: isCurrent ? '#fff7f6' : '#fafafa',
+                    animation: 'thinkingStepIn 0.28s ease-out',
+                    opacity: isDone || isCurrent ? 1 : 0.55,
+                  }}
+                >
+                  {isCurrent ? (
+                    <LoadingOutlined style={{ color: BRAND_PRIMARY, fontSize: 14, flexShrink: 0 }} />
+                  ) : (
+                    <CheckCircleFilled style={{ color: BRAND_PRIMARY, fontSize: 14, flexShrink: 0 }} />
+                  )}
+                  <span style={{
+                    flex: 1,
+                    fontSize: 13,
+                    color: isCurrent ? BRAND_PRIMARY : '#333',
+                    fontWeight: isCurrent ? 500 : 400,
+                  }}>
+                    {step}
+                    {isCurrent ? '…' : ''}
+                  </span>
+                </div>
+              );
+            })}
+            {isStreaming && visibleCount === 0 && (
+              <div style={{ fontSize: 13, color: '#999', padding: '4px 2px' }}>
+                正在启动思考…
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 const statusColor: Record<string, string> = {
   ACTIVE: '#52c41a', TRAINING: '#1677ff', SUSPENDED: '#faad14', TERMINATED: '#ff4d4f',
@@ -181,12 +344,13 @@ const ChatPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const location = useLocation();
   const isUserLayout = location.pathname.startsWith('/user/');
-  const isCreateScheduleIntent = searchParams.get('intent') === 'createSchedule';
+  const initialDraft = searchParams.get('draft') || '';
+  const isCreateScheduleIntent =
+    searchParams.get('intent') === 'createSchedule' || initialDraft.includes('【任务标题】');
   const initialEmployeeId = searchParams.get('employeeId')
     || (isCreateScheduleIntent ? SCHEDULE_ASSISTANT_ID : '');
   const isNewChat = searchParams.get('newChat') === '1' || isCreateScheduleIntent;
   const initialMsg = searchParams.get('msg') || '';
-  const initialDraft = searchParams.get('draft') || '';
 
   const [selectedConvId, setSelectedConvId] = useState<string>(
     () => initialEmployeeId || (!isUserLayout && !isNewChat ? (conversations[0]?.employeeId || '') : ''),
@@ -226,6 +390,53 @@ const ChatPage: React.FC = () => {
   const [dislikeForm] = Form.useForm();
   const [retrieving, setRetrieving] = useState(false);
   const [retrievingFiles, setRetrievingFiles] = useState<RetrievalFileItem[]>([]);
+  const [thinkingStreamSteps, setThinkingStreamSteps] = useState<string[]>([]);
+  const [thinkingRevealedCount, setThinkingRevealedCount] = useState(0);
+  const thinkingTimerRef = useRef<number | null>(null);
+
+  const clearThinkingStream = () => {
+    if (thinkingTimerRef.current != null) {
+      window.clearInterval(thinkingTimerRef.current);
+      thinkingTimerRef.current = null;
+    }
+    setThinkingStreamSteps([]);
+    setThinkingRevealedCount(0);
+  };
+
+  /** 流式逐步完成思考，结束后执行 onDone */
+  const runThinkingStream = (steps: string[], onDone: () => void) => {
+    clearThinkingStream();
+    setThinkingStreamSteps(steps);
+    setThinkingRevealedCount(1);
+    if (steps.length <= 1) {
+      window.setTimeout(() => {
+        clearThinkingStream();
+        onDone();
+      }, THINKING_STEP_INTERVAL_MS);
+      return;
+    }
+    let count = 1;
+    thinkingTimerRef.current = window.setInterval(() => {
+      count += 1;
+      setThinkingRevealedCount(count);
+      if (count >= steps.length) {
+        if (thinkingTimerRef.current != null) {
+          window.clearInterval(thinkingTimerRef.current);
+          thinkingTimerRef.current = null;
+        }
+        window.setTimeout(() => {
+          clearThinkingStream();
+          onDone();
+        }, Math.round(THINKING_STEP_INTERVAL_MS * 0.7));
+      }
+    }, THINKING_STEP_INTERVAL_MS);
+  };
+
+  useEffect(() => () => {
+    if (thinkingTimerRef.current != null) {
+      window.clearInterval(thinkingTimerRef.current);
+    }
+  }, []);
 
   useEffect(() => {
     if (initialEmployeeId && !activeConvIds.includes(initialEmployeeId)) {
@@ -245,15 +456,11 @@ const ChatPage: React.FC = () => {
     }
   }, [initialDraft]);
 
-  const isDigitalEmployeeNewChat = !isUserLayout && isNewChat;
+  // 仅用户端「未选员工的新对话欢迎页」隐藏消息列表；数字员工端（含创建定时任务）始终展示
   const isNewConversationMode =
-    isCreateScheduleIntent
-    || (isUserLayout && !initialEmployeeId && !selectedConvId)
-    || isDigitalEmployeeNewChat;
+    isUserLayout && !initialEmployeeId && !selectedConvId;
 
-  const activeEmployeeId = ((isDigitalEmployeeNewChat || isCreateScheduleIntent) && initialEmployeeId)
-    ? initialEmployeeId
-    : selectedConvId;
+  const activeEmployeeId = selectedConvId || initialEmployeeId || '';
 
   const selectedEmployee = useMemo(
     () => digitalEmployees.find((e) => e.id === activeEmployeeId) || null,
@@ -263,6 +470,28 @@ const ChatPage: React.FC = () => {
   const featureFlags = useMemo(
     () => getEmployeeFeatureFlags(selectedEmployee),
     [selectedEmployee],
+  );
+
+  const isScheduleChatActive =
+    isCreateScheduleIntent
+    && !!activeEmployeeId
+    && activeEmployeeId === (initialEmployeeId || SCHEDULE_ASSISTANT_ID);
+
+  const composerFeatureFlags = useMemo(
+    () => (isScheduleChatActive ? { ...featureFlags, mcp: true } : featureFlags),
+    [featureFlags, isScheduleChatActive],
+  );
+
+  const scheduleMcpItems = useMemo(
+    () => (isScheduleChatActive ? [
+      {
+        id: 'mcp-schedule-task',
+        name: '定时任务 MCP',
+        desc: '通过 MCP 创建、编辑、暂停和删除定时任务',
+        selected: true,
+      },
+    ] : undefined),
+    [isScheduleChatActive],
   );
 
   /** 未选员工时的门户欢迎区快捷问（非会话级） */
@@ -336,6 +565,7 @@ const ChatPage: React.FC = () => {
           role: 'assistant',
           content: `您好！我是 **${selectedEmployee.name}**，专门协助您创建周期性自动化任务。\n\n您可以：\n1. 直接用自然语言描述任务（例如：「每天早上8点处理客户工单」）\n2. 点击底部 **召唤专家**，选中要执行任务的数字员工\n\n我会整理任务名称、执行专家、执行频率并完成创建。`,
           time: new Date().toLocaleTimeString(),
+          thinkingSteps: buildThinkingSteps({ scheduleIntent: true }),
           suggestedQuestions: buildIntentSuggestedQuestions('', { scheduleIntent: true }),
         }],
       }));
@@ -350,6 +580,7 @@ const ChatPage: React.FC = () => {
           role: 'assistant',
           content: `您好！我是 **${selectedEmployee.name}**，${selectedEmployee.description}\n\n请问有什么可以帮您？`,
           time: new Date().toLocaleTimeString(),
+          thinkingSteps: buildThinkingSteps(),
         }],
       }));
     }
@@ -371,12 +602,13 @@ const ChatPage: React.FC = () => {
       }));
       const empId = activeEmployeeId;
       const flags = getEmployeeFeatureFlags(selectedEmployee);
+      const thinkingSteps = buildThinkingSteps();
       setLoading(true);
       if (flags.thinkTank) {
         setRetrieving(true);
         setRetrievingFiles(mockRetrievalFiles.slice(0, 2));
       }
-      setTimeout(() => {
+      runThinkingStream(thinkingSteps, () => {
         const resp = mockResponses[Math.floor(Math.random() * mockResponses.length)];
         const usedSkills = selectedEmployee.skills.slice(0, Math.floor(Math.random() * 2) + 1);
         const retrieved = flags.thinkTank ? mockRetrievalFiles.slice(0, 3) : undefined;
@@ -393,6 +625,7 @@ const ChatPage: React.FC = () => {
             usedSkills,
             retrievedFiles: retrieved,
             recalledFiles: recalled,
+            thinkingSteps,
             suggestedQuestions: flags.suggestedQuestions
               ? buildIntentSuggestedQuestions(initialMsg)
               : undefined,
@@ -401,13 +634,13 @@ const ChatPage: React.FC = () => {
         setRetrieving(false);
         setRetrievingFiles([]);
         setLoading(false);
-      }, 1200 + Math.random() * 500);
+      });
     }
   }, [initialMsg, activeEmployeeId, selectedEmployee, chatHistories, initialMsgSent]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [currentMessages, loading]);
+  }, [currentMessages, loading, thinkingRevealedCount]);
 
   const departments: DeptNode[] = useMemo(() => {
     const deptMap = new Map<string, typeof digitalEmployees>();
@@ -539,9 +772,15 @@ const ChatPage: React.FC = () => {
 
     const empId = activeEmployeeId;
     const flags = getEmployeeFeatureFlags(selectedEmployee);
+    const thinkingSteps = buildThinkingSteps({ scheduleIntent: isScheduleChatActive });
 
-    if (isCreateScheduleIntent) {
-      setTimeout(() => {
+    if (flags.thinkTank && !isScheduleChatActive) {
+      setRetrieving(true);
+      setRetrievingFiles(mockRetrievalFiles.slice(0, 2));
+    }
+
+    runThinkingStream(thinkingSteps, () => {
+      if (isScheduleChatActive) {
         const task = buildScheduleFromText(userText);
         persistCreatedScheduledTask(task);
         setScheduleList((prev) => [task, ...prev.filter((t) => t.id !== task.id)]);
@@ -565,23 +804,19 @@ const ChatPage: React.FC = () => {
             role: 'assistant',
             content: reply,
             time: new Date().toLocaleTimeString(),
+            thinkingSteps,
             suggestedQuestions: flags.suggestedQuestions
               ? buildIntentSuggestedQuestions(userText, { scheduleIntent: true })
               : undefined,
           }],
         }));
         message.success(`定时任务「${task.name}」已创建`);
+        setRetrieving(false);
+        setRetrievingFiles([]);
         setLoading(false);
-      }, 900);
-      return;
-    }
+        return;
+      }
 
-    if (flags.thinkTank) {
-      setRetrieving(true);
-      setRetrievingFiles(mockRetrievalFiles.slice(0, 2));
-    }
-
-    setTimeout(() => {
       const resp = mockResponses[Math.floor(Math.random() * mockResponses.length)];
       const emp = digitalEmployees.find((e) => e.id === empId);
       const usedSkills = flags.skill && emp
@@ -601,6 +836,7 @@ const ChatPage: React.FC = () => {
           usedSkills: usedSkills.length ? usedSkills : undefined,
           retrievedFiles: retrieved,
           recalledFiles: recalled,
+          thinkingSteps,
           suggestedQuestions: flags.suggestedQuestions
             ? buildIntentSuggestedQuestions(userText)
             : undefined,
@@ -609,7 +845,7 @@ const ChatPage: React.FC = () => {
       setRetrieving(false);
       setRetrievingFiles([]);
       setLoading(false);
-    }, 1200 + Math.random() * 600);
+    });
   };
 
   const applyMessageFeedback = (
@@ -956,6 +1192,12 @@ const ChatPage: React.FC = () => {
                       <Avatar size={32} src={selectedEmployee.avatar} style={{ flexShrink: 0 }} />
                     )}
                     <div style={{ maxWidth: '70%' }}>
+                      {msg.role === 'assistant' && (
+                        <ThinkingProcess
+                          steps={msg.thinkingSteps || buildThinkingSteps()}
+                          mode="done"
+                        />
+                      )}
                       <div style={{
                         background: msg.role === 'user' ? '#1677ff' : '#fff',
                         color: msg.role === 'user' ? '#fff' : '#333',
@@ -1108,40 +1350,56 @@ const ChatPage: React.FC = () => {
                   </div>
                 ))}
 
-                {(loading || retrieving) && (
+                {loading && (
                   <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
                     <Avatar size={32} src={selectedEmployee.avatar} style={{ flexShrink: 0 }} />
                     <div style={{ maxWidth: '70%' }}>
-                      <div style={{
-                        background: '#fff', padding: '12px 16px',
-                        borderRadius: '16px 16px 16px 4px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
-                      }}>
-                        {retrieving && featureFlags.thinkTank ? (
-                          <div>
-                            <div style={{ fontSize: 13, color: '#666', marginBottom: 8 }}>
-                              <SearchOutlined style={{ marginRight: 6, color: '#1677ff' }} />
-                              正在检索相关文件与知识…
+                      {thinkingStreamSteps.length > 0 ? (
+                        <ThinkingProcess
+                          steps={thinkingStreamSteps}
+                          mode="streaming"
+                          revealedCount={thinkingRevealedCount}
+                        />
+                      ) : (
+                        <div style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 8,
+                          height: 32,
+                          padding: '0 12px',
+                          marginBottom: 8,
+                          border: '1px solid #e8e8e8',
+                          borderRadius: 8,
+                          background: '#f7f8fa',
+                          color: '#666',
+                          fontSize: 13,
+                        }}>
+                          <LoadingOutlined style={{ fontSize: 12, color: BRAND_PRIMARY }} />
+                          思考中…
+                        </div>
+                      )}
+                      {retrieving && featureFlags.thinkTank && (
+                        <div style={{
+                          background: '#fff', padding: '12px 16px',
+                          borderRadius: '16px 16px 16px 4px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+                        }}>
+                          <div style={{ fontSize: 13, color: '#666', marginBottom: 8 }}>
+                            <SearchOutlined style={{ marginRight: 6, color: '#1677ff' }} />
+                            正在检索相关文件与知识…
+                          </div>
+                          {retrievingFiles.map((f) => (
+                            <div key={f.id} style={{ fontSize: 12, color: '#8c8c8c', marginBottom: 4 }}>
+                              · {f.name}
                             </div>
-                            {retrievingFiles.map((f) => (
-                              <div key={f.id} style={{ fontSize: 12, color: '#8c8c8c', marginBottom: 4 }}>
-                                · {f.name}
-                              </div>
-                            ))}
-                            <a
-                              style={{ fontSize: 12 }}
-                              onClick={() => openThirdScreen(retrievingFiles.length ? retrievingFiles : mockRetrievalFiles)}
-                            >
-                              查看检索过程
-                            </a>
-                          </div>
-                        ) : (
-                          <div>
-                            <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: '#999', margin: '0 2px', animation: 'blink 1.4s infinite both' }} />
-                            <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: '#999', margin: '0 2px', animation: 'blink 1.4s infinite both', animationDelay: '0.2s' }} />
-                            <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: '#999', margin: '0 2px', animation: 'blink 1.4s infinite both', animationDelay: '0.4s' }} />
-                          </div>
-                        )}
-                      </div>
+                          ))}
+                          <a
+                            style={{ fontSize: 12 }}
+                            onClick={() => openThirdScreen(retrievingFiles.length ? retrievingFiles : mockRetrievalFiles)}
+                          >
+                            查看检索过程
+                          </a>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
@@ -1150,7 +1408,7 @@ const ChatPage: React.FC = () => {
 
               {/* Input Bar — 对齐数字人门户对话框 */}
               <div style={{ background: '#fff', padding: '12px 20px 16px', borderTop: '1px solid #f0f0f0' }}>
-                {isCreateScheduleIntent && scheduleSummonedExpert && (
+                {isScheduleChatActive && scheduleSummonedExpert && (
                   <div style={{
                     display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10,
                     padding: '8px 12px', background: '#fff7e6', borderRadius: 8, border: '1px solid #ffd591',
@@ -1179,14 +1437,15 @@ const ChatPage: React.FC = () => {
                   onSend={handleSend}
                   loading={loading}
                   placeholder={
-                    isCreateScheduleIntent
+                    isScheduleChatActive
                       ? '描述要创建的定时任务，或先召唤执行专家…'
                       : `向${selectedEmployee.name}提问，例如：如何修改 OA 密码？公文格式规范有哪些？`
                   }
-                  featureFlags={featureFlags}
+                  featureFlags={composerFeatureFlags}
                   showAllWhenNoFlags={false}
                   onSummonEmployee={() => setSummonEmployeeVisible(true)}
-                  summonLabel={isCreateScheduleIntent ? '召唤专家' : '切换专家'}
+                  summonLabel={isScheduleChatActive ? '召唤专家' : '切换专家'}
+                  mcpItems={scheduleMcpItems}
                 />
               </div>
             </div>
@@ -1606,7 +1865,7 @@ const ChatPage: React.FC = () => {
         title={
           <span>
             <RobotOutlined style={{ marginRight: 8 }} />
-            {isCreateScheduleIntent ? '召唤专家（选择执行员工）' : '选择数字员工'}
+            {isScheduleChatActive ? '召唤专家（选择执行员工）' : '选择数字员工'}
           </span>
         }
         open={summonEmployeeVisible}
@@ -1615,7 +1874,7 @@ const ChatPage: React.FC = () => {
         width={800}
         styles={{ body: { padding: '16px 24px' } }}
       >
-        {isCreateScheduleIntent && (
+        {isScheduleChatActive && (
           <div style={{ fontSize: 13, color: '#666', marginBottom: 12 }}>
             选中专家后仍停留在定时任务助手对话中，该专家将作为任务的执行员工。
           </div>
@@ -1630,7 +1889,7 @@ const ChatPage: React.FC = () => {
         />
         <div style={{ maxHeight: 460, overflow: 'auto' }}>
           <Row gutter={[12, 12]}>
-            {(isCreateScheduleIntent
+            {(isScheduleChatActive
               ? summonFilteredEmployees.filter((e) => e.id !== SCHEDULE_ASSISTANT_ID)
               : summonFilteredEmployees
             ).map((emp) => (
@@ -1640,16 +1899,16 @@ const ChatPage: React.FC = () => {
                   hoverable
                   style={{
                     borderRadius: 10,
-                    borderColor: isCreateScheduleIntent && scheduleSummonedExpertId === emp.id
+                    borderColor: isScheduleChatActive && scheduleSummonedExpertId === emp.id
                       ? '#e4393c'
                       : undefined,
-                    background: isCreateScheduleIntent && scheduleSummonedExpertId === emp.id
+                    background: isScheduleChatActive && scheduleSummonedExpertId === emp.id
                       ? '#fff1f0'
                       : undefined,
                   }}
                   styles={{ body: { padding: '14px 16px' } }}
                   onClick={() => {
-                    if (isCreateScheduleIntent) {
+                    if (isScheduleChatActive) {
                       setScheduleSummonedExpertId(emp.id);
                       message.success(`已选中执行专家：${emp.name}`);
                       setSummonEmployeeVisible(false);
@@ -1684,7 +1943,7 @@ const ChatPage: React.FC = () => {
                 </Card>
               </Col>
             ))}
-            {(isCreateScheduleIntent
+            {(isScheduleChatActive
               ? summonFilteredEmployees.filter((e) => e.id !== SCHEDULE_ASSISTANT_ID)
               : summonFilteredEmployees
             ).length === 0 && (

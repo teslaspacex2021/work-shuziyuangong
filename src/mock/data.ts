@@ -779,7 +779,7 @@ export interface ScheduledTask {
 export interface ScheduledTaskRun {
   id: string;
   taskId: string;
-  status: '已完成' | '执行中' | '已失败' | '已跳过';
+  status: '待执行' | '已完成' | '执行中' | '已失败' | '已跳过';
   startTime: string;
   finishTime?: string;
   duration?: string;
@@ -1731,21 +1731,49 @@ export function persistCreatedScheduledTask(task: ScheduledTask): void {
   sessionStorage.setItem(SCHEDULE_STORAGE_KEY, JSON.stringify([task, ...prev]));
 }
 
+const SCHEDULE_DELETED_KEY = 'ai-de-deleted-schedules';
+
+export function loadDeletedScheduledTaskIds(): string[] {
+  try {
+    const raw = sessionStorage.getItem(SCHEDULE_DELETED_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as string[];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+export function removeScheduledTask(id: string): void {
+  const created = loadCreatedScheduledTasks().filter((t) => t.id !== id);
+  sessionStorage.setItem(SCHEDULE_STORAGE_KEY, JSON.stringify(created));
+  const deleted = new Set(loadDeletedScheduledTaskIds());
+  deleted.add(id);
+  sessionStorage.setItem(SCHEDULE_DELETED_KEY, JSON.stringify([...deleted]));
+}
+
 export function getAllScheduledTasks(): ScheduledTask[] {
   const created = loadCreatedScheduledTasks();
   const createdIds = new Set(created.map((t) => t.id));
-  return [...created, ...scheduledTasks.filter((t) => !createdIds.has(t.id))];
+  const deletedIds = new Set(loadDeletedScheduledTaskIds());
+  return [
+    ...created.filter((t) => !deletedIds.has(t.id)),
+    ...scheduledTasks.filter((t) => !createdIds.has(t.id) && !deletedIds.has(t.id)),
+  ];
 }
 
 export const scheduledTaskRuns: ScheduledTaskRun[] = [
+  { id: 'STR000', taskId: 'ST001', status: '待执行', startTime: '2026-03-18 08:00', result: '等待到达调度时间后自动执行' },
   { id: 'STR001', taskId: 'ST001', status: '已完成', startTime: '2026-03-17 08:00', finishTime: '2026-03-17 08:12', duration: '12分钟', result: '处理未完成工单 86 条，自动结单 72 条' },
   { id: 'STR002', taskId: 'ST001', status: '已完成', startTime: '2026-03-16 08:00', finishTime: '2026-03-16 08:15', duration: '15分钟', result: '处理未完成工单 94 条，转人工 8 条' },
   { id: 'STR003', taskId: 'ST001', status: '已失败', startTime: '2026-03-15 08:00', finishTime: '2026-03-15 08:03', duration: '3分钟', result: '工单系统接口超时，已自动重试排队' },
   { id: 'STR004', taskId: 'ST001', status: '已完成', startTime: '2026-03-14 08:00', finishTime: '2026-03-14 08:10', duration: '10分钟', result: '处理未完成工单 61 条' },
   { id: 'STR005', taskId: 'ST001', status: '已完成', startTime: '2026-03-13 08:00', finishTime: '2026-03-13 08:09', duration: '9分钟', result: '处理未完成工单 55 条' },
+  { id: 'STR005b', taskId: 'ST002', status: '待执行', startTime: '2026-03-24 09:00', result: '等待到达调度时间后自动执行' },
   { id: 'STR006', taskId: 'ST002', status: '已完成', startTime: '2026-03-17 09:00', finishTime: '2026-03-17 09:28', duration: '28分钟', result: '已生成营销周报并推送运营负责人' },
   { id: 'STR007', taskId: 'ST002', status: '已完成', startTime: '2026-03-10 09:00', finishTime: '2026-03-10 09:25', duration: '25分钟', result: '周报生成成功，附件 12 页' },
   { id: 'STR008', taskId: 'ST002', status: '已跳过', startTime: '2026-03-03 09:00', result: '员工暂停执行，自动跳过本次调度' },
+  { id: 'STR008b', taskId: 'ST003', status: '待执行', startTime: '2026-04-01 09:00', result: '等待到达调度时间后自动执行' },
   { id: 'STR009', taskId: 'ST003', status: '已完成', startTime: '2026-03-01 09:00', finishTime: '2026-03-01 17:20', duration: '8小时20分', result: '检查报销 342 笔，异常 12 笔' },
   { id: 'STR010', taskId: 'ST003', status: '已完成', startTime: '2026-02-01 09:00', finishTime: '2026-02-01 16:40', duration: '7小时40分', result: '检查报销 298 笔，异常 9 笔' },
   { id: 'STR011', taskId: 'ST004', status: '已完成', startTime: '2026-03-15 06:00', finishTime: '2026-03-15 06:18', duration: '18分钟', result: '发现 3 处空值率异常，已写入告警' },
