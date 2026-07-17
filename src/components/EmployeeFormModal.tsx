@@ -1,8 +1,8 @@
 import React, { useMemo } from 'react';
 import {
-  Modal, Form, Input, Select, InputNumber, Card, Row, Col, Upload, DatePicker,
+  Modal, Form, Input, Select, InputNumber, Card, Row, Col, Upload, DatePicker, Button,
 } from 'antd';
-import { PlusOutlined } from '@ant-design/icons';
+import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import {
   SYSTEM_LEVELS, positions,
@@ -314,38 +314,86 @@ const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({ open, onCancel, o
           </Row>
         </Card>
 
-        <Card size="small" title="产出指标项" style={{ marginBottom: 16, borderRadius: 8 }}>
-          <Row gutter={12}>
-            <Col span={12}>
-              <Form.Item
-                name={['outputMetrics', 0, 'name']}
-                label="指标名称"
-                rules={[{ required: true, message: '请输入指标名称' }]}
-              >
-                <Input placeholder="例如：工单处理量" />
-              </Form.Item>
-            </Col>
-            <Col span={6}>
-              <Form.Item name={['outputMetrics', 0, 'cycle']} label="统计周期">
-                <Input placeholder="日/周/月" />
-              </Form.Item>
-            </Col>
-            <Col span={6}>
-              <Form.Item name={['outputMetrics', 0, 'unit']} label="统计单位">
-                <Input placeholder="单/次/%" />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name={['outputMetrics', 0, 'target']} label="上岗目标值">
-                <Input placeholder="目标值" />
-              </Form.Item>
-            </Col>
-            <Col span={16}>
-              <Form.Item name={['outputMetrics', 0, 'source']} label="指标数据来源（系统）">
-                <Input placeholder="数据来源系统名称" />
-              </Form.Item>
-            </Col>
-          </Row>
+        <Card
+          size="small"
+          title="产出指标项"
+          style={{ marginBottom: 16, borderRadius: 8 }}
+          extra={
+            <span style={{ fontSize: 12, color: '#999' }}>可添加多项产出指标</span>
+          }
+        >
+          <Form.List name="outputMetrics">
+            {(fields, { add, remove }) => (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {fields.map((field, index) => (
+                  <div
+                    key={field.key}
+                    style={{
+                      padding: 12,
+                      border: '1px solid #f0f0f0',
+                      borderRadius: 8,
+                      background: '#fafafa',
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                      <span style={{ fontWeight: 500, fontSize: 13 }}>指标 {index + 1}</span>
+                      {fields.length > 1 && (
+                        <Button
+                          type="text"
+                          danger
+                          size="small"
+                          icon={<DeleteOutlined />}
+                          onClick={() => remove(field.name)}
+                        >
+                          删除
+                        </Button>
+                      )}
+                    </div>
+                    <Row gutter={12}>
+                      <Col span={12}>
+                        <Form.Item
+                          {...field}
+                          name={[field.name, 'name']}
+                          label="指标名称"
+                          rules={[{ required: true, message: '请输入指标名称' }]}
+                        >
+                          <Input placeholder="例如：工单处理量" />
+                        </Form.Item>
+                      </Col>
+                      <Col span={6}>
+                        <Form.Item {...field} name={[field.name, 'cycle']} label="统计周期">
+                          <Input placeholder="日/周/月" />
+                        </Form.Item>
+                      </Col>
+                      <Col span={6}>
+                        <Form.Item {...field} name={[field.name, 'unit']} label="统计单位">
+                          <Input placeholder="单/次/%" />
+                        </Form.Item>
+                      </Col>
+                      <Col span={8}>
+                        <Form.Item {...field} name={[field.name, 'target']} label="上岗目标值">
+                          <Input placeholder="目标值" />
+                        </Form.Item>
+                      </Col>
+                      <Col span={16}>
+                        <Form.Item {...field} name={[field.name, 'source']} label="指标数据来源（系统）">
+                          <Input placeholder="数据来源系统名称" />
+                        </Form.Item>
+                      </Col>
+                    </Row>
+                  </div>
+                ))}
+                <Button
+                  type="dashed"
+                  block
+                  icon={<PlusOutlined />}
+                  onClick={() => add(defaultOutputMetric())}
+                >
+                  添加指标项
+                </Button>
+              </div>
+            )}
+          </Form.List>
         </Card>
 
         <Card size="small" title="算力投资设计信息" style={{ marginBottom: 16, borderRadius: 8 }}>

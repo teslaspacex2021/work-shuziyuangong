@@ -812,6 +812,11 @@ export const digitalEmployees: DigitalEmployee[] = [
     level: 'L3', tokensQuota: 10000000, tokensUsed: 1200000, taskCompleteRate: 98.0,
     lastActive: '在线', onboardDate: '2026-01-01', relatedAgents: ['翼答', '通用问答智能体'],
     likes: 520, dislikes: 5, heat: 2500,
+    outputMetrics: [
+      { name: '日均会话响应量', cycle: '日', unit: '次', target: '800', source: '数字员工对话平台' },
+      { name: '任务分派完成率', cycle: '周', unit: '%', target: '95', source: '任务调度系统' },
+      { name: '用户满意度', cycle: '月', unit: '分', target: '4.8', source: '满意度调查系统' },
+    ],
     featureFlags: {
       attachmentUpload: true, deepThinking: true, webSearch: true,
       skill: true, mcp: true, thinkTank: true, suggestedQuestions: true,
@@ -835,6 +840,11 @@ export const digitalEmployees: DigitalEmployee[] = [
     level: 'L3', tokensQuota: 3000000, tokensUsed: 180000, taskCompleteRate: 97.5,
     lastActive: '在线', onboardDate: '2026-03-01', relatedAgents: ['通用问答智能体'],
     likes: 86, dislikes: 1, heat: 320,
+    outputMetrics: [
+      { name: '定时任务创建量', cycle: '周', unit: '个', target: '30', source: '定时任务平台' },
+      { name: '任务配置一次成功率', cycle: '月', unit: '%', target: '90', source: '定时任务平台' },
+      { name: '调度引导完成率', cycle: '周', unit: '%', target: '92', source: '数字员工对话平台' },
+    ],
     featureFlags: {
       attachmentUpload: true, deepThinking: true, webSearch: true,
       skill: true, mcp: true, thinkTank: true, suggestedQuestions: true,
@@ -891,6 +901,11 @@ export const digitalEmployees: DigitalEmployee[] = [
     level: 'L2', tokensQuota: 3000000, tokensUsed: 1500000, taskCompleteRate: 89.2,
     lastActive: '2小时前', onboardDate: '2026-02-01', relatedAgents: ['数据下载', '翼练'],
     likes: 145, dislikes: 8, heat: 620,
+    outputMetrics: [
+      { name: '数据标注量', cycle: '日', unit: '条', target: '2000', source: '数据标注平台' },
+      { name: '数据清洗完成率', cycle: '周', unit: '%', target: '98', source: '数据运营中心' },
+      { name: '异常检出率', cycle: '月', unit: '%', target: '95', source: '数据质量监控系统' },
+    ],
   },
   {
     id: 'DE-2026003', employeeNumber: 'DE-2026003', name: '小翼·营销', avatar: 'https://api.dicebear.com/7.x/personas/svg?seed=yingxiao&backgroundColor=ffd5dc', department: '数字化运营部', position: '业务支撑-市场-营销策划',
@@ -902,6 +917,11 @@ export const digitalEmployees: DigitalEmployee[] = [
     level: 'L3', tokensQuota: 4000000, tokensUsed: 2800000, taskCompleteRate: 93.8,
     lastActive: '30分钟前', onboardDate: '2026-01-20', relatedAgents: ['营销智能体', '写作助手'],
     likes: 256, dislikes: 15, heat: 1120,
+    outputMetrics: [
+      { name: '营销文案产出量', cycle: '周', unit: '篇', target: '20', source: '营销内容平台' },
+      { name: '方案采纳率', cycle: '月', unit: '%', target: '70', source: '数字化运营部' },
+      { name: '用户画像覆盖率', cycle: '月', unit: '%', target: '85', source: '用户画像系统' },
+    ],
     featureFlags: {
       attachmentUpload: true, deepThinking: false, webSearch: true,
       skill: true, mcp: false, thinkTank: true, suggestedQuestions: true,
@@ -928,6 +948,7 @@ export const digitalEmployees: DigitalEmployee[] = [
     outputMetrics: [
       { name: '底稿生成数', cycle: '月', unit: '份', target: '40', source: '审计管理系统' },
       { name: '风险识别准确率', cycle: '季', unit: '%', target: '92', source: '审计管理系统' },
+      { name: '整改建议采纳率', cycle: '季', unit: '%', target: '88', source: '审计管理系统' },
     ],
     designMaxConcurrency: 30, designTokensPerSec: 8000,
     securityPassed: '是', logAuditCompliant: '是',
@@ -945,6 +966,11 @@ export const digitalEmployees: DigitalEmployee[] = [
     level: 'L3', tokensQuota: 3500000, tokensUsed: 2100000, taskCompleteRate: 95.2,
     lastActive: '5分钟前', onboardDate: '2026-01-10', relatedAgents: ['人岗匹配', '资质证书问询'],
     likes: 210, dislikes: 7, heat: 980,
+    outputMetrics: [
+      { name: '简历筛选量', cycle: '日', unit: '份', target: '120', source: '招聘管理系统' },
+      { name: '人岗匹配准确率', cycle: '周', unit: '%', target: '90', source: '人岗匹配系统' },
+      { name: '面试安排完成率', cycle: '周', unit: '%', target: '95', source: '招聘管理系统' },
+    ],
   },
   {
     id: 'DE-2026006', employeeNumber: 'DE-2026006', name: '小翼·财务', avatar: 'https://api.dicebear.com/7.x/personas/svg?seed=caiwu&backgroundColor=b6e3f4', department: '财务共享中心', position: '综合支撑-财务-财务管理',
@@ -956,6 +982,11 @@ export const digitalEmployees: DigitalEmployee[] = [
     level: 'L3', tokensQuota: 4500000, tokensUsed: 3100000, taskCompleteRate: 97.1,
     lastActive: '15分钟前', onboardDate: '2025-12-20', relatedAgents: ['惠企优才', '通用问答智能体'],
     likes: 302, dislikes: 9, heat: 1350,
+    outputMetrics: [
+      { name: '报销审核量', cycle: '日', unit: '单', target: '300', source: '财务共享系统' },
+      { name: '审核一次通过率', cycle: '周', unit: '%', target: '92', source: '财务共享系统' },
+      { name: '费用异常检出率', cycle: '月', unit: '%', target: '96', source: '预算分析系统' },
+    ],
   },
   {
     id: 'DE-2026007', name: '小翼·运维', avatar: 'https://api.dicebear.com/7.x/personas/svg?seed=yunwei&backgroundColor=c0aede', department: 'IT运维部', position: '综合支撑-云网-系统运维',
@@ -967,6 +998,11 @@ export const digitalEmployees: DigitalEmployee[] = [
     level: 'L2', tokensQuota: 3000000, tokensUsed: 500000, taskCompleteRate: 85.0,
     lastActive: '3天前', onboardDate: '2026-02-15', relatedAgents: ['翼练'],
     likes: 67, dislikes: 18, heat: 210,
+    outputMetrics: [
+      { name: '故障自动诊断量', cycle: '日', unit: '次', target: '80', source: '运维监控平台' },
+      { name: '巡检任务完成率', cycle: '周', unit: '%', target: '99', source: '自动巡检系统' },
+      { name: '平均故障恢复时长', cycle: '月', unit: '分钟', target: '15', source: '运维监控平台' },
+    ],
   },
   {
     id: 'DE-2026008', employeeNumber: 'DE-2026008', name: '小翼·商机', avatar: 'https://api.dicebear.com/7.x/personas/svg?seed=shangji&backgroundColor=ffd5dc', department: '数字化运营部', position: '业务支撑-市场-商机分析',
@@ -978,6 +1014,11 @@ export const digitalEmployees: DigitalEmployee[] = [
     level: 'L4', tokensQuota: 6000000, tokensUsed: 4200000, taskCompleteRate: 92.3,
     lastActive: '20分钟前', onboardDate: '2025-11-15', relatedAgents: ['翼达（商机挖掘）', '营销智能体'],
     likes: 278, dislikes: 11, heat: 1280,
+    outputMetrics: [
+      { name: '商机线索挖掘量', cycle: '周', unit: '条', target: '150', source: '商机挖掘系统' },
+      { name: '线索有效转化率', cycle: '月', unit: '%', target: '35', source: 'CRM' },
+      { name: '销售预测准确率', cycle: '季', unit: '%', target: '80', source: '销售预测系统' },
+    ],
   },
   {
     id: 'DE-2026009', employeeNumber: 'DE-2026009', name: '小翼·文档', avatar: 'https://api.dicebear.com/7.x/personas/svg?seed=wendang&backgroundColor=d1f4d1', department: '综合管理部', position: '综合支撑-办公室-文档管理',
@@ -989,6 +1030,11 @@ export const digitalEmployees: DigitalEmployee[] = [
     level: 'L2', tokensQuota: 2500000, tokensUsed: 1800000, taskCompleteRate: 94.5,
     lastActive: '45分钟前', onboardDate: '2026-01-25', relatedAgents: ['文件助手'],
     likes: 156, dislikes: 6, heat: 720,
+    outputMetrics: [
+      { name: '文档解析量', cycle: '日', unit: '份', target: '60', source: '文档管理系统' },
+      { name: '摘要生成准确率', cycle: '周', unit: '%', target: '93', source: '文档管理系统' },
+      { name: '格式转换成功率', cycle: '月', unit: '%', target: '98', source: '文件助手' },
+    ],
     featureFlags: {
       attachmentUpload: true, deepThinking: true, webSearch: false,
       skill: false, mcp: false, thinkTank: true, suggestedQuestions: true,
@@ -1009,6 +1055,11 @@ export const digitalEmployees: DigitalEmployee[] = [
     level: 'L1', tokensQuota: 2000000, tokensUsed: 400000, taskCompleteRate: 78.5,
     lastActive: '5小时前', onboardDate: '2026-03-01', relatedAgents: ['数据下载'],
     likes: 42, dislikes: 3, heat: 150,
+    outputMetrics: [
+      { name: '经营报告生成数', cycle: '月', unit: '份', target: '12', source: '经营分析系统' },
+      { name: '指标分析覆盖率', cycle: '周', unit: '%', target: '90', source: '经营分析系统' },
+      { name: '趋势预测准确率', cycle: '季', unit: '%', target: '82', source: '大数据平台' },
+    ],
   },
 ];
 
