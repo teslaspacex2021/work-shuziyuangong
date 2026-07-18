@@ -70,23 +70,12 @@ const efficiencyData = [
   { month: '2026-03', tasks: 4100, quality: 95, calls: 25200 },
 ];
 
-const deptDetailColumns = [
-  { title: '部门', dataIndex: 'department', key: 'department', width: 140 },
-  { title: '用户数', dataIndex: 'users', key: 'users', width: 100, sorter: (a: typeof departmentUsage[0], b: typeof departmentUsage[0]) => a.users - b.users },
-  { title: '会话数', dataIndex: 'sessions', key: 'sessions', width: 100, sorter: (a: typeof departmentUsage[0], b: typeof departmentUsage[0]) => a.sessions - b.sessions },
-  { title: '任务数', dataIndex: 'tasks', key: 'tasks', width: 100, sorter: (a: typeof departmentUsage[0], b: typeof departmentUsage[0]) => a.tasks - b.tasks },
-  {
-    title: 'Tokens消耗', key: 'tokens', width: 120,
-    render: (_: unknown, r: typeof departmentUsage[0]) => `${(r.tasks * 1.5).toFixed(0)}万`,
-  },
-  {
-    title: '活跃率', key: 'activeRate', width: 100,
-    render: (_: unknown, r: typeof departmentUsage[0]) => {
-      const rate = Math.min(99, Math.round((r.users / 120) * 100));
-      return <Tag color={rate >= 80 ? 'green' : rate >= 50 ? 'orange' : 'red'}>{rate}%</Tag>;
-    },
-  },
-];
+type DeptRow = (typeof departmentUsage)[0];
+
+const getDeptActiveRate = (r: DeptRow) => Math.min(99, Math.round((r.users / 120) * 100));
+const getDeptTokens = (r: DeptRow) => Math.round(r.tasks * 1.5);
+
+const DEPT_ACCENTS = ['#1677ff', '#2f8bff', '#13c2c2', '#52c41a', '#fa8c16', '#722ed1', '#eb2f96', '#595959'];
 
 type KpiItem = {
   label: string;
@@ -207,46 +196,218 @@ const Dashboard: React.FC = () => {
   ];
 
   if (showDeptDetail) {
+    const deptTotals = departmentUsage.reduce(
+      (acc, d) => ({
+        users: acc.users + d.users,
+        sessions: acc.sessions + d.sessions,
+        tasks: acc.tasks + d.tasks,
+      }),
+      { users: 0, sessions: 0, tasks: 0 },
+    );
+    const maxTasks = Math.max(...departmentUsage.map((d) => d.tasks), 1);
+    const avgActiveRate = Math.round(
+      departmentUsage.reduce((s, d) => s + getDeptActiveRate(d), 0) / departmentUsage.length,
+    );
+    const sortedDepts = [...departmentUsage].sort((a, b) => b.tasks - a.tasks);
+
+    const deptDetailColumns = [
+      {
+        title: '排名',
+        key: 'rank',
+        width: 56,
+        render: (_: unknown, __: DeptRow, idx: number) => (
+          <span className={`dash-rank-badge ${idx < 3 ? 'top' : 'rest'}`}>{idx + 1}</span>
+        ),
+      },
+      { title: '部门', dataIndex: 'department', key: 'department', width: 140 },
+      {
+        title: '用户数',
+        dataIndex: 'users',
+        key: 'users',
+        width: 90,
+        sorter: (a: DeptRow, b: DeptRow) => a.users - b.users,
+      },
+      {
+        title: '会话数',
+        dataIndex: 'sessions',
+        key: 'sessions',
+        width: 90,
+        sorter: (a: DeptRow, b: DeptRow) => a.sessions - b.sessions,
+        render: (v: number) => v.toLocaleString(),
+      },
+      {
+        title: '任务数',
+        dataIndex: 'tasks',
+        key: 'tasks',
+        width: 90,
+        defaultSortOrder: 'descend' as const,
+        sorter: (a: DeptRow, b: DeptRow) => a.tasks - b.tasks,
+        render: (v: number) => v.toLocaleString(),
+      },
+      {
+        title: 'Tokens 消耗',
+        key: 'tokens',
+        width: 110,
+        sorter: (a: DeptRow, b: DeptRow) => getDeptTokens(a) - getDeptTokens(b),
+        render: (_: unknown, r: DeptRow) => (
+          <span className="dept-tokens">{getDeptTokens(r)}<em>万</em></span>
+        ),
+      },
+      {
+        title: '活跃率',
+        key: 'activeRate',
+        width: 160,
+        sorter: (a: DeptRow, b: DeptRow) => getDeptActiveRate(a) - getDeptActiveRate(b),
+        render: (_: unknown, r: DeptRow) => {
+          const rate = getDeptActiveRate(r);
+          const tone = rate >= 80 ? 'high' : rate >= 50 ? 'mid' : 'low';
+          return (
+            <div className={`dept-rate dept-rate--${tone}`}>
+              <div className="dept-rate-track">
+                <i style={{ width: `${rate}%` }} />
+              </div>
+              <span>{rate}%</span>
+            </div>
+          );
+        },
+      },
+    ];
+
     return (
       <div className="dash">
-        <div className="dash-subhead">
-          <Button icon={<ArrowLeftOutlined />} onClick={() => setShowDeptDetail(false)}>返回驾驶舱</Button>
-          <h2>部门使用详情</h2>
+        <div className="dash-toolbar">
+          <div>
+            <h2>部门使用详情</h2>
+            <p>各部门活跃用户、会话与任务消耗一览</p>
+          </div>
+          <div className="dash-toolbar-actions">
+            <Button icon={<ArrowLeftOutlined />} onClick={() => setShowDeptDetail(false)}>
+              返回驾驶舱
+            </Button>
+          </div>
         </div>
 
-        <Row gutter={[8, 8]} style={{ marginBottom: 10 }}>
-          {departmentUsage.map((d) => (
-            <Col span={6} key={d.department}>
-              <Card className="dash-panel" size="small">
-                <div style={{ fontWeight: 600, marginBottom: 8, fontSize: 12 }}>{d.department}</div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
-                  <div>
-                    <div style={{ fontSize: 11, color: 'rgba(0,0,0,0.45)' }}>用户</div>
-                    <div style={{ fontSize: 16, fontWeight: 650 }}>{d.users}</div>
+        <div className="dash-kpi-strip">
+          <KpiCard
+            label="覆盖部门"
+            value={departmentUsage.length}
+            accent="#1677ff"
+            icon={<TeamOutlined />}
+            meta={<>本周期统计范围</>}
+          />
+          <KpiCard
+            label="使用用户"
+            value={deptTotals.users.toLocaleString()}
+            accent="#eb2f96"
+            icon={<UserOutlined />}
+            meta={<>各部门合计</>}
+          />
+          <KpiCard
+            label="会话 / 任务"
+            value={`${(deptTotals.sessions / 1000).toFixed(1)}k`}
+            accent="#13c2c2"
+            icon={<DashboardOutlined />}
+            meta={<>任务 {deptTotals.tasks.toLocaleString()}</>}
+          />
+          <KpiCard
+            label="平均活跃率"
+            value={`${avgActiveRate}%`}
+            accent="#52c41a"
+            icon={<FireOutlined />}
+            meta={<>部门均值</>}
+            metaClass="up"
+          />
+        </div>
+
+        <section className="dash-section">
+          <div className="dash-section-head">
+            <strong>部门速览</strong>
+            <span>按任务量排序 · 条形对比相对强度</span>
+          </div>
+          <div className="dept-card-grid">
+            {sortedDepts.map((d, idx) => {
+              const rate = getDeptActiveRate(d);
+              const accent = DEPT_ACCENTS[idx % DEPT_ACCENTS.length];
+              const taskPct = Math.round((d.tasks / maxTasks) * 100);
+              return (
+                <div
+                  key={d.department}
+                  className="dept-card"
+                  style={{ ['--dept-accent' as string]: accent }}
+                >
+                  <div className="dept-card-top">
+                    <span className={`dash-rank-badge ${idx < 3 ? 'top' : 'rest'}`}>{idx + 1}</span>
+                    <strong>{d.department}</strong>
+                    <Tag
+                      color={rate >= 80 ? 'success' : rate >= 50 ? 'warning' : 'error'}
+                      style={{ marginInlineEnd: 0, fontSize: 11 }}
+                    >
+                      {rate}%
+                    </Tag>
                   </div>
-                  <div>
-                    <div style={{ fontSize: 11, color: 'rgba(0,0,0,0.45)' }}>会话</div>
-                    <div style={{ fontSize: 16, fontWeight: 650 }}>{d.sessions}</div>
+                  <div className="dept-card-metrics">
+                    <div>
+                      <span>用户</span>
+                      <b>{d.users}</b>
+                    </div>
+                    <div>
+                      <span>会话</span>
+                      <b>{d.sessions.toLocaleString()}</b>
+                    </div>
+                    <div>
+                      <span>任务</span>
+                      <b>{d.tasks.toLocaleString()}</b>
+                    </div>
+                    <div>
+                      <span>Tokens</span>
+                      <b>{getDeptTokens(d)}万</b>
+                    </div>
                   </div>
-                  <div>
-                    <div style={{ fontSize: 11, color: 'rgba(0,0,0,0.45)' }}>任务</div>
-                    <div style={{ fontSize: 16, fontWeight: 650 }}>{d.tasks}</div>
+                  <div className="dept-card-bar">
+                    <i style={{ width: `${taskPct}%` }} />
                   </div>
                 </div>
-              </Card>
-            </Col>
-          ))}
-        </Row>
+              );
+            })}
+          </div>
+        </section>
 
-        <Card className="dash-panel" title="部门使用明细">
-          <Table
-            dataSource={departmentUsage}
-            columns={deptDetailColumns}
-            rowKey="department"
-            pagination={false}
-            size="small"
-          />
-        </Card>
+        <section className="dash-section">
+          <div className="dash-section-head">
+            <strong>明细对照</strong>
+            <span>横向对比用户与任务量，表格支持排序</span>
+          </div>
+          <Card className="dash-panel" title="部门任务 vs 用户" style={{ marginBottom: 12 }}>
+            <ResponsiveContainer width="100%" height={260}>
+              <BarChart data={sortedDepts} layout="vertical" margin={{ left: 4, right: 12, top: 4, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID} horizontal={false} />
+                <XAxis type="number" tick={{ fill: CHART_AXIS, fontSize: 11 }} axisLine={false} tickLine={false} />
+                <YAxis
+                  type="category"
+                  dataKey="department"
+                  width={88}
+                  tick={{ fontSize: 11, fill: CHART_AXIS }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'rgba(22,119,255,0.04)' }} />
+                <Legend iconType="circle" wrapperStyle={{ fontSize: 11 }} />
+                <Bar dataKey="users" name="用户数" fill="#1677ff" radius={[0, 3, 3, 0]} maxBarSize={12} />
+                <Bar dataKey="tasks" name="任务数" fill="#69b1ff" radius={[0, 3, 3, 0]} maxBarSize={12} />
+              </BarChart>
+            </ResponsiveContainer>
+          </Card>
+          <Card className="dash-panel" title="部门使用明细">
+            <Table
+              className="dept-detail-table"
+              dataSource={sortedDepts}
+              columns={deptDetailColumns}
+              rowKey="department"
+              pagination={false}
+              size="small"
+            />
+          </Card>
+        </section>
       </div>
     );
   }
@@ -327,7 +488,7 @@ const Dashboard: React.FC = () => {
               { title: '质量', dataIndex: 'qualityScore', key: 'qualityScore' },
               { title: '调用', dataIndex: 'agentCalls', key: 'agentCalls' },
               { title: 'Tokens', key: 'tokens', render: (_: unknown, r: typeof fullRankingData[0]) => `${(r.tokensUsed / 1000000).toFixed(1)}M` },
-              { title: '职级', dataIndex: 'level', key: 'level', render: (l: string) => <Tag color="blue">{l}</Tag> },
+              { title: '级别', dataIndex: 'level', key: 'level', render: (l: string) => <Tag color="blue">{l}</Tag> },
             ]}
           />
         </Card>
@@ -408,11 +569,11 @@ const Dashboard: React.FC = () => {
         ))}
       </div>
 
-      {/* ② 消耗总览：趋势 ‖ 职级（等高定高，避免留白） */}
+      {/* ② 消耗总览：趋势 ‖ 级别（等高定高，避免留白） */}
       <section className="dash-section">
         <div className="dash-section-head">
           <strong>消耗总览</strong>
-          <span>近7天趋势与职级结构并列对比</span>
+          <span>近7天趋势与级别结构并列对比</span>
         </div>
         <div className="dash-pair">
           <Card className="dash-panel" title="Tokens 消耗趋势（近7天）">
@@ -431,7 +592,7 @@ const Dashboard: React.FC = () => {
             </div>
           </Card>
 
-          <Card className="dash-panel" title="职级分布">
+          <Card className="dash-panel" title="级别分布">
             <div className="dash-pie-pane">
               <div className="dash-pie-wrap">
                 <ResponsiveContainer width="100%" height="100%">
