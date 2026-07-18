@@ -1,0 +1,268 @@
+/* 管理后台：浅色企业后台风格（对齐截图） */
+.admin-layout {
+  height: 100vh;
+  overflow: hidden;
+  background: #f0f2f5;
+}
+
+.admin-layout .admin-header {
+  background: #fff;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 56px;
+  line-height: 56px;
+  flex-shrink: 0;
+  border-bottom: 1px solid #e8e8e8;
+  z-index: 100;
+}
+
+/* 顶栏下主体：侧栏固定，仅右侧内容滚动 */
+.admin-layout .admin-body {
+  flex: 1;
+  min-height: 0;
+  height: calc(100vh - 56px);
+  overflow: hidden;
+}
+
+.admin-layout .admin-header-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.admin-layout .admin-logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.admin-layout .admin-logo-mark {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #1677ff 0%, #69b1ff 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  box-shadow: 0 2px 6px rgba(22, 119, 255, 0.25);
+}
+
+.admin-layout .admin-logo-text {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1677ff;
+  letter-spacing: 0.5px;
+  line-height: 1;
+}
+
+.admin-layout .admin-header-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.85);
+  padding-left: 12px;
+  border-left: 1px solid #e8e8e8;
+  line-height: 1.2;
+}
+
+.admin-layout .admin-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.admin-layout .admin-user {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: background 0.2s;
+}
+
+.admin-layout .admin-user:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.admin-layout .admin-sider {
+  background: #f7f8fa !important;
+  border-right: 1px solid #e8e8e8;
+  height: 100% !important;
+  max-height: 100%;
+  position: sticky;
+  top: 0;
+  left: 0;
+  overflow: hidden;
+  z-index: 90;
+}
+
+.admin-layout .admin-sider .ant-layout-sider-children {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.admin-layout .admin-sider-collapse {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 12px 16px 4px;
+  color: rgba(0, 0, 0, 0.45);
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.admin-layout .admin-sider-collapse:hover {
+  color: #1677ff;
+}
+
+.admin-layout .admin-menu.ant-menu {
+  background: transparent;
+  border-inline-end: none !important;
+  padding: 4px 0 16px;
+}
+
+.admin-layout .admin-menu .ant-menu-item-group-title {
+  font-size: 12px !important;
+  text-transform: none;
+  letter-spacing: 0;
+  color: rgba(0, 0, 0, 0.45) !important;
+  padding: 16px 20px 8px !important;
+  font-weight: 500;
+}
+
+.admin-layout .admin-menu .ant-menu-item {
+  margin-inline: 8px !important;
+  width: calc(100% - 16px) !important;
+  border-radius: 6px !important;
+}
+
+.admin-layout .admin-menu .ant-menu-item-selected {
+  background: #fff !important;
+  color: #1677ff !important;
+  font-weight: 500;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  position: relative;
+}
+
+.admin-layout .admin-menu .ant-menu-item-selected::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  border-radius: 0 2px 2px 0;
+  background: #1677ff;
+}
+
+.admin-layout .admin-menu .ant-menu-item-selected .anticon {
+  color: #1677ff;
+}
+
+.admin-layout .admin-content {
+  background:
+    radial-gradient(1200px 480px at 12% -10%, rgba(22, 119, 255, 0.06), transparent 55%),
+    radial-gradient(900px 420px at 92% 0%, rgba(82, 196, 26, 0.04), transparent 50%),
+    #f3f5f8;
+  padding: 18px 28px 28px;
+  overflow: auto;
+  height: 100%;
+  min-height: 0;
+  flex: 1;
+}
+
+/* 页面通用卡片：统一浅色企业风 */
+.admin-page > div > .ant-card,
+.admin-page > .ant-card,
+.admin-page .ant-row > .ant-col > .ant-card {
+  border-radius: 8px;
+  border: 1px solid #f0f0f0;
+  box-shadow: none;
+}
+
+.admin-page > div > h2,
+.admin-page > h2 {
+  font-size: 16px !important;
+  font-weight: 600 !important;
+  color: rgba(0, 0, 0, 0.85);
+  margin-bottom: 4px !important;
+}
+
+.admin-page > div > h2 + p,
+.admin-page > h2 + p {
+  color: rgba(0, 0, 0, 0.45) !important;
+  font-size: 13px;
+}
+
+/* 页面通用：统计卡、列表卡 */
+.admin-page .admin-stat-card.ant-card {
+  border-radius: 8px;
+  border: 1px solid #f0f0f0;
+  box-shadow: none;
+}
+
+.admin-page .admin-stat-card .ant-statistic-title {
+  font-size: 13px;
+  color: rgba(0, 0, 0, 0.45);
+  margin-bottom: 8px;
+}
+
+.admin-page .admin-stat-card .ant-statistic-content-value {
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.admin-page .admin-panel.ant-card {
+  border-radius: 8px;
+  border: 1px solid #f0f0f0;
+  box-shadow: none;
+}
+
+.admin-page .admin-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.admin-page .admin-table-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.admin-page .admin-link-btn.ant-btn-link {
+  padding: 0 4px;
+  height: auto;
+}
+
+.admin-page .admin-skill-tag.ant-tag {
+  background: #f0f7ff;
+  border-color: #91caff;
+  color: #1677ff;
+  margin-inline-end: 0;
+}
+
+.admin-page .ant-table-thead > tr > th {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.admin-page .ant-breadcrumb {
+  margin-bottom: 16px;
+  font-size: 13px;
+}

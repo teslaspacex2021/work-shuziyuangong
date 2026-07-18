@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Layout, Menu, Avatar, Dropdown, Badge, Tag, Select } from 'antd';
+import React, { useMemo, useState } from 'react';
+import { Layout, Menu, Avatar, Dropdown, Badge, Tag, Select, Breadcrumb, ConfigProvider } from 'antd';
 import {
   DashboardOutlined,
   TeamOutlined,
@@ -15,9 +15,11 @@ import {
   AuditOutlined,
   TagOutlined,
 } from '@ant-design/icons';
-import { useNavigate, useLocation, Outlet } from 'react-router-dom';
+import { useNavigate, useLocation, Outlet, Link } from 'react-router-dom';
 import { usePermission } from '../contexts/PermissionContext';
 import type { SystemRole } from '../mock/data';
+import { adminTheme } from '../theme/admin';
+import './AdminLayout.css';
 
 const { Sider, Content, Header } = Layout;
 
@@ -27,6 +29,23 @@ const roleColorMap: Record<string, string> = {
   '人力专员': 'green',
   '审计角色': 'purple',
   '普通用户': 'default',
+};
+
+const routeTitleMap: Record<string, string> = {
+  '/admin/dashboard': '运营驾驶舱',
+  '/admin/alerts': '数字人预警',
+  '/admin/employees': '员工管理',
+  '/admin/approval-records': '审批记录',
+  '/admin/positions': '岗位设置',
+  '/admin/position-types': '岗位所属条线',
+  '/admin/task-logs': '任务调度日志',
+  '/admin/feedback': '意见反馈',
+  '/admin/pending': '我的待办',
+  '/admin/onboard': '入职管理',
+  '/admin/transfer': '调动管理',
+  '/admin/demand': '需求管理',
+  '/admin/performance': '绩效管理',
+  '/admin/exit': '退出管理',
 };
 
 const AdminLayout: React.FC = () => {
@@ -68,7 +87,6 @@ const AdminLayout: React.FC = () => {
         { key: '/admin/position-types', icon: <TagOutlined />, label: '岗位所属条线', permission: 'positions' },
       ],
     },
-    // 人事管理菜单已隐藏
     {
       key: 'logs-group',
       label: '任务日志',
@@ -92,9 +110,13 @@ const AdminLayout: React.FC = () => {
     children: group.children.filter((item) => canAccessRoute(item.key)),
   })).filter((group) => group.children.length > 0);
 
-  const getSelectedKey = () => {
-    return location.pathname;
-  };
+  const selectedKey = location.pathname;
+  const pageTitle = routeTitleMap[selectedKey] ?? '管理后台';
+
+  const breadcrumbItems = useMemo(() => [
+    { title: <Link to="/admin/dashboard">首页</Link> },
+    { title: pageTitle },
+  ], [pageTitle]);
 
   const userMenu = {
     items: [
@@ -104,62 +126,17 @@ const AdminLayout: React.FC = () => {
   };
 
   return (
-    <Layout style={{ minHeight: '100vh' }}>
-      <Sider
-        width={220}
-        collapsible
-        collapsed={collapsed}
-        trigger={null}
-        theme="dark"
-        style={{ background: '#0a1929' }}
-      >
-        <div style={{
-          padding: '16px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 10,
-          borderBottom: '1px solid rgba(255,255,255,0.08)',
-        }}>
-          <RobotOutlined style={{ fontSize: 22, color: '#1677ff' }} />
-          {!collapsed && (
-            <span style={{ fontSize: 15, fontWeight: 600, color: '#fff' }}>
-              数字员工管理后台
-            </span>
-          )}
-        </div>
-        <Menu
-          mode="inline"
-          theme="dark"
-          selectedKeys={[getSelectedKey()]}
-          items={menuItems}
-          onClick={({ key }) => navigate(key)}
-          style={{
-            background: 'transparent',
-            borderRight: 'none',
-            marginTop: 8,
-          }}
-        />
-      </Sider>
-      <Layout>
-        <Header style={{
-          background: '#fff',
-          padding: '0 24px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          borderBottom: '1px solid #f0f0f0',
-          height: 56,
-          lineHeight: '56px',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <span
-              style={{ cursor: 'pointer', fontSize: 16 }}
-              onClick={() => setCollapsed(!collapsed)}
-            >
-              {collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-            </span>
+    <ConfigProvider theme={adminTheme} autoInsertSpaceInButton={false}>
+      <Layout className="admin-layout">
+        <Header className="admin-header">
+          <div className="admin-header-brand">
+            <div className="admin-logo">
+              <div className="admin-logo-mark">云</div>
+              <span className="admin-logo-text">天翼云</span>
+            </div>
+            <span className="admin-header-title">数字员工管理后台</span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <div className="admin-header-actions">
             <Select
               size="small"
               value={user.role}
@@ -174,22 +151,57 @@ const AdminLayout: React.FC = () => {
               ]}
             />
             <Badge count={3} size="small">
-              <BellOutlined style={{ fontSize: 16, cursor: 'pointer' }} onClick={() => navigate('/admin/alerts')} />
+              <BellOutlined
+                style={{ fontSize: 16, cursor: 'pointer', color: 'rgba(0,0,0,0.65)' }}
+                onClick={() => navigate('/admin/alerts')}
+              />
             </Badge>
             <Dropdown menu={userMenu} placement="bottomRight">
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+              <div className="admin-user">
                 <Avatar size="small" icon={<UserOutlined />} style={{ background: '#1677ff' }} />
-                <span style={{ fontSize: 14 }}>{user.name}</span>
-                <Tag color={roleColorMap[user.role]} style={{ fontSize: 11, marginLeft: -4 }}>{user.role}</Tag>
+                <span style={{ fontSize: 14, color: 'rgba(0,0,0,0.85)' }}>{user.name}</span>
+                <Tag color={roleColorMap[user.role]} style={{ fontSize: 11, marginInlineEnd: 0 }}>
+                  {user.role}
+                </Tag>
               </div>
             </Dropdown>
           </div>
         </Header>
-        <Content style={{ background: '#f0f2f5', padding: 24, overflow: 'auto' }}>
-          <Outlet />
-        </Content>
+        <Layout className="admin-body">
+          <Sider
+            className="admin-sider"
+            width={220}
+            collapsible
+            collapsed={collapsed}
+            trigger={null}
+            theme="light"
+          >
+            <div
+              className="admin-sider-collapse"
+              onClick={() => setCollapsed(!collapsed)}
+              role="button"
+              aria-label={collapsed ? '展开菜单' : '收起菜单'}
+            >
+              {collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+            </div>
+            <Menu
+              className="admin-menu"
+              mode="inline"
+              theme="light"
+              selectedKeys={[selectedKey]}
+              items={menuItems}
+              onClick={({ key }) => navigate(key)}
+            />
+          </Sider>
+          <Content className="admin-content">
+            <Breadcrumb items={breadcrumbItems} />
+            <div className="admin-page">
+              <Outlet />
+            </div>
+          </Content>
+        </Layout>
       </Layout>
-    </Layout>
+    </ConfigProvider>
   );
 };
 

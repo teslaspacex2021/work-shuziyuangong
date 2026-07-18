@@ -1,14 +1,12 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   Card, Table, Tag, Button, Space, Avatar, Modal, Input, Select,
-  Row, Col, Statistic, Badge, message, Switch, Tooltip, Empty,
+  Row, Col, Statistic, Badge, message, Switch, Empty,
 } from 'antd';
 import {
-  SearchOutlined, SettingOutlined, TeamOutlined,
-  ThunderboltOutlined, DatabaseOutlined, FileTextOutlined,
-  BookOutlined, InfoCircleOutlined, SyncOutlined,
-  CheckCircleOutlined, ExperimentOutlined,
-  PlusOutlined, ControlOutlined, DeleteOutlined,
+  SearchOutlined, ThunderboltOutlined, DatabaseOutlined, FileTextOutlined,
+  BookOutlined, SyncOutlined, PlusOutlined, ControlOutlined, DeleteOutlined,
+  ReloadOutlined,
 } from '@ant-design/icons';
 import {
   digitalEmployees, skills, knowledgeBases,
@@ -55,7 +53,13 @@ const generateEmployeeId = (list: DigitalEmployee[]): string => {
 const EmployeeManagement: React.FC = () => {
   const [employees, setEmployees] = useState(digitalEmployees);
   const [searchText, setSearchText] = useState('');
+  const [deptFilter, setDeptFilter] = useState<string | undefined>(undefined);
   const [statusFilter, setStatusFilter] = useState<string | undefined>(undefined);
+  const [runStatusFilter, setRunStatusFilter] = useState<string | undefined>(undefined);
+  const [appliedSearch, setAppliedSearch] = useState('');
+  const [appliedDept, setAppliedDept] = useState<string | undefined>(undefined);
+  const [appliedStatus, setAppliedStatus] = useState<string | undefined>(undefined);
+  const [appliedRunStatus, setAppliedRunStatus] = useState<string | undefined>(undefined);
   const [addVisible, setAddVisible] = useState(false);
   const [configVisible, setConfigVisible] = useState(false);
   const [detailVisible, setDetailVisible] = useState(false);
@@ -65,17 +69,44 @@ const EmployeeManagement: React.FC = () => {
   const [featureFlags, setFeatureFlags] = useState<EmployeeFeatureFlags>({ ...DEFAULT_FEATURE_FLAGS });
   const [pickerType, setPickerType] = useState<AiToolPickerType | null>(null);
 
+  const departmentOptions = useMemo(
+    () => [...new Set(employees.map((e) => e.department).filter(Boolean))].map((d) => ({ label: d, value: d })),
+    [employees],
+  );
+
   const filtered = employees.filter((e) => {
     const empNo = e.employeeNumber ?? '';
     const matchSearch =
-      e.name.includes(searchText)
-      || empNo.includes(searchText)
-      || e.id.includes(searchText)
-      || e.department.includes(searchText);
+      !appliedSearch
+      || e.name.includes(appliedSearch)
+      || empNo.includes(appliedSearch)
+      || e.id.includes(appliedSearch)
+      || e.department.includes(appliedSearch)
+      || e.position.includes(appliedSearch);
     const effectiveStatus = getEffectiveEmploymentStatus(e);
-    const matchStatus = !statusFilter || effectiveStatus === statusFilter;
-    return matchSearch && matchStatus;
+    const matchStatus = !appliedStatus || effectiveStatus === appliedStatus;
+    const matchDept = !appliedDept || e.department === appliedDept;
+    const matchRun = !appliedRunStatus || e.status === appliedRunStatus;
+    return matchSearch && matchStatus && matchDept && matchRun;
   });
+
+  const handleSearch = () => {
+    setAppliedSearch(searchText.trim());
+    setAppliedDept(deptFilter);
+    setAppliedStatus(statusFilter);
+    setAppliedRunStatus(runStatusFilter);
+  };
+
+  const handleReset = () => {
+    setSearchText('');
+    setDeptFilter(undefined);
+    setStatusFilter(undefined);
+    setRunStatusFilter(undefined);
+    setAppliedSearch('');
+    setAppliedDept(undefined);
+    setAppliedStatus(undefined);
+    setAppliedRunStatus(undefined);
+  };
 
   const activeCount = employees.filter((e) => e.status === 'ACTIVE').length;
   const trainingCount = employees.filter((e) => e.status === 'TRAINING').length;
@@ -211,38 +242,82 @@ const EmployeeManagement: React.FC = () => {
 
   const columns = [
     {
-      title: '数字员工名称', key: 'name', width: 200,
+      title: 'ID',
+      key: 'id',
+      width: 120,
+      render: (_: unknown, record: DigitalEmployee) => (
+        <span style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: 12, color: 'rgba(0,0,0,0.65)' }}>
+          {record.employeeNumber || record.id}
+        </span>
+      ),
+    },
+    {
+      title: '数字员工', key: 'name', width: 200,
       render: (_: unknown, record: DigitalEmployee) => (
         <Space>
-          <Badge dot color={record.status === 'ACTIVE' ? '#52c41a' : record.status === 'TRAINING' ? '#1677ff' : '#faad14'} offset={[-2, 32]}>
-            <Avatar src={record.avatar} />
+          <Badge dot color={record.status === 'ACTIVE' ? '#52c41a' : record.status === 'TRAINING' ? '#722ed1' : '#faad14'} offset={[-2, 32]}>
+            <Avatar src={record.avatar} size={36} />
           </Badge>
           <div>
-            <div style={{ fontWeight: 500 }}>{record.name}</div>
-            <div style={{ fontSize: 11, color: '#999' }}>{record.owner} ({record.ownerType})</div>
+            <div style={{ fontWeight: 500, color: 'rgba(0,0,0,0.85)' }}>{record.name}</div>
+            <div style={{ fontSize: 12, color: 'rgba(0,0,0,0.45)' }}>{record.owner}（{record.ownerType}）</div>
           </div>
         </Space>
       ),
     },
     {
+      title: '部门',
+      dataIndex: 'department',
+      key: 'department',
+      width: 140,
+      ellipsis: true,
+    },
+    {
+      title: '岗位',
+      dataIndex: 'position',
+      key: 'position',
+      width: 200,
+      ellipsis: true,
+    },
+    {
       title: '所属条线', dataIndex: 'businessLine', key: 'businessLine', width: 100,
       render: (v: string | undefined) => v ? <Tag>{v}</Tag> : <span style={{ color: '#999' }}>—</span>,
     },
-    { title: '基准岗位', dataIndex: 'position', key: 'position', width: 220 },
     {
       title: '级别', dataIndex: 'capabilityLevel', key: 'capabilityLevel', width: 90,
       render: (v: string | undefined) => v ? <Tag color="blue">{v}</Tag> : <span style={{ color: '#999' }}>—</span>,
     },
     {
-      title: '所需技能', key: 'skills', width: 240,
+      title: '配置技能', key: 'skills', width: 240,
       render: (_: unknown, record: DigitalEmployee) => {
         const shown = record.skills.slice(0, 3);
         const rest = record.skills.length - 3;
         if (shown.length === 0) return <span style={{ color: '#999', fontSize: 12 }}>暂未配置</span>;
         return (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-            {shown.map((s) => <Tag key={s} color="processing" style={{ margin: 0 }}>{s}</Tag>)}
-            {rest > 0 && <Tag style={{ margin: 0 }}>+{rest}</Tag>}
+            {shown.map((s) => (
+              <Tag key={s} className="admin-skill-tag">{s}</Tag>
+            ))}
+            {rest > 0 && <Tag className="admin-skill-tag">+{rest}</Tag>}
+          </div>
+        );
+      },
+    },
+    {
+      title: '关联智能体',
+      key: 'relatedAgents',
+      width: 160,
+      render: (_: unknown, record: DigitalEmployee) => {
+        const agents = record.relatedAgents ?? [];
+        if (!agents.length) return <span style={{ color: '#999', fontSize: 12 }}>—</span>;
+        const shown = agents.slice(0, 2);
+        const rest = agents.length - 2;
+        return (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+            {shown.map((a) => (
+              <Tag key={a} className="admin-skill-tag">{a}</Tag>
+            ))}
+            {rest > 0 && <Tag className="admin-skill-tag">+{rest}</Tag>}
           </div>
         );
       },
@@ -262,15 +337,15 @@ const EmployeeManagement: React.FC = () => {
       },
     },
     {
-      title: '操作', key: 'action', width: 100, fixed: 'right' as const,
+      title: '操作', key: 'action', width: 140, fixed: 'right' as const,
       render: (_: unknown, record: DigitalEmployee) => (
-        <Space size={4}>
-          <Tooltip title="配置">
-            <Button type="primary" size="small" icon={<SettingOutlined />} onClick={() => openConfig(record)} />
-          </Tooltip>
-          <Tooltip title="详情">
-            <Button type="text" size="small" icon={<InfoCircleOutlined />} onClick={() => showDetail(record)} />
-          </Tooltip>
+        <Space size={8}>
+          <Button type="link" className="admin-link-btn" onClick={() => openConfig(record)}>
+            配置
+          </Button>
+          <Button type="link" className="admin-link-btn" onClick={() => showDetail(record)}>
+            查看详情
+          </Button>
         </Space>
       ),
     },
@@ -283,73 +358,95 @@ const EmployeeManagement: React.FC = () => {
 
   return (
     <div>
-      <div style={{ marginBottom: 20 }}>
-        <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 4 }}>员工管理</h2>
-        <p style={{ color: '#666', margin: 0 }}>
-          管理数字员工信息，配置技能与知识资源，全面掌控数字员工能力。
-        </p>
-      </div>
-
-      <Row gutter={16} style={{ marginBottom: 20 }}>
+      <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col span={6}>
-          <Card style={{ borderRadius: 12 }}>
-            <Statistic title="数字员工总数" value={employees.length} prefix={<TeamOutlined />} />
+          <Card className="admin-stat-card" size="small">
+            <Statistic title="数字员工总数" value={employees.length} valueStyle={{ color: '#1677ff' }} />
           </Card>
         </Col>
         <Col span={6}>
-          <Card style={{ borderRadius: 12 }}>
-            <Statistic title="在职" value={inServiceCount} prefix={<CheckCircleOutlined style={{ color: '#52c41a' }} />} valueStyle={{ color: '#52c41a' }} />
+          <Card className="admin-stat-card" size="small">
+            <Statistic title="在职" value={inServiceCount} valueStyle={{ color: '#52c41a' }} />
           </Card>
         </Col>
         <Col span={6}>
-          <Card style={{ borderRadius: 12 }}>
-            <Statistic title="在线" value={activeCount} prefix={<CheckCircleOutlined style={{ color: '#1677ff' }} />} valueStyle={{ color: '#1677ff' }} />
+          <Card className="admin-stat-card" size="small">
+            <Statistic title="在线" value={activeCount} valueStyle={{ color: '#722ed1' }} />
           </Card>
         </Col>
         <Col span={6}>
-          <Card style={{ borderRadius: 12 }}>
-            <Statistic title="训练中" value={trainingCount} prefix={<ExperimentOutlined style={{ color: '#722ed1' }} />} valueStyle={{ color: '#722ed1' }} />
+          <Card className="admin-stat-card" size="small">
+            <Statistic title="训练中" value={trainingCount} valueStyle={{ color: '#fa8c16' }} />
           </Card>
         </Col>
       </Row>
 
-      <Card
-        style={{ borderRadius: 12 }}
-        title="数字员工列表"
-        extra={
-          <Space>
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => setAddVisible(true)}>
-              新增员工
-            </Button>
-            <Input
-              placeholder="搜索员工名称/工号/部门..."
-              prefix={<SearchOutlined />}
-              value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
-              style={{ width: 240 }}
-              allowClear
-            />
-            <Select
-              placeholder="在职状态"
-              style={{ width: 100 }}
-              allowClear
-              value={statusFilter}
-              onChange={setStatusFilter}
-              options={[
-                { label: '在职', value: '在职' },
-                { label: '离职', value: '离职' },
-              ]}
-            />
-          </Space>
-        }
-      >
+      <Card className="admin-panel" styles={{ body: { paddingBottom: 12 } }}>
+        <div className="admin-filter-bar">
+          <Input
+            placeholder="关键词（名称/工号/部门）"
+            prefix={<SearchOutlined style={{ color: 'rgba(0,0,0,0.25)' }} />}
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+            onPressEnter={handleSearch}
+            style={{ width: 240 }}
+            allowClear
+          />
+          <Select
+            placeholder="部门"
+            style={{ width: 160 }}
+            allowClear
+            value={deptFilter}
+            onChange={setDeptFilter}
+            options={departmentOptions}
+          />
+          <Select
+            placeholder="在岗状态"
+            style={{ width: 120 }}
+            allowClear
+            value={statusFilter}
+            onChange={setStatusFilter}
+            options={[
+              { label: '在职', value: '在职' },
+              { label: '离职', value: '离职' },
+            ]}
+          />
+          <Select
+            placeholder="运行状态"
+            style={{ width: 120 }}
+            allowClear
+            value={runStatusFilter}
+            onChange={setRunStatusFilter}
+            options={[
+              { label: '在线', value: 'ACTIVE' },
+              { label: '训练中', value: 'TRAINING' },
+              { label: '已暂停', value: 'SUSPENDED' },
+              { label: '已停用', value: 'TERMINATED' },
+            ]}
+          />
+          <Button type="primary" onClick={handleSearch}>查询</Button>
+          <Button onClick={handleReset}>重置</Button>
+        </div>
+
+        <div className="admin-table-toolbar">
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => setAddVisible(true)}>
+            新增员工
+          </Button>
+          <Button
+            type="text"
+            icon={<ReloadOutlined />}
+            onClick={handleSearch}
+            aria-label="刷新列表"
+          />
+        </div>
+
         <Table
           dataSource={filtered}
           columns={columns}
           rowKey="id"
-          pagination={{ pageSize: 10 }}
+          pagination={{ pageSize: 10, showSizeChanger: true, showTotal: (total) => `共 ${total} 条` }}
           size="middle"
-          scroll={{ x: 1000 }}
+          scroll={{ x: 1400 }}
         />
       </Card>
 
@@ -380,7 +477,7 @@ const EmployeeManagement: React.FC = () => {
               <div style={{ marginBottom: 24 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
                   <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <ThunderboltOutlined style={{ color: '#e4393c' }} />
+                    <ThunderboltOutlined style={{ color: '#1677ff' }} />
                     技能配置
                     <Tag style={{ marginLeft: 4 }}>{selectedSkills.length}</Tag>
                   </div>

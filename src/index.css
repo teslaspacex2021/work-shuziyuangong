@@ -44,9 +44,8 @@ body {
 }
 
 .ant-menu-item-group-title {
-  font-size: 11px !important;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  font-size: 12px !important;
+  letter-spacing: 0;
 }
 
 .ant-card:hover {
@@ -55,10 +54,4 @@ body {
 
 .ant-card.ant-card-hoverable:hover {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-}
-
-.ant-layout-sider-dark .ant-menu-item-group-title {
-  color: rgba(255, 255, 255, 0.35) !important;
-  font-size: 11px !important;
-  padding-left: 24px !important;
 }
