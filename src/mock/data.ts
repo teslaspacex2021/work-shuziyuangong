@@ -129,6 +129,32 @@ const FALLBACK_LEVEL_MAP: Record<string, CapabilityLevel> = {
 export const getEmployeeCapabilityLevel = (emp: DigitalEmployee): CapabilityLevel =>
   emp.capabilityLevel ?? FALLBACK_LEVEL_MAP[emp.level] ?? '工具型';
 
+/** 对话输入框「例如」示例：优先员工专属猜你想问，其次按技能生成 */
+export const getEmployeePlaceholderExamples = (emp: DigitalEmployee): string[] => {
+  const fromSuggested = (emp.suggestedQuestions ?? []).map((q) => q.trim()).filter(Boolean);
+  if (fromSuggested.length >= 2) return fromSuggested.slice(0, 2);
+  if (fromSuggested.length === 1) {
+    const skillHint = emp.skills[0] ? `帮我用「${emp.skills[0]}」处理一项任务` : '帮我梳理今日重点事项';
+    return [fromSuggested[0], skillHint];
+  }
+  if (emp.skills.length >= 2) {
+    return [
+      `帮我用「${emp.skills[0]}」完成一项任务`,
+      `关于「${emp.skills[1]}」有什么建议？`,
+    ];
+  }
+  if (emp.skills.length === 1) {
+    return [`帮我用「${emp.skills[0]}」完成一项任务`, `介绍一下你的主要能力`];
+  }
+  return ['帮我梳理今日重点事项', '你能帮我做什么？'];
+};
+
+/** 组装对话输入框占位文案（含专属示例；@ / 提示由 ChatInputComposer 追加） */
+export const buildEmployeeChatPlaceholder = (emp: DigitalEmployee): string => {
+  const examples = getEmployeePlaceholderExamples(emp);
+  return `向${emp.name}提问，例如：${examples.join('；')}`;
+};
+
 /** 关联系统级别 */
 export const SYSTEM_LEVELS = ['集团级系统', '公司级系统'] as const;
 export type SystemLevelType = typeof SYSTEM_LEVELS[number];

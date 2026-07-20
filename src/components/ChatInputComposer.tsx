@@ -175,9 +175,9 @@ const ChatInputComposer: React.FC<ChatInputComposerProps> = ({
   const [focused, setFocused] = useState(false);
   const [pickerType, setPickerType] = useState<AiToolPickerType | null>(null);
   const [selectedCounts, setSelectedCounts] = useState({
-    skill: 3,
+    skill: 0,
     knowledge: 0,
-    mcp: mcpItems ? mcpItems.filter((item) => item.selected).length : 3,
+    mcp: mcpItems ? mcpItems.filter((item) => item.selected).length : 0,
   });
   const [mention, setMention] = useState<MentionState | null>(null);
   const [mentionIndex, setMentionIndex] = useState(0);
@@ -185,12 +185,20 @@ const ChatInputComposer: React.FC<ChatInputComposerProps> = ({
   const [selectedSkills, setSelectedSkills] = useState<ChatMentionSkill[]>([]);
 
   useEffect(() => {
-    if (!mcpItems) return;
+    if (!mcpItems) {
+      setSelectedCounts((prev) => ({ ...prev, mcp: 0 }));
+      return;
+    }
     setSelectedCounts((prev) => ({
       ...prev,
       mcp: mcpItems.filter((item) => item.selected).length,
     }));
   }, [mcpItems]);
+
+  // 「/」选中的技能标签与 + 菜单计数同步
+  useEffect(() => {
+    setSelectedCounts((prev) => ({ ...prev, skill: selectedSkills.length }));
+  }, [selectedSkills]);
 
   const openPicker = (type: AiToolPickerType) => {
     setPickerType(type);

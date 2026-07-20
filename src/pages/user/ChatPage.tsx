@@ -20,7 +20,7 @@ import { useSearchParams, useLocation } from 'react-router-dom';
 import {
   digitalEmployees, conversations, tasks, skills, knowledgeBases,
   getAllScheduledTasks, persistCreatedScheduledTask, mockRetrievalFiles, getEmployeeFeatureFlags,
-  DISLIKE_REASON_OPTIONS, SCHEDULE_ASSISTANT_ID,
+  DISLIKE_REASON_OPTIONS, SCHEDULE_ASSISTANT_ID, buildEmployeeChatPlaceholder,
   type ConversationItem, type ScheduledTask, type RetrievalFileItem,
 } from '../../mock/data';
 import ThirdScreenPanel from '../../components/ThirdScreenPanel';
@@ -1066,7 +1066,7 @@ const ChatPage: React.FC = () => {
                 }}
                 placeholder={
                   isUserLayout
-                    ? '向天翼云数字人提问，例如：如何修改 OA 密码？公文格式规范有哪些？'
+                    ? '向天翼云数字人提问，例如：帮我处理今日待办；公司软考有什么政策？'
                     : '请输入指令或问题和我对话吧'
                 }
                 featureFlags={null}
@@ -1441,7 +1441,7 @@ const ChatPage: React.FC = () => {
                   placeholder={
                     isScheduleChatActive
                       ? '描述要创建的定时任务，或先召唤执行专家…'
-                      : `向${selectedEmployee.name}提问，例如：如何修改 OA 密码？公文格式规范有哪些？`
+                      : buildEmployeeChatPlaceholder(selectedEmployee)
                   }
                   featureFlags={composerFeatureFlags}
                   showAllWhenNoFlags={false}

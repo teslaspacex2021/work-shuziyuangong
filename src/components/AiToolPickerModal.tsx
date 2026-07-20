@@ -18,17 +18,17 @@ export interface AiToolPickerItem {
 const MAX_SELECT = 99;
 
 const MOCK_SKILLS: AiToolPickerItem[] = [
-  { id: 's1', name: '期刊数据多维分析', desc: '多维度拆解期刊经营与内容数据，支持对比分析', icon: '⚡', color: '#722ed1', selected: true },
-  { id: 's2', name: '大白话版数据分析', desc: '用通俗语言解读复杂数据结论与趋势', icon: '📊', color: '#1677ff', selected: true },
-  { id: 's3', name: '数据可视化', desc: '自动生成图表与看板，辅助汇报与决策', icon: '📈', color: '#52c41a', selected: true },
+  { id: 's1', name: '期刊数据多维分析', desc: '多维度拆解期刊经营与内容数据，支持对比分析', icon: '⚡', color: '#722ed1', selected: false },
+  { id: 's2', name: '大白话版数据分析', desc: '用通俗语言解读复杂数据结论与趋势', icon: '📊', color: '#1677ff', selected: false },
+  { id: 's3', name: '数据可视化', desc: '自动生成图表与看板，辅助汇报与决策', icon: '📈', color: '#52c41a', selected: false },
   { id: 's4', name: '数据分析技能', desc: '通用数据分析与指标计算能力', icon: '🔍', color: '#fa8c16', selected: false },
   { id: 's5', name: '运营数据分析技能', desc: '面向运营场景的转化、留存与活动分析', icon: '📋', color: '#13c2c2', selected: false },
 ];
 
 const MOCK_MCP: AiToolPickerItem[] = [
-  { id: 'm1', name: '期刊数据多维分析', desc: '通过 MCP 调用期刊数据多维分析工具', selected: true },
-  { id: 'm2', name: '大白话版数据分析', desc: '通过 MCP 调用通俗解读类分析工具', selected: true },
-  { id: 'm3', name: '数据可视化', desc: '通过 MCP 生成可视化结果', selected: true },
+  { id: 'm1', name: '期刊数据多维分析', desc: '通过 MCP 调用期刊数据多维分析工具', selected: false },
+  { id: 'm2', name: '大白话版数据分析', desc: '通过 MCP 调用通俗解读类分析工具', selected: false },
+  { id: 'm3', name: '数据可视化', desc: '通过 MCP 生成可视化结果', selected: false },
   { id: 'm4', name: '数据分析技能', desc: '通用数据分析 MCP 工具', selected: false },
   { id: 'm5', name: '运营数据分析技能', desc: '运营场景 MCP 分析工具', selected: false },
 ];
