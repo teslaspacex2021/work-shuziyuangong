@@ -1074,6 +1074,7 @@ const ChatPage: React.FC = () => {
                 onSummonEmployee={() => setSummonEmployeeVisible(true)}
                 summonLabel={isUserLayout ? '切换专家' : '选择数字员工'}
                 onMentionEmployee={(emp) => startChatWithEmployee(emp.id)}
+                currentEmployeeId={selectedEmployee?.id}
               />
             </div>
           </div>
@@ -1448,6 +1449,7 @@ const ChatPage: React.FC = () => {
                   summonLabel={isScheduleChatActive ? '召唤专家' : '切换专家'}
                   mcpItems={scheduleMcpItems}
                   onMentionEmployee={(emp) => startChatWithEmployee(emp.id)}
+                  currentEmployeeId={selectedEmployee.id}
                 />
               </div>
             </div>

@@ -10,6 +10,8 @@ import {
   DatabaseOutlined,
   ApiOutlined,
   RobotOutlined,
+  ToolOutlined,
+  CloseOutlined,
 } from '@ant-design/icons';
 import type { EmployeeFeatureFlags } from '../mock/data';
 import { digitalEmployees, skills } from '../mock/data';
@@ -54,6 +56,8 @@ export interface ChatInputComposerProps {
   onMentionEmployee?: (employee: ChatMentionEmployee) => void;
   /** 通过 / 选中技能后的回调 */
   onMentionSkill?: (skill: ChatMentionSkill) => void;
+  /** 当前对话中的数字员工（用于 @ 列表排除/提示；不在输入框展示员工标签） */
+  currentEmployeeId?: string;
 }
 
 type MentionKind = 'employee' | 'skill';
@@ -65,7 +69,7 @@ type MentionState = {
 };
 
 const MODEL_OPTIONS = [
-  { key: 'auto', label: '自动' },
+  { key: 'auto', label: 'Auto' },
   { key: 'glm-4', label: 'GLM-4' },
   { key: 'deepseek-v3', label: 'DeepSeek-V3' },
   { key: 'qwen-max', label: '通义千问 Max' },
@@ -164,6 +168,7 @@ const ChatInputComposer: React.FC<ChatInputComposerProps> = ({
   mentionSkills = DEFAULT_SKILLS,
   onMentionEmployee,
   onMentionSkill,
+  currentEmployeeId,
 }) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [modelKey, setModelKey] = useState('auto');
@@ -176,6 +181,8 @@ const ChatInputComposer: React.FC<ChatInputComposerProps> = ({
   });
   const [mention, setMention] = useState<MentionState | null>(null);
   const [mentionIndex, setMentionIndex] = useState(0);
+  /** / 选中的技能：以标签形式展示在输入框顶部，可多选 */
+  const [selectedSkills, setSelectedSkills] = useState<ChatMentionSkill[]>([]);
 
   useEffect(() => {
     if (!mcpItems) return;
@@ -271,30 +278,31 @@ const ChatInputComposer: React.FC<ChatInputComposerProps> = ({
   const toolsActive =
     selectedCounts.skill > 0 || selectedCounts.knowledge > 0 || selectedCounts.mcp > 0;
 
-  const modelLabel = MODEL_OPTIONS.find((m) => m.key === modelKey)?.label ?? '自动';
+  const modelLabel = MODEL_OPTIONS.find((m) => m.key === modelKey)?.label ?? 'Auto';
+  const effectivePlaceholder = `${placeholder}  @ 切换数字员工， / 添加技能标签`;
 
   const filteredEmployees = useMemo(() => {
     if (!mention || mention.kind !== 'employee') return [];
     const q = mention.query.toLowerCase();
     return mentionEmployees.filter((e) =>
-      !q
-      || e.name.toLowerCase().includes(q)
-      || e.department?.toLowerCase().includes(q),
+      e.id !== currentEmployeeId
+      && (!q || e.name.toLowerCase().includes(q) || e.department?.toLowerCase().includes(q)),
     ).slice(0, 8);
-  }, [mention, mentionEmployees]);
+  }, [mention, mentionEmployees, currentEmployeeId]);
 
   const filteredSkills = useMemo(() => {
     if (!mention || mention.kind !== 'skill') return [];
     const q = mention.query.toLowerCase();
+    const selectedIds = new Set(selectedSkills.map((s) => s.id));
     return mentionSkills.filter((s) =>
-      !q
-      || s.name.toLowerCase().includes(q)
-      || s.description?.toLowerCase().includes(q),
+      !selectedIds.has(s.id)
+      && (!q || s.name.toLowerCase().includes(q) || s.description?.toLowerCase().includes(q)),
     ).slice(0, 8);
-  }, [mention, mentionSkills]);
+  }, [mention, mentionSkills, selectedSkills]);
 
   const mentionItems = mention?.kind === 'employee' ? filteredEmployees : filteredSkills;
-  const mentionOpen = !!mention && mentionItems.length > 0;
+  const mentionOpen = !!mention;
+  const hasChips = selectedSkills.length > 0;
 
   useEffect(() => {
     setMentionIndex(0);
@@ -304,32 +312,46 @@ const ChatInputComposer: React.FC<ChatInputComposerProps> = ({
     setMention(detectMention(nextValue, cursor));
   }, []);
 
-  const applyMention = useCallback((
-    item: ChatMentionEmployee | ChatMentionSkill,
-    kind: MentionKind,
-  ) => {
-    if (!mention || !textareaRef.current) return;
-    const cursor = textareaRef.current.selectionStart ?? value.length;
-    const prefix = kind === 'employee' ? '@' : '/';
-    const insertText = `${prefix}${item.name} `;
-    const nextValue = value.slice(0, mention.start) + insertText + value.slice(cursor);
+  /** 选中后清除触发符与查询词，改为标签展示（技能）或切换员工（@） */
+  const stripTriggerAndKeepText = useCallback((start: number, cursor: number) => {
+    const nextValue = value.slice(0, start) + value.slice(cursor);
     onChange(nextValue);
-    setMention(null);
-
-    const nextCursor = mention.start + insertText.length;
     requestAnimationFrame(() => {
       const el = textareaRef.current;
       if (!el) return;
       el.focus();
-      el.setSelectionRange(nextCursor, nextCursor);
+      el.setSelectionRange(start, start);
     });
+  }, [onChange, value]);
+
+  const applyMention = useCallback((
+    item: ChatMentionEmployee | ChatMentionSkill,
+    kind: MentionKind,
+  ) => {
+    if (!mention) return;
+    const cursor = textareaRef.current?.selectionStart ?? value.length;
+    stripTriggerAndKeepText(mention.start, cursor);
+    setMention(null);
 
     if (kind === 'employee') {
+      // 不展示员工标签：对话对象由页头/占位符体现，避免与「切换专家」不同步
       onMentionEmployee?.(item as ChatMentionEmployee);
-    } else {
-      onMentionSkill?.(item as ChatMentionSkill);
+      return;
     }
-  }, [mention, onChange, onMentionEmployee, onMentionSkill, value]);
+
+    const skill = item as ChatMentionSkill;
+    setSelectedSkills((prev) => (prev.some((s) => s.id === skill.id) ? prev : [...prev, skill]));
+    onMentionSkill?.(skill);
+  }, [mention, onMentionEmployee, onMentionSkill, stripTriggerAndKeepText, value.length]);
+
+  const removeSkill = (id: string) => {
+    setSelectedSkills((prev) => prev.filter((s) => s.id !== id));
+  };
+
+  const handleSendClick = () => {
+    onSend();
+    setSelectedSkills([]);
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const next = e.target.value;
@@ -343,7 +365,7 @@ const ChatInputComposer: React.FC<ChatInputComposerProps> = ({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (mentionOpen) {
+    if (mentionOpen && mentionItems.length > 0) {
       if (e.key === 'ArrowDown') {
         e.preventDefault();
         setMentionIndex((i) => (i + 1) % mentionItems.length);
@@ -360,17 +382,32 @@ const ChatInputComposer: React.FC<ChatInputComposerProps> = ({
         if (item) applyMention(item, mention!.kind);
         return;
       }
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        setMention(null);
-        return;
-      }
+    }
+    if (mentionOpen && e.key === 'Escape') {
+      e.preventDefault();
+      setMention(null);
+      return;
     }
 
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      onSend();
+      handleSendClick();
     }
+  };
+
+  const chipStyle: React.CSSProperties = {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 6,
+    height: 28,
+    padding: '0 8px 0 10px',
+    borderRadius: 8,
+    background: '#f5f5f5',
+    border: '1px solid #ebebeb',
+    fontSize: 13,
+    color: '#333',
+    lineHeight: 1,
+    maxWidth: 220,
   };
 
   return (
@@ -410,7 +447,9 @@ const ChatInputComposer: React.FC<ChatInputComposerProps> = ({
               borderBottom: '1px solid #f0f0f0',
             }}
             >
-              {mention?.kind === 'employee' ? '选择数字员工（@）' : '选择技能（/）'}
+              {mention?.kind === 'employee'
+                ? (currentEmployeeId ? '切换数字员工（@，一次一位）' : '选择数字员工（@）')
+                : '选择技能（/）'}
             </div>
             {mention?.kind === 'employee' && filteredEmployees.map((emp, idx) => (
               <button
@@ -471,11 +510,11 @@ const ChatInputComposer: React.FC<ChatInputComposerProps> = ({
                   display: 'inline-flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  color: BRAND_PRIMARY,
+                  color: '#666',
                   flexShrink: 0,
                 }}
                 >
-                  <ThunderboltOutlined />
+                  <ToolOutlined />
                 </span>
                 <div style={{ minWidth: 0 }}>
                   <div style={{ fontSize: 14, fontWeight: 500, color: '#333' }}>{skill.name}</div>
@@ -495,10 +534,58 @@ const ChatInputComposer: React.FC<ChatInputComposerProps> = ({
                 </div>
               </button>
             ))}
+            {mention?.kind === 'skill' && filteredSkills.length === 0 && (
+              <div style={{ padding: '12px', fontSize: 13, color: '#999' }}>暂无更多可添加技能</div>
+            )}
+            {mention?.kind === 'employee' && filteredEmployees.length === 0 && (
+              <div style={{ padding: '12px', fontSize: 13, color: '#999' }}>暂无匹配的数字员工</div>
+            )}
           </div>
         )}
 
-        <div style={{ padding: '12px 14px 6px' }}>
+        {hasChips && (
+          <div style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: 8,
+            padding: '10px 14px 0',
+          }}
+          >
+            {selectedSkills.map((skill) => (
+              <span key={skill.id} style={chipStyle}>
+                <ToolOutlined style={{ fontSize: 13, color: '#595959' }} />
+                <span style={{
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  maxWidth: 160,
+                }}
+                >
+                  {skill.name}
+                </span>
+                <button
+                  type="button"
+                  aria-label={`移除技能 ${skill.name}`}
+                  onClick={() => removeSkill(skill.id)}
+                  style={{
+                    border: 'none',
+                    background: 'transparent',
+                    padding: 0,
+                    marginLeft: 2,
+                    cursor: 'pointer',
+                    color: '#999',
+                    display: 'inline-flex',
+                    lineHeight: 1,
+                  }}
+                >
+                  <CloseOutlined style={{ fontSize: 10 }} />
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
+
+        <div style={{ padding: hasChips ? '8px 14px 6px' : '12px 14px 6px' }}>
           <textarea
             ref={textareaRef}
             value={value}
@@ -511,7 +598,7 @@ const ChatInputComposer: React.FC<ChatInputComposerProps> = ({
               setFocused(false);
               window.setTimeout(() => setMention(null), 150);
             }}
-            placeholder={placeholder}
+            placeholder={effectivePlaceholder}
             rows={Math.min(10, Math.max(3, (value.match(/\n/g)?.length ?? 0) + 1))}
             style={{
               display: 'block',
@@ -584,7 +671,9 @@ const ChatInputComposer: React.FC<ChatInputComposerProps> = ({
                 <PaperClipOutlined style={{ fontSize: 14 }} />
               </button>
             )}
+          </div>
 
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
             <Dropdown
               menu={{
                 items: MODEL_OPTIONS.map((m) => ({
@@ -595,20 +684,18 @@ const ChatInputComposer: React.FC<ChatInputComposerProps> = ({
                 selectedKeys: [modelKey],
               }}
               trigger={['click']}
+              placement="topRight"
             >
               <button type="button" style={chipBtnStyle()} title="大模型选择">
                 <span>{modelLabel}</span>
                 <DownOutlined style={{ fontSize: 10, color: '#999' }} />
               </button>
             </Dropdown>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
             <button
               type="button"
               aria-label="发送"
               disabled={loading || !value.trim()}
-              onClick={onSend}
+              onClick={handleSendClick}
               style={{
                 width: 36,
                 height: 36,
@@ -629,11 +716,6 @@ const ChatInputComposer: React.FC<ChatInputComposerProps> = ({
             </button>
           </div>
         </div>
-      </div>
-
-      <div style={{ marginTop: 6, fontSize: 12, color: '#bbb', textAlign: 'center' }}>
-        输入 <kbd style={{ padding: '0 4px', borderRadius: 4, background: '#f5f5f5' }}>@</kbd> 选择数字员工，
-        <kbd style={{ padding: '0 4px', borderRadius: 4, background: '#f5f5f5' }}>/</kbd> 选择技能
       </div>
 
       <AiToolPickerModal

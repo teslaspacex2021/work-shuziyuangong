@@ -858,101 +858,103 @@ const Dashboard: React.FC = () => {
         </div>
       </section>
 
-      {/* ⑥ 运营动态：按员工 Tokens */}
+      {/* ⑥ 运营动态：场景构成 ‖ 按员工 Tokens */}
       <section className="dash-section">
         <div className="dash-section-head">
           <strong>运营动态</strong>
-          <span>按员工 Tokens 消耗排行 · 效能明细见完整排名</span>
+          <span>场景构成与员工 Tokens 排行对照</span>
         </div>
-        <Card
-          className="dash-panel"
-          title="按员工 Tokens 消耗"
-          extra={
-            <Button type="link" size="small" onClick={() => setShowFullRanking(true)}>
-              效能排名 <RightOutlined />
-            </Button>
-          }
-        >
-          <Table
-            size="small"
-            dataSource={employeeTokens}
-            rowKey="id"
-            pagination={{ pageSize: 10, showSizeChanger: true, showTotal: (t) => `共 ${t} 条` }}
-            columns={[
-              {
-                title: '排名',
-                key: 'rank',
-                width: 56,
-                render: (_: unknown, record: (typeof employeeTokens)[0]) => {
-                  const idx = employeeTokens.findIndex((e) => e.id === record.id);
-                  return (
-                    <span className={`dash-rank-badge ${idx < 3 ? 'top' : 'rest'}`}>{idx + 1}</span>
-                  );
+        <div className="dash-dual">
+          <Card className="dash-panel" title="Tokens 消耗构成">
+            <div className="dash-pie-pane">
+              <div className="dash-pie-wrap" style={{ height: 240 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={tokensScenario}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={48}
+                      outerRadius={78}
+                      paddingAngle={2}
+                      dataKey="value"
+                      stroke="#fff"
+                      strokeWidth={2}
+                    >
+                      {tokensScenario.map((entry, index) => (
+                        <Cell key={index} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip contentStyle={tooltipStyle} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="dash-legend">
+                {tokensScenario.map((s) => (
+                  <div key={s.name} className="dash-legend-item">
+                    <span className="dash-legend-dot" style={{ background: s.color }} />
+                    {s.name} {s.value}%
+                  </div>
+                ))}
+              </div>
+            </div>
+          </Card>
+          <Card
+            className="dash-panel"
+            title="按员工 Tokens 消耗"
+            extra={
+              <Button type="link" size="small" onClick={() => setShowFullRanking(true)}>
+                效能排名 <RightOutlined />
+              </Button>
+            }
+          >
+            <Table
+              size="small"
+              dataSource={employeeTokens}
+              rowKey="id"
+              pagination={{ pageSize: 8, showSizeChanger: true, showTotal: (t) => `共 ${t} 条` }}
+              columns={[
+                {
+                  title: '排名',
+                  key: 'rank',
+                  width: 56,
+                  render: (_: unknown, record: (typeof employeeTokens)[0]) => {
+                    const idx = employeeTokens.findIndex((e) => e.id === record.id);
+                    return (
+                      <span className={`dash-rank-badge ${idx < 3 ? 'top' : 'rest'}`}>{idx + 1}</span>
+                    );
+                  },
                 },
-              },
-              { title: '员工', dataIndex: 'name', key: 'name', ellipsis: true },
-              { title: '部门', dataIndex: 'department', key: 'department', ellipsis: true, width: 120 },
-              {
-                title: '已用',
-                dataIndex: 'used',
-                key: 'used',
-                width: 90,
-                sorter: (a: (typeof employeeTokens)[0], b: (typeof employeeTokens)[0]) => a.used - b.used,
-                defaultSortOrder: 'descend' as const,
-                render: (v: number) => `${v.toFixed(1)}M`,
-              },
-              {
-                title: '配额',
-                dataIndex: 'quota',
-                key: 'quota',
-                width: 90,
-                render: (v: number) => `${v.toFixed(1)}M`,
-              },
-              {
-                title: <MetricLabel tip={METRIC_TIPS.tokenUsageRate}>消耗率</MetricLabel>,
-                dataIndex: 'rate',
-                key: 'rate',
-                width: 100,
-                sorter: (a: (typeof employeeTokens)[0], b: (typeof employeeTokens)[0]) => a.rate - b.rate,
-                render: (v: number) => <Tag color={v > 80 ? 'red' : v > 50 ? 'orange' : 'green'}>{v}%</Tag>,
-              },
-            ]}
-          />
-        </Card>
-        <Card className="dash-panel" title="Tokens 消耗构成" style={{ marginTop: 12 }}>
-          <div className="dash-pie-pane" style={{ maxWidth: 560, margin: '0 auto' }}>
-            <div className="dash-pie-wrap" style={{ height: 220 }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={tokensScenario}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={48}
-                    outerRadius={78}
-                    paddingAngle={2}
-                    dataKey="value"
-                    stroke="#fff"
-                    strokeWidth={2}
-                  >
-                    {tokensScenario.map((entry, index) => (
-                      <Cell key={index} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip contentStyle={tooltipStyle} />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="dash-legend">
-              {tokensScenario.map((s) => (
-                <div key={s.name} className="dash-legend-item">
-                  <span className="dash-legend-dot" style={{ background: s.color }} />
-                  {s.name} {s.value}%
-                </div>
-              ))}
-            </div>
-          </div>
-        </Card>
+                { title: '员工', dataIndex: 'name', key: 'name', ellipsis: true },
+                { title: '部门', dataIndex: 'department', key: 'department', ellipsis: true, width: 110 },
+                {
+                  title: '已用',
+                  dataIndex: 'used',
+                  key: 'used',
+                  width: 80,
+                  sorter: (a: (typeof employeeTokens)[0], b: (typeof employeeTokens)[0]) => a.used - b.used,
+                  defaultSortOrder: 'descend' as const,
+                  render: (v: number) => `${v.toFixed(1)}M`,
+                },
+                {
+                  title: '配额',
+                  dataIndex: 'quota',
+                  key: 'quota',
+                  width: 80,
+                  render: (v: number) => `${v.toFixed(1)}M`,
+                },
+                {
+                  title: <MetricLabel tip={METRIC_TIPS.tokenUsageRate}>消耗率</MetricLabel>,
+                  dataIndex: 'rate',
+                  key: 'rate',
+                  width: 90,
+                  sorter: (a: (typeof employeeTokens)[0], b: (typeof employeeTokens)[0]) => a.rate - b.rate,
+                  render: (v: number) => <Tag color={v > 80 ? 'red' : v > 50 ? 'orange' : 'green'}>{v}%</Tag>,
+                },
+              ]}
+            />
+          </Card>
+        </div>
       </section>
     </div>
   );
