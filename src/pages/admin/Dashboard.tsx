@@ -472,7 +472,7 @@ const Dashboard: React.FC = () => {
             size="small"
             dataSource={fullRankingData}
             rowKey="id"
-            pagination={{ pageSize: 20, sizeSize: true }}
+            pagination={{ pageSize: 20, showSizeChanger: true }}
             columns={[
               {
                 title: '排名', key: 'rank', width: 56,
