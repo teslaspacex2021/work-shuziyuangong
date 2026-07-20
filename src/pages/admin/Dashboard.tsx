@@ -1,5 +1,5 @@
 import React, { useState, useMemo, type ReactNode } from 'react';
-import { Card, Row, Col, Tag, Button, DatePicker, Table, Tooltip as AntTooltip, message, Input, Space, Select, Modal, Segmented } from 'antd';
+import { Card, Row, Col, Tag, Button, DatePicker, Table, Tooltip as AntTooltip, message, Input, Space, Select, Modal, Segmented, Avatar } from 'antd';
 import {
   HeartOutlined,
   TeamOutlined,
@@ -18,18 +18,84 @@ import {
 } from '@ant-design/icons';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
-  ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, AreaChart, Area,
+  ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area,
 } from 'recharts';
 import dayjs, { type Dayjs } from 'dayjs';
 import {
   dashboardStats, tokensWeekly, getCapabilityLevelDistribution, getBusinessLineDistribution,
   digitalEmployees, userUsageTrend, departmentUsage,
-  efficiencyReport, BUSINESS_LINES, CAPABILITY_LEVELS,
+  BUSINESS_LINES, CAPABILITY_LEVELS,
+  hasEmployeeNumber, getEffectiveEmploymentStatus,
   getEmployeeScheduledTaskRunCounts,
   getEmployeeCapabilityLevel, getEmployeeBusinessLine,
+  type DigitalEmployee,
 } from '../../mock/data';
 import CapabilityLevelTag from '../../components/CapabilityLevelTag';
+import EmployeeFieldSections from '../../components/EmployeeFieldSections';
+import { fullHeightModalStyles } from '../../components/EmployeeFormModal';
 import './Dashboard.css';
+
+const EMPLOYEE_STATUS_LABEL: Record<string, string> = {
+  ACTIVE: '在线', TRAINING: '训练中', SUSPENDED: '已暂停', TERMINATED: '已停用',
+};
+
+const EMPLOYEE_STATUS_COLOR: Record<string, string> = {
+  ACTIVE: 'success', TRAINING: 'processing', SUSPENDED: 'warning', TERMINATED: 'error',
+};
+
+const AdminEmployeeDetailModal: React.FC<{
+  employee: DigitalEmployee | null;
+  open: boolean;
+  onClose: () => void;
+}> = ({ employee, open, onClose }) => (
+  <Modal
+    title={`员工详情 — ${employee?.name ?? ''}`}
+    open={open}
+    onCancel={onClose}
+    footer={null}
+    width={900}
+    centered={false}
+    style={{ top: 0, paddingBottom: 0, maxWidth: '100vw' }}
+    styles={fullHeightModalStyles}
+    destroyOnHidden
+  >
+    {employee ? (
+      <div>
+        <div style={{ display: 'flex', gap: 16, marginBottom: 20 }}>
+          <Avatar size={64} src={employee.avatar} />
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 18, fontWeight: 600 }}>{employee.name}</div>
+            <Space style={{ marginTop: 8 }} wrap>
+              {hasEmployeeNumber(employee)
+                ? <Tag style={{ fontFamily: 'monospace' }}>{employee.employeeNumber}</Tag>
+                : <Tag color="warning">工号未填写</Tag>}
+              {(() => {
+                const effective = getEffectiveEmploymentStatus(employee);
+                if (effective !== null) {
+                  return <Tag color={effective === '在职' ? 'green' : 'default'}>{effective}</Tag>;
+                }
+                return null;
+              })()}
+              <Tag color={EMPLOYEE_STATUS_COLOR[employee.status]}>{EMPLOYEE_STATUS_LABEL[employee.status]}</Tag>
+            </Space>
+          </div>
+        </div>
+        <EmployeeFieldSections employee={employee} />
+      </div>
+    ) : null}
+  </Modal>
+);
+
+const renderEmployeeNameCell = (name: string, employeeId: string, onClick: (id: string) => void) => (
+  <Button
+    type="link"
+    size="small"
+    className="dash-employee-name-link"
+    onClick={() => onClick(employeeId)}
+  >
+    {name}
+  </Button>
+);
 
 const { RangePicker } = DatePicker;
 
@@ -48,7 +114,7 @@ const METRIC_TIPS = {
   monthGrowth: '较上月增速 =（本月新增数字员工数 − 上月新增数）÷ 上月末总量 × 100%。',
   newEmployeesWindow: '近7天 / 近30天：按入职日期统计的上新数字员工数量（去重）。',
   tokensWindow: '总量 = 输入 Tokens + 输出 Tokens。近7天 / 近30天为对应窗口累计消耗（文本 + 多模态）。',
-  avgTaskRate: '统计周期内全部在岗数字员工任务完成率的算术平均值。效能评级：≥95% 为 A+，≥90% 为 A，≥80% 为 B，其余为 C。',
+  avgTaskRate: '统计周期内全部在岗数字员工任务完成率的算术平均值。',
   activeUsers: '统计日内至少产生 1 次会话或任务的去重平台用户数。',
   avgResponse: '统计周期内会话首条有效回复的平均等待时间（均响）。',
   sessionTiming: '均响 = 首条有效回复平均等待时间；平均耗时 = 单次会话从发起到结束的平均时长。',
@@ -56,9 +122,6 @@ const METRIC_TIPS = {
   lineShare: '条线占比 = 该所属条线数字员工数 ÷ 数字员工总数 × 100%。',
   monthConsume: '本月累计 Tokens 消耗量；圆环占比 = 本月消耗 ÷ 月度配额 × 100%。环比 =（本月 − 上月）÷ 上月 × 100%。',
   monthRemain: '预计月度结余 = 月度配额 − 本月已消耗（不足整月时按日均外推至月末）。结余占比 = 结余 ÷ 配额 × 100%。',
-  savedHours: '由数字员工替代人工完成的任务量 × 单任务标准工时估算得出。',
-  costReduction: '成本降低率 =（人工基准单次成本 − 数字员工单次成本）÷ 人工基准单次成本 × 100%。',
-  roi: 'ROI（投入产出比）= 产出效益估值 ÷ 平台投入成本。',
   deptActiveRate: '部门活跃率 = min(99%, 部门活跃用户数 ÷ 基准用户容量 120 × 100%)。',
   avgDeptActiveRate: '平均活跃率 = 各部门活跃率的算术平均值。单部门活跃率 = min(99%, 用户数 ÷ 120 × 100%)。',
   deptUserCount: '统计周期内该部门内使用数字员工的去重用户数。',
@@ -67,7 +130,7 @@ const METRIC_TIPS = {
   deptTokens: 'Tokens 消耗按任务量估算：约等于任务数 × 1.5（单位：万）。',
   tokenUsageRate: '消耗率 = 员工已用 Tokens ÷ 配额 Tokens × 100%。',
   /** 完整效能排名 — 单员工口径（勿与驾驶舱汇总指标混淆） */
-  empTaskRate: '该数字员工在统计周期内：已完成任务数 ÷ 应完成任务数 × 100%。',
+  empTaskRate: '该数字员工在统计周期内：已完成定时任务数 ÷ 应完成定时任务数 × 100%，不含会话触发任务。',
   empTaskCount: '统计周期内该数字员工定时任务的执行次数，不含会话触发任务。',
   empUserCount: '统计周期内与该数字员工产生过交互的去重用户数。',
   empSessionCount: '统计周期内用户与该数字员工产生的对话会话总数。',
@@ -114,6 +177,26 @@ const HEALTH_SCORE_TIP = (
   </div>
 );
 
+const AVG_TASK_RATE_TIP = (
+  <div className="dash-metric-tip-detail">
+    <strong>平均任务完成率</strong>
+    <p>平台级汇总指标。先算每位在岗数字员工的完成率，再取算术平均；任务口径为定时任务，不含会话触发任务。</p>
+    <dl>
+      <dt>单员工完成率</dt>
+      <dd>完成率 = 已完成定时任务数 ÷ 应完成定时任务数 × 100%</dd>
+      <dd>已完成：执行结果为「已完成」的定时任务运行次数</dd>
+      <dd>应完成：统计周期内到期应执行的定时任务次数（含已完成、已失败、已跳过；不含「待执行」）</dd>
+      <dt>平台平均值</dt>
+      <dd>平均任务完成率 = Σ(在岗员工完成率) ÷ 在岗员工数</dd>
+      <dd>在岗：在职状态为「在职」，且运行状态不为「已退出」</dd>
+      <dt>效能评级（按平均值）</dt>
+      <dd>≥95% → A+ · ≥90% → A · ≥80% → B · &lt;80% → C</dd>
+      <dt>不计入口径</dt>
+      <dd>会话触发的即时任务、未到调度时间的待执行任务、已离职/已退出员工</dd>
+    </dl>
+  </div>
+);
+
 const CHART_GRID = '#eef0f3';
 const CHART_AXIS = '#8c8c8c';
 const tooltipStyle = {
@@ -147,15 +230,6 @@ const mapEmployeeUsageMetrics = (e: (typeof digitalEmployees)[0]) => ({
 const employeeTokens = digitalEmployees
   .map(mapEmployeeUsageMetrics)
   .sort((a, b) => b.used - a.used);
-
-const efficiencyData = [
-  { month: '2025-10', tasks: 2800, quality: 88, calls: 15200 },
-  { month: '2025-11', tasks: 3200, quality: 90, calls: 18500 },
-  { month: '2025-12', tasks: 3800, quality: 91, calls: 21000 },
-  { month: '2026-01', tasks: 4200, quality: 93, calls: 24800 },
-  { month: '2026-02', tasks: 4600, quality: 94, calls: 27600 },
-  { month: '2026-03', tasks: 4100, quality: 95, calls: 25200 },
-];
 
 type DeptRow = (typeof departmentUsage)[0];
 
@@ -192,10 +266,12 @@ type KpiItem = {
   tinted?: boolean;
   /** 二次计算口径说明 */
   tip?: string;
+  /** 右上角操作（如「更多」） */
+  extra?: ReactNode;
 };
 
 const KpiCard: React.FC<KpiItem> = ({
-  label, value, accent, icon, meta, metaClass, sideStats, stats, tinted, tip,
+  label, value, accent, icon, meta, metaClass, sideStats, stats, tinted, tip, extra,
 }) => (
   <div
     className={`dash-kpi${tinted ? ' tinted' : ''}${stats?.length || sideStats?.length ? ' has-stats' : ''}${sideStats?.length ? ' has-side' : ''}`}
@@ -205,7 +281,10 @@ const KpiCard: React.FC<KpiItem> = ({
       <div className="dash-kpi-label">
         <MetricLabel tip={tip}>{label}</MetricLabel>
       </div>
-      <div className="dash-kpi-icon">{icon}</div>
+      <div className="dash-kpi-top-right">
+        {extra}
+        <div className="dash-kpi-icon">{icon}</div>
+      </div>
     </div>
     <div>
       <div className="dash-kpi-main">
@@ -242,7 +321,7 @@ const BenefitInsightsSection: React.FC = () => (
   <section className="dash-section">
     <div className="dash-section-head">
       <strong>效益洞察</strong>
-      <span>配额消耗 · 结余 · 降本增效</span>
+      <span>配额消耗 · 结余 · 任务效能</span>
     </div>
     <div className="dash-insight-row">
       <div className="dash-insight">
@@ -286,85 +365,38 @@ const BenefitInsightsSection: React.FC = () => (
       <div className="dash-insight">
         <div>
           <div className="dash-insight-label">
-            <MetricLabel tip={METRIC_TIPS.savedHours}>本月节省工时</MetricLabel>
+            <MetricLabel tip={AVG_TASK_RATE_TIP}>平均任务完成率</MetricLabel>
           </div>
           <div className="dash-insight-value">
-            {efficiencyReport.savedHours}<span>h</span>
+            {dashboardStats.avgTaskRate}<span>%</span>
           </div>
         </div>
         <div className="dash-ring-wrap">
-          <div className="dash-ring" style={{ ['--ring-pct' as string]: 88, ['--ring-color' as string]: '#1677ff' }} />
-          <span className="dash-ring-label">88%</span>
+          <div
+            className="dash-ring"
+            style={{
+              ['--ring-pct' as string]: Math.round(dashboardStats.avgTaskRate),
+              ['--ring-color' as string]: '#1677ff',
+            }}
+          />
+          <span className="dash-ring-label">{dashboardStats.efficiencyGrade}</span>
         </div>
-        <div className="dash-insight-meta">
-          <MetricLabel tip={METRIC_TIPS.roi}>ROI {efficiencyReport.roi}</MetricLabel>
-          {' · '}
-          <MetricLabel tip={METRIC_TIPS.costReduction}>-{efficiencyReport.costReduction}%</MetricLabel>
+        <div className="dash-insight-meta up">
+          效能评级 {dashboardStats.efficiencyGrade} · 定时任务口径
         </div>
         <div
           className="dash-insight-bar"
-          style={{ ['--bar-w' as string]: '88%', ['--bar-from' as string]: '#69b1ff', ['--bar-to' as string]: '#1677ff' }}
+          style={{
+            ['--bar-w' as string]: `${Math.round(dashboardStats.avgTaskRate)}%`,
+            ['--bar-from' as string]: '#69b1ff',
+            ['--bar-to' as string]: '#1677ff',
+          }}
         >
           <i />
         </div>
       </div>
     </div>
   </section>
-);
-
-const EfficiencyStatsSection: React.FC = () => (
-  <Row gutter={10}>
-    <Col span={16}>
-      <Card className="dash-panel" title="效能趋势">
-        <ResponsiveContainer width="100%" height={260}>
-          <LineChart data={efficiencyData}>
-            <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID} vertical={false} />
-            <XAxis dataKey="month" tick={{ fill: CHART_AXIS, fontSize: 11 }} axisLine={false} tickLine={false} />
-            <YAxis yAxisId="left" tick={{ fill: CHART_AXIS, fontSize: 11 }} axisLine={false} tickLine={false} width={40} />
-            <YAxis yAxisId="right" orientation="right" tick={{ fill: CHART_AXIS, fontSize: 11 }} axisLine={false} tickLine={false} width={36} />
-            <Tooltip contentStyle={tooltipStyle} />
-            <Legend iconType="circle" wrapperStyle={{ fontSize: 12 }} />
-            <Line yAxisId="left" type="monotone" dataKey="tasks" name="任务完成量" stroke="#1677ff" strokeWidth={2} dot={false} />
-            <Line yAxisId="right" type="monotone" dataKey="quality" name="完成质量(%)" stroke="#52c41a" strokeWidth={2} dot={false} />
-            <Line yAxisId="left" type="monotone" dataKey="calls" name="智能体调用" stroke="#722ed1" strokeWidth={2} dot={false} />
-          </LineChart>
-        </ResponsiveContainer>
-      </Card>
-    </Col>
-    <Col span={8}>
-      <Card className="dash-panel" title="降本增效分析报告">
-        <div style={{ padding: '2px 0 6px' }}>
-          <div style={{ marginBottom: 14 }}>
-            <div style={{ fontSize: 12, color: 'rgba(0,0,0,0.45)', marginBottom: 2 }}>
-              <MetricLabel tip={METRIC_TIPS.savedHours}>本月节省人力工时</MetricLabel>
-            </div>
-            <div style={{ fontSize: 24, fontWeight: 700, color: '#52c41a' }}>
-              {efficiencyReport.savedHours} <span style={{ fontSize: 13, fontWeight: 400 }}>小时</span>
-            </div>
-          </div>
-          <div style={{ marginBottom: 14 }}>
-            <div style={{ fontSize: 12, color: 'rgba(0,0,0,0.45)', marginBottom: 2 }}>
-              <MetricLabel tip={METRIC_TIPS.costReduction}>平均单次任务成本降低</MetricLabel>
-            </div>
-            <div style={{ fontSize: 24, fontWeight: 700, color: '#1677ff' }}>
-              {efficiencyReport.costReduction}%
-            </div>
-          </div>
-          <div style={{ marginBottom: 14 }}>
-            <div style={{ fontSize: 12, color: 'rgba(0,0,0,0.45)', marginBottom: 2 }}>
-              <MetricLabel tip={METRIC_TIPS.roi}>ROI (投入产出比)</MetricLabel>
-            </div>
-            <div style={{ fontSize: 24, fontWeight: 700 }}>
-              {efficiencyReport.roi}
-            </div>
-          </div>
-          <Button type="primary" icon={<DownloadOutlined />} block size="middle">
-            下载详细效益报告
-          </Button>
-        </div>
-      </Card>
-    </Col>
-  </Row>
 );
 
 type TokenTrendRow = { date: string; input: number; output: number; total: number };
@@ -564,12 +596,41 @@ const UserUsageTrendChart: React.FC<{ data: UserUsageRow[] }> = ({ data }) => (
 
 type EmployeeTokenRow = (typeof employeeTokens)[0];
 
+/** 按统计区间天数缩放员工消耗指标（mock 口径：以 30 天为基准） */
+const scaleEmployeeTokensByRange = (rows: EmployeeTokenRow[], range: RangeValue): EmployeeTokenRow[] => {
+  const start = range?.[0] ?? dayjs().subtract(30, 'day');
+  const end = range?.[1] ?? dayjs();
+  const days = Math.max(1, end.diff(start, 'day') + 1);
+  const factor = Math.min(2, Math.max(0.15, days / 30));
+  return rows.map((e) => {
+    const used = Math.max(0.01, Math.round(e.used * factor * 100) / 100);
+    const userCount = Math.max(1, Math.round(e.userCount * factor));
+    const sessionCount = Math.max(1, Math.round(e.sessionCount * factor));
+    const taskCount = Math.max(0, Math.round(e.taskCount * factor));
+    const agentCalls = Math.max(1, Math.round(e.agentCalls * factor));
+    const likes = Math.max(0, Math.round(e.likes * factor));
+    return {
+      ...e,
+      used,
+      rate: Math.min(99, Math.round((used / Math.max(e.quota, 0.01)) * 100)),
+      userCount,
+      sessionCount,
+      taskCount,
+      agentCalls,
+      likes,
+    };
+  });
+};
+
 const topEmployeeTokens = employeeTokens.slice(0, 8);
 const topDepartmentUsage = [...departmentUsage]
   .sort((a, b) => b.tasks - a.tasks)
   .slice(0, 8);
 
-const getEmployeeTokensPreviewColumns = (rows: EmployeeTokenRow[]) => [
+const getEmployeeTokensPreviewColumns = (
+  rows: EmployeeTokenRow[],
+  onEmployeeClick: (id: string) => void,
+) => [
   {
     title: '排名',
     key: 'rank',
@@ -581,7 +642,13 @@ const getEmployeeTokensPreviewColumns = (rows: EmployeeTokenRow[]) => [
       );
     },
   },
-  { title: '员工', dataIndex: 'name', key: 'name', ellipsis: true },
+  {
+    title: '员工',
+    dataIndex: 'name',
+    key: 'name',
+    ellipsis: true,
+    render: (name: string, record: EmployeeTokenRow) => renderEmployeeNameCell(name, record.id, onEmployeeClick),
+  },
   { title: '部门', dataIndex: 'department', key: 'department', ellipsis: true, width: 100 },
   {
     title: '已用',
@@ -644,7 +711,10 @@ const getDepartmentRankColumns = (rows: DeptRow[]) => [
   },
 ];
 
-const getEmployeeTokensColumns = (rows: EmployeeTokenRow[]) => [
+const getEmployeeTokensColumns = (
+  rows: EmployeeTokenRow[],
+  onEmployeeClick: (id: string) => void,
+) => [
   {
     title: '排名',
     key: 'rank',
@@ -657,7 +727,15 @@ const getEmployeeTokensColumns = (rows: EmployeeTokenRow[]) => [
       );
     },
   },
-  { title: '员工', dataIndex: 'name', key: 'name', ellipsis: true, width: 120, fixed: 'left' as const },
+  {
+    title: '员工',
+    dataIndex: 'name',
+    key: 'name',
+    ellipsis: true,
+    width: 120,
+    fixed: 'left' as const,
+    render: (name: string, record: EmployeeTokenRow) => renderEmployeeNameCell(name, record.id, onEmployeeClick),
+  },
   { title: '部门', dataIndex: 'department', key: 'department', ellipsis: true, width: 110 },
   { title: '所属条线', dataIndex: 'line', key: 'line', width: 80 },
   {
@@ -759,11 +837,76 @@ const Dashboard: React.FC = () => {
   const [empDeptFilter, setEmpDeptFilter] = useState<string | undefined>();
   const [empLineFilter, setEmpLineFilter] = useState<string | undefined>();
   const [empLevelFilter, setEmpLevelFilter] = useState<string | undefined>();
+  const [empRange, setEmpRange] = useState<RangeValue>([
+    dayjs().subtract(30, 'day'),
+    dayjs(),
+  ]);
   const [trendModal, setTrendModal] = useState<'tokens' | 'users' | null>(null);
   const [tokensTrendRange, setTokensTrendRange] = useState<RangeValue>(defaultTrendRange);
   const [tokensGranularity, setTokensGranularity] = useState<TrendGranularity>('month');
   const [usersTrendRange, setUsersTrendRange] = useState<RangeValue>(defaultTrendRange);
   const [usersGranularity, setUsersGranularity] = useState<TrendGranularity>('month');
+  const [employeeDetailOpen, setEmployeeDetailOpen] = useState(false);
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
+  const [deptEmployeeModalOpen, setDeptEmployeeModalOpen] = useState(false);
+  const [deptEmpPage, setDeptEmpPage] = useState(1);
+  const [deptEmpPageSize, setDeptEmpPageSize] = useState(8);
+  const [selectedDeptName, setSelectedDeptName] = useState<string | null>(null);
+
+  const selectedEmployee = useMemo(
+    () => digitalEmployees.find((e) => e.id === selectedEmployeeId) ?? null,
+    [selectedEmployeeId],
+  );
+
+  const selectedDeptEmployees = useMemo(() => {
+    if (!selectedDeptName) return [];
+    return employeeTokens
+      .filter((e) => e.department === selectedDeptName)
+      .sort((a, b) => b.used - a.used);
+  }, [selectedDeptName]);
+
+  const openDeptEmployeeUsage = (department: string) => {
+    setSelectedDeptName(department);
+  };
+
+  const closeDeptEmployeeUsage = () => {
+    setSelectedDeptName(null);
+  };
+
+  const deptEmployeeStats = useMemo(() => {
+    const total = digitalEmployees.length || 1;
+    const map = new Map<string, { department: string; total: number; active: number; training: number; other: number }>();
+    digitalEmployees.forEach((e) => {
+      const prev = map.get(e.department) ?? {
+        department: e.department,
+        total: 0,
+        active: 0,
+        training: 0,
+        other: 0,
+      };
+      prev.total += 1;
+      if (e.status === 'ACTIVE') prev.active += 1;
+      else if (e.status === 'TRAINING') prev.training += 1;
+      else prev.other += 1;
+      map.set(e.department, prev);
+    });
+    return [...map.values()]
+      .map((row) => ({
+        ...row,
+        share: Math.round((row.total / total) * 1000) / 10,
+      }))
+      .sort((a, b) => b.total - a.total || b.active - a.active);
+  }, []);
+
+  const openEmployeeDetail = (employeeId: string) => {
+    setSelectedEmployeeId(employeeId);
+    setEmployeeDetailOpen(true);
+  };
+
+  const closeEmployeeDetail = () => {
+    setEmployeeDetailOpen(false);
+    setSelectedEmployeeId(null);
+  };
 
   const tokensModalData = useMemo(
     () => aggregateTokenRows(filterTrendByRange(tokensDailyTrend, tokensTrendRange), tokensGranularity),
@@ -797,6 +940,19 @@ const Dashboard: React.FC = () => {
       meta: <><ArrowUpOutlined /> 较上月 {dashboardStats.monthNewPercent}%</>,
       metaClass: 'up',
       tip: METRIC_TIPS.newEmployeesWindow,
+      extra: (
+        <Button
+          type="link"
+          size="small"
+          className="dash-kpi-more"
+          onClick={() => {
+            setDeptEmpPage(1);
+            setDeptEmployeeModalOpen(true);
+          }}
+        >
+          更多 <RightOutlined />
+        </Button>
+      ),
       stats: [
         { label: '近7天上新', value: dashboardStats.newEmployees7d },
         { label: '近30天上新', value: dashboardStats.newEmployees30d },
@@ -828,7 +984,7 @@ const Dashboard: React.FC = () => {
       icon: <CheckCircleOutlined />,
       meta: <>效能评级 {dashboardStats.efficiencyGrade}</>,
       metaClass: 'up',
-      tip: METRIC_TIPS.avgTaskRate,
+      tip: AVG_TASK_RATE_TIP,
     },
     {
       label: '用户总数',
@@ -919,7 +1075,22 @@ const Dashboard: React.FC = () => {
           );
         },
       },
-      { title: '部门', dataIndex: 'department', key: 'department', width: 140 },
+      {
+        title: '部门',
+        dataIndex: 'department',
+        key: 'department',
+        width: 160,
+        render: (name: string) => (
+          <Button
+            type="link"
+            size="small"
+            className="dash-employee-name-link"
+            onClick={() => openDeptEmployeeUsage(name)}
+          >
+            {name}
+          </Button>
+        ),
+      },
       {
         title: <MetricLabel tip={METRIC_TIPS.deptUserCount}>用户数</MetricLabel>,
         dataIndex: 'users',
@@ -1067,13 +1238,133 @@ const Dashboard: React.FC = () => {
             />
           </Card>
         </section>
+
+        <Modal
+          open={!!selectedDeptName}
+          title={`${selectedDeptName ?? ''} · 数字员工使用统计`}
+          width={960}
+          footer={null}
+          destroyOnHidden
+          onCancel={closeDeptEmployeeUsage}
+        >
+          <p className="dash-dept-emp-modal-desc">
+            该部门归属的数字员工及使用指标；点击员工名称可查看档案详情。
+          </p>
+          <div className="dash-dept-emp-summary">
+            <span>数字员工 <strong>{selectedDeptEmployees.length}</strong></span>
+            <span>在线 <strong className="dept-emp-active">{selectedDeptEmployees.filter((e) => digitalEmployees.find((d) => d.id === e.id)?.status === 'ACTIVE').length}</strong></span>
+            <span>已用 Tokens <strong>{selectedDeptEmployees.reduce((s, e) => s + e.used, 0).toFixed(1)}M</strong></span>
+            <span>会话合计 <strong>{selectedDeptEmployees.reduce((s, e) => s + e.sessionCount, 0).toLocaleString()}</strong></span>
+          </div>
+          <Table
+            className="dash-ranking-table"
+            size="small"
+            rowKey="id"
+            dataSource={selectedDeptEmployees}
+            scroll={{ x: 900 }}
+            pagination={selectedDeptEmployees.length > 8 ? { pageSize: 8, showTotal: (t) => `共 ${t} 条` } : false}
+            locale={{ emptyText: '该部门暂无归属数字员工' }}
+            columns={[
+              {
+                title: '排名',
+                key: 'rank',
+                width: 56,
+                fixed: 'left' as const,
+                render: (_: unknown, __: unknown, index: number) => (
+                  <span className={`dash-rank-badge ${index < 3 ? 'top' : 'rest'}`}>{index + 1}</span>
+                ),
+              },
+              {
+                title: '数字员工',
+                dataIndex: 'name',
+                key: 'name',
+                width: 120,
+                fixed: 'left' as const,
+                ellipsis: true,
+                render: (name: string, record: EmployeeTokenRow) =>
+                  renderEmployeeNameCell(name, record.id, openEmployeeDetail),
+              },
+              {
+                title: '级别',
+                key: 'capLevel',
+                width: 88,
+                render: (_: unknown, r: EmployeeTokenRow) => <CapabilityLevelTag level={r.capLevel} />,
+              },
+              { title: '所属条线', dataIndex: 'line', key: 'line', width: 80 },
+              {
+                title: <MetricLabel tip={METRIC_TIPS.empUserCount}>用户数</MetricLabel>,
+                dataIndex: 'userCount',
+                key: 'userCount',
+                width: 80,
+                sorter: (a: EmployeeTokenRow, b: EmployeeTokenRow) => a.userCount - b.userCount,
+              },
+              {
+                title: <MetricLabel tip={METRIC_TIPS.empSessionCount}>会话数</MetricLabel>,
+                dataIndex: 'sessionCount',
+                key: 'sessionCount',
+                width: 88,
+                sorter: (a: EmployeeTokenRow, b: EmployeeTokenRow) => a.sessionCount - b.sessionCount,
+                render: (v: number) => v.toLocaleString(),
+              },
+              {
+                title: <MetricLabel tip={METRIC_TIPS.empTaskCount}>定时任务数</MetricLabel>,
+                dataIndex: 'taskCount',
+                key: 'taskCount',
+                width: 100,
+                sorter: (a: EmployeeTokenRow, b: EmployeeTokenRow) => a.taskCount - b.taskCount,
+              },
+              {
+                title: <MetricLabel tip={METRIC_TIPS.empTaskRate}>完成率</MetricLabel>,
+                dataIndex: 'taskCompleteRate',
+                key: 'taskCompleteRate',
+                width: 88,
+                sorter: (a: EmployeeTokenRow, b: EmployeeTokenRow) => a.taskCompleteRate - b.taskCompleteRate,
+                render: (v: number) => `${v}%`,
+              },
+              {
+                title: <MetricLabel tip={METRIC_TIPS.empTokens}>已用</MetricLabel>,
+                dataIndex: 'used',
+                key: 'used',
+                width: 80,
+                defaultSortOrder: 'descend' as const,
+                sorter: (a: EmployeeTokenRow, b: EmployeeTokenRow) => a.used - b.used,
+                render: (v: number) => `${v.toFixed(1)}M`,
+              },
+              {
+                title: <MetricLabel tip={METRIC_TIPS.tokenUsageRate}>消耗率</MetricLabel>,
+                dataIndex: 'rate',
+                key: 'rate',
+                width: 88,
+                sorter: (a: EmployeeTokenRow, b: EmployeeTokenRow) => a.rate - b.rate,
+                render: (v: number) => <Tag color={v > 80 ? 'red' : v > 50 ? 'orange' : 'green'}>{v}%</Tag>,
+              },
+              {
+                title: '状态',
+                key: 'status',
+                width: 80,
+                render: (_: unknown, r: EmployeeTokenRow) => {
+                  const emp = digitalEmployees.find((d) => d.id === r.id);
+                  if (!emp) return '—';
+                  return <Tag color={EMPLOYEE_STATUS_COLOR[emp.status]}>{EMPLOYEE_STATUS_LABEL[emp.status]}</Tag>;
+                },
+              },
+            ]}
+          />
+        </Modal>
+
+        <AdminEmployeeDetailModal
+          employee={selectedEmployee}
+          open={employeeDetailOpen}
+          onClose={closeEmployeeDetail}
+        />
       </div>
     );
   }
 
   if (showEmployeeTokensDetail) {
     const keyword = empKeyword.trim().toLowerCase();
-    const filteredEmployeeTokens = employeeTokens.filter((e) => {
+    const rangedEmployeeTokens = scaleEmployeeTokensByRange(employeeTokens, empRange);
+    const filteredEmployeeTokens = rangedEmployeeTokens.filter((e) => {
       if (empDeptFilter && e.department !== empDeptFilter) return false;
       if (empLineFilter && e.line !== empLineFilter) return false;
       if (empLevelFilter && e.capLevel !== empLevelFilter) return false;
@@ -1084,11 +1375,14 @@ const Dashboard: React.FC = () => {
       return true;
     });
     const empDepartmentOptions = [...new Set(employeeTokens.map((e) => e.department))].sort();
+    const empRangeLabel = empRange?.[0] && empRange?.[1]
+      ? `${empRange[0].format('YYYY-MM-DD')} ~ ${empRange[1].format('YYYY-MM-DD')}`
+      : '全部周期';
 
     const exportEmployeeTokensCsv = () => {
       const headers = [
         '排名', '员工', '部门', '所属条线', '级别', '用户数', '会话数', '定时任务数',
-        '完成率(%)', '质量', '调用', '已用(M)', '配额(M)', '消耗率(%)', '点赞',
+        '完成率(%)', '质量', '调用', '已用(M)', '配额(M)', '消耗率(%)', '点赞', '统计区间',
       ];
       const rows = filteredEmployeeTokens.map((r, i) => [
         i + 1,
@@ -1106,6 +1400,7 @@ const Dashboard: React.FC = () => {
         r.quota.toFixed(1),
         r.rate,
         r.likes,
+        empRangeLabel,
       ]);
       const escape = (cell: string | number) => `"${String(cell).replace(/"/g, '""')}"`;
       const csv = `\uFEFF${[headers, ...rows].map((row) => row.map(escape).join(',')).join('\n')}`;
@@ -1124,7 +1419,7 @@ const Dashboard: React.FC = () => {
         <div className="dash-toolbar">
           <div>
             <h2>按员工 Tokens 消耗</h2>
-            <p>配额消耗效益、效能统计与员工明细对照</p>
+            <p>配额消耗效益与员工明细对照</p>
           </div>
           <div className="dash-toolbar-actions">
             <Button icon={<ArrowLeftOutlined />} onClick={() => setShowEmployeeTokensDetail(false)}>
@@ -1136,18 +1431,10 @@ const Dashboard: React.FC = () => {
         <BenefitInsightsSection />
 
         <section className="dash-section">
-          <div className="dash-section-head">
-            <strong>效能统计</strong>
-            <span>趋势分析与降本增效报告</span>
-          </div>
-          <EfficiencyStatsSection />
-        </section>
-
-        <section className="dash-section">
           <div className="dash-section-head dept-detail-head">
             <div>
               <strong>员工消耗明细</strong>
-              <span>支持搜索、筛选、排序与导出</span>
+              <span>支持搜索、时间筛选、排序与导出</span>
             </div>
             <Space wrap className="dept-detail-filters" size={8}>
               <Input
@@ -1157,6 +1444,12 @@ const Dashboard: React.FC = () => {
                 value={empKeyword}
                 onChange={(e) => setEmpKeyword(e.target.value)}
                 style={{ width: 168 }}
+              />
+              <RangePicker
+                value={empRange}
+                onChange={(val) => setEmpRange(val)}
+                presets={presets}
+                allowClear={false}
               />
               <Select
                 allowClear
@@ -1194,7 +1487,7 @@ const Dashboard: React.FC = () => {
               dataSource={filteredEmployeeTokens}
               rowKey="id"
               scroll={{ x: 1280 }}
-              columns={getEmployeeTokensColumns(filteredEmployeeTokens)}
+              columns={getEmployeeTokensColumns(filteredEmployeeTokens, openEmployeeDetail)}
               pagination={{
                 pageSize: 10,
                 showSizeChanger: true,
@@ -1209,6 +1502,11 @@ const Dashboard: React.FC = () => {
             />
           </Card>
         </section>
+        <AdminEmployeeDetailModal
+          employee={selectedEmployee}
+          open={employeeDetailOpen}
+          onClose={closeEmployeeDetail}
+        />
       </div>
     );
   }
@@ -1402,7 +1700,7 @@ const Dashboard: React.FC = () => {
               dataSource={topEmployeeTokens}
               rowKey="id"
               pagination={false}
-              columns={getEmployeeTokensPreviewColumns(topEmployeeTokens)}
+              columns={getEmployeeTokensPreviewColumns(topEmployeeTokens, openEmployeeDetail)}
             />
           </Card>
           <Card
@@ -1494,6 +1792,135 @@ const Dashboard: React.FC = () => {
         <div style={{ height: 380 }}>
           <UserUsageTrendChart data={usersModalData} />
         </div>
+      </Modal>
+
+      <AdminEmployeeDetailModal
+        employee={selectedEmployee}
+        open={employeeDetailOpen}
+        onClose={closeEmployeeDetail}
+      />
+
+      <Modal
+        open={deptEmployeeModalOpen}
+        title="各部门数字员工上线统计"
+        width={760}
+        footer={null}
+        destroyOnHidden
+        onCancel={() => {
+          setDeptEmployeeModalOpen(false);
+          setDeptEmpPage(1);
+        }}
+      >
+        <div className="dash-dept-emp-modal-head">
+          <p className="dash-dept-emp-modal-desc">
+            按部门统计已上线数字员工数量；在线指运行状态为「在线」，训练中单独列示。
+          </p>
+          <Button
+            type="primary"
+            size="small"
+            icon={<DownloadOutlined />}
+            onClick={() => {
+              const headers = ['排名', '部门', '总数', '在线', '训练中', '其他', '占比(%)'];
+              const rows = deptEmployeeStats.map((r, i) => [
+                i + 1,
+                r.department,
+                r.total,
+                r.active,
+                r.training,
+                r.other,
+                r.share,
+              ]);
+              const escape = (cell: string | number) => `"${String(cell).replace(/"/g, '""')}"`;
+              const csv = `\uFEFF${[headers, ...rows].map((row) => row.map(escape).join(',')).join('\n')}`;
+              const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = `各部门数字员工上线统计_${dayjs().format('YYYYMMDD_HHmm')}.csv`;
+              a.click();
+              URL.revokeObjectURL(url);
+              message.success(`已导出 ${deptEmployeeStats.length} 条部门统计`);
+            }}
+          >
+            导出
+          </Button>
+        </div>
+        <Table
+          className="dash-ranking-table"
+          size="small"
+          rowKey="department"
+          dataSource={deptEmployeeStats}
+          pagination={{
+            current: deptEmpPage,
+            pageSize: deptEmpPageSize,
+            showSizeChanger: true,
+            pageSizeOptions: [5, 8, 10, 20],
+            showTotal: (t) => `共 ${t} 条`,
+            onChange: (page, size) => {
+              setDeptEmpPage(page);
+              setDeptEmpPageSize(size);
+            },
+          }}
+          columns={[
+            {
+              title: '排名',
+              key: 'rank',
+              width: 56,
+              render: (_: unknown, __: unknown, index: number) => {
+                const rank = (deptEmpPage - 1) * deptEmpPageSize + index + 1;
+                return (
+                  <span className={`dash-rank-badge ${rank <= 3 ? 'top' : 'rest'}`}>{rank}</span>
+                );
+              },
+            },
+            { title: '部门', dataIndex: 'department', key: 'department', ellipsis: true },
+            {
+              title: <MetricLabel tip="该部门数字员工总数（含在线、训练中、停用等全部状态）。">总数</MetricLabel>,
+              dataIndex: 'total',
+              key: 'total',
+              width: 72,
+              defaultSortOrder: 'descend' as const,
+              sorter: (a: (typeof deptEmployeeStats)[0], b: (typeof deptEmployeeStats)[0]) => a.total - b.total,
+            },
+            {
+              title: <MetricLabel tip="运行状态为「在线」的数字员工数，即当前已上线可用。">在线</MetricLabel>,
+              dataIndex: 'active',
+              key: 'active',
+              width: 72,
+              sorter: (a: (typeof deptEmployeeStats)[0], b: (typeof deptEmployeeStats)[0]) => a.active - b.active,
+              render: (v: number) => <span className="dept-emp-active">{v}</span>,
+            },
+            {
+              title: <MetricLabel tip="运行状态为「训练中」的数字员工数。">训练中</MetricLabel>,
+              dataIndex: 'training',
+              key: 'training',
+              width: 80,
+              sorter: (a: (typeof deptEmployeeStats)[0], b: (typeof deptEmployeeStats)[0]) => a.training - b.training,
+            },
+            {
+              title: <MetricLabel tip="停用、已退出等非在线/非训练中状态的数字员工数。">其他</MetricLabel>,
+              dataIndex: 'other',
+              key: 'other',
+              width: 72,
+              sorter: (a: (typeof deptEmployeeStats)[0], b: (typeof deptEmployeeStats)[0]) => a.other - b.other,
+            },
+            {
+              title: <MetricLabel tip="该部门数字员工数 ÷ 平台数字员工总数 × 100%。">占比</MetricLabel>,
+              dataIndex: 'share',
+              key: 'share',
+              width: 140,
+              sorter: (a: (typeof deptEmployeeStats)[0], b: (typeof deptEmployeeStats)[0]) => a.share - b.share,
+              render: (share: number) => (
+                <div className={`dept-rate ${share >= 20 ? 'dept-rate--high' : share >= 10 ? 'dept-rate--mid' : 'dept-rate--low'}`}>
+                  <div className="dept-rate-track">
+                    <i style={{ width: `${Math.min(100, share * 3)}%` }} />
+                  </div>
+                  <span>{share}%</span>
+                </div>
+              ),
+            },
+          ]}
+        />
       </Modal>
     </div>
   );

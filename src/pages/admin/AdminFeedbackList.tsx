@@ -98,7 +98,7 @@ const AdminFeedbackList: React.FC = () => {
       render: (s: string) => <Tag color={statusColor[s]}>{s}</Tag>,
     },
     { title: '提交时间', dataIndex: 'createTime', key: 'createTime', width: 160 },
-    { title: '更新时间', dataIndex: 'updateTime', key: 'updateTime', width: 160 },
+    { title: '处理时间', dataIndex: 'updateTime', key: 'updateTime', width: 160 },
     {
       title: '操作', key: 'action', width: 120, fixed: 'right' as const,
       render: (_: unknown, record: FeedbackItem) => (
@@ -208,8 +208,8 @@ const AdminFeedbackList: React.FC = () => {
                   { label: '已关闭', value: '已关闭' },
                 ]} />
               </Form.Item>
-              <Form.Item label="回复内容" name="reply" rules={[{ required: true, message: '请输入回复内容' }]}>
-                <Input.TextArea rows={4} placeholder="请输入回复内容..." />
+              <Form.Item label="备注" name="reply" rules={[{ required: true, message: '请输入备注' }]}>
+                <Input.TextArea rows={4} placeholder="请输入备注..." />
               </Form.Item>
             </Form>
           </div>
