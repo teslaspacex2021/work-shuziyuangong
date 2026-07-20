@@ -9,7 +9,7 @@ import {
   ExclamationCircleFilled, SwapOutlined, PauseCircleOutlined, LinkOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
-import { positions, BUSINESS_LINES, BUSINESS_LINE_COLORS, CAPABILITY_LEVEL_COLORS, type PositionItem } from '../../mock/data';
+import { positions, BUSINESS_LINES, BUSINESS_LINE_COLORS, type PositionItem } from '../../mock/data';
 
 const categoryOptions: string[] = [...BUSINESS_LINES];
 
@@ -124,12 +124,6 @@ const PositionSettings: React.FC = () => {
     { title: '所属部门', dataIndex: 'department', key: 'department', width: 130, ellipsis: true },
     { title: '基准岗位', dataIndex: 'benchmarkPosition', key: 'benchmarkPosition', ellipsis: true },
     {
-      title: '级别', dataIndex: 'capabilityLevel', key: 'capabilityLevel', width: 80,
-      render: (v: string | undefined) => v
-        ? <Tag color={CAPABILITY_LEVEL_COLORS[v as keyof typeof CAPABILITY_LEVEL_COLORS] || 'default'}>{v}</Tag>
-        : <span style={{ color: '#999' }}>—</span>,
-    },
-    {
       title: '所需技能', dataIndex: 'requiredSkills', key: 'requiredSkills', width: 180,
       render: (skillList: string[]) => {
         const shown = skillList.slice(0, 2);
@@ -161,7 +155,7 @@ const PositionSettings: React.FC = () => {
   return (
     <div>
       <h2 style={{ marginBottom: 4, fontSize: 20, fontWeight: 600 }}>岗位设置</h2>
-      <p style={{ color: '#999', marginBottom: 20 }}>维护数字员工的岗位选项，设置所属条线、级别、所需技能及员工数量上限</p>
+      <p style={{ color: '#999', marginBottom: 20 }}>维护数字员工的岗位选项，设置所属条线、所需技能及员工数量上限</p>
 
       <Row gutter={16} style={{ marginBottom: 20 }}>
         <Col span={6}>
@@ -267,12 +261,6 @@ const PositionSettings: React.FC = () => {
             <Select
               placeholder="请选择所属条线"
               options={categoryOptions.map((c) => ({ label: c, value: c }))}
-            />
-          </Form.Item>
-          <Form.Item name="capabilityLevel" label="级别" rules={[{ required: true, message: '请选择级别' }]}>
-            <Select
-              placeholder="请选择级别"
-              options={['工具型', '智能型', '超级型'].map((l) => ({ label: l, value: l }))}
             />
           </Form.Item>
           <Form.Item

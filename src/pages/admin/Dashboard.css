@@ -1,5 +1,5 @@
 /* 运营驾驶舱 — 分区指挥台布局
- * 一瞥 → 消耗总览 → 效益条 → 消耗明细 → 使用组织 → 运营动态
+ * 一瞥 → 消耗总览 → 效益条 → 使用组织 → 运营动态（含场景构成）
  */
 
 .dash {
@@ -191,7 +191,7 @@
 
 .dash-hero-kpis {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--dash-gap);
 }
 
@@ -247,6 +247,33 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.dash-metric-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+}
+
+.dash-metric-help {
+  color: rgba(0, 0, 0, 0.35);
+  font-size: 12px;
+  cursor: help;
+  flex-shrink: 0;
+  transition: color 0.15s;
+}
+
+.dash-metric-help:hover {
+  color: #1677ff;
+}
+
+.dash-metric-help--light {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.dash-metric-help--light:hover {
+  color: #fff;
 }
 
 .dash-kpi-icon {
@@ -768,6 +795,15 @@
 .dept-detail-table .ant-table-tbody > tr > td {
   font-size: 12px;
   font-variant-numeric: tabular-nums;
+}
+
+.dash-ranking-table .ant-table-cell {
+  vertical-align: middle;
+}
+
+.dash-ranking-table .capability-level-tag {
+  display: inline-block;
+  white-space: nowrap;
 }
 
 @media (max-width: 1280px) {

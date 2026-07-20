@@ -1886,11 +1886,23 @@ export const monthlyStats = [
 ];
 
 export const levelDistribution = [
-  { name: 'L1 初级', value: 180, color: '#C0C0C0' },
-  { name: 'L2 中级', value: 420, color: '#6B7B8D' },
-  { name: 'L3 高级', value: 480, color: '#1677ff' },
-  { name: 'L4 专家', value: 168, color: '#0A1929' },
-];
+  { name: '工具型', value: 0, color: CAPABILITY_LEVEL_COLORS.工具型 },
+  { name: '智能型', value: 0, color: CAPABILITY_LEVEL_COLORS.智能型 },
+  { name: '超级型', value: 0, color: CAPABILITY_LEVEL_COLORS.超级型 },
+] as const;
+
+/** 按能力级别统计数字员工数量（工具型 / 智能型 / 超级型） */
+export const getCapabilityLevelDistribution = () => {
+  const counts: Record<CapabilityLevel, number> = { 工具型: 0, 智能型: 0, 超级型: 0 };
+  digitalEmployees.forEach((e) => {
+    counts[getEmployeeCapabilityLevel(e)] += 1;
+  });
+  return (Object.keys(counts) as CapabilityLevel[]).map((name) => ({
+    name,
+    value: counts[name],
+    color: CAPABILITY_LEVEL_COLORS[name],
+  }));
+};
 
 export const departmentUsage = [
   { department: '客户服务部', users: 120, sessions: 5800, tasks: 3200 },

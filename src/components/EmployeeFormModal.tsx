@@ -5,7 +5,7 @@ import {
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import {
-  SYSTEM_LEVELS, positions,
+  SYSTEM_LEVELS, CAPABILITY_LEVELS, positions,
   type BusinessLine, type CapabilityLevel, type OutputMetric, type RunSystemConfig,
 } from '../mock/data';
 
@@ -101,7 +101,6 @@ const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({ open, onCancel, o
         businessLine: undefined,
         department: undefined,
         position: undefined,
-        capabilityLevel: undefined,
         responsibility: undefined,
       });
       return;
@@ -113,7 +112,6 @@ const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({ open, onCancel, o
       businessLine: pos.category as BusinessLine,
       department: pos.department,
       position: pos.benchmarkPosition,
-      capabilityLevel: pos.capabilityLevel,
       responsibility: pos.description,
     });
   };
@@ -261,12 +259,12 @@ const EmployeeFormModal: React.FC<EmployeeFormModalProps> = ({ open, onCancel, o
               <Form.Item
                 name="capabilityLevel"
                 label="级别"
-                rules={[{ required: true, message: '请先选择数字员工名称以带入级别' }]}
+                rules={[{ required: true, message: '请选择级别' }]}
               >
-                <Input
-                  placeholder="选择岗位后自动带入"
-                  readOnly
-                  style={{ background: '#f5f5f5', cursor: 'not-allowed', color: 'rgba(0,0,0,0.88)' }}
+                <Select
+                  allowClear
+                  placeholder="请选择级别"
+                  options={CAPABILITY_LEVELS.map((l) => ({ label: l, value: l }))}
                 />
               </Form.Item>
             </Col>

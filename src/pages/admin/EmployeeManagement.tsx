@@ -12,8 +12,10 @@ import {
   digitalEmployees, skills, knowledgeBases,
   hasEmployeeNumber, getEffectiveEmploymentStatus,
   FEATURE_FLAG_META, DEFAULT_FEATURE_FLAGS, getEmployeeFeatureFlags,
+  getEmployeeCapabilityLevel,
   type DigitalEmployee, type EmployeeFeatureFlags,
 } from '../../mock/data';
+import CapabilityLevelTag from '../../components/CapabilityLevelTag';
 import EmployeeFormModal, { fullHeightModalStyles, type EmployeeFormValues } from '../../components/EmployeeFormModal';
 import EmployeeFieldSections from '../../components/EmployeeFieldSections';
 import AiToolPickerModal, { type AiToolPickerItem, type AiToolPickerType } from '../../components/AiToolPickerModal';
@@ -284,8 +286,10 @@ const EmployeeManagement: React.FC = () => {
       render: (v: string | undefined) => v ? <Tag>{v}</Tag> : <span style={{ color: '#999' }}>—</span>,
     },
     {
-      title: '级别', dataIndex: 'capabilityLevel', key: 'capabilityLevel', width: 90,
-      render: (v: string | undefined) => v ? <Tag color="blue">{v}</Tag> : <span style={{ color: '#999' }}>—</span>,
+      title: '级别', key: 'capabilityLevel', width: 100,
+      render: (_: unknown, record: DigitalEmployee) => (
+        <CapabilityLevelTag level={getEmployeeCapabilityLevel(record)} />
+      ),
     },
     {
       title: '配置技能', key: 'skills', width: 240,

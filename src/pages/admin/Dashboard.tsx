@@ -1,33 +1,32 @@
 import React, { useState, type ReactNode } from 'react';
-import { Card, Row, Col, Tag, List, Button, DatePicker, Table } from 'antd';
+import { Card, Row, Col, Tag, Button, DatePicker, Table, Tooltip as AntTooltip, message } from 'antd';
 import {
   HeartOutlined,
   TeamOutlined,
-  RobotOutlined,
   ThunderboltOutlined,
   CheckCircleOutlined,
   ArrowUpOutlined,
   ArrowDownOutlined,
-  WarningOutlined,
-  ClockCircleOutlined,
   UserOutlined,
   FireOutlined,
   DashboardOutlined,
   DownloadOutlined,
   ArrowLeftOutlined,
   RightOutlined,
+  QuestionCircleOutlined,
 } from '@ant-design/icons';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, AreaChart, Area,
 } from 'recharts';
 import dayjs, { type Dayjs } from 'dayjs';
-import { useNavigate } from 'react-router-dom';
 import {
-  dashboardStats, tokensWeekly, levelDistribution,
-  digitalEmployees, tasks, userUsageTrend, departmentUsage,
+  dashboardStats, tokensWeekly, getCapabilityLevelDistribution,
+  digitalEmployees, userUsageTrend, departmentUsage,
   tokensScenario, efficiencyReport,
+  getEmployeeCapabilityLevel, getEmployeeBusinessLine,
 } from '../../mock/data';
+import CapabilityLevelTag from '../../components/CapabilityLevelTag';
 import './Dashboard.css';
 
 const { RangePicker } = DatePicker;
@@ -42,6 +41,51 @@ const presets: { label: string; value: [Dayjs, Dayjs] }[] = [
   { label: '本年', value: [dayjs().startOf('year'), dayjs()] },
 ];
 
+/** 二次计算指标口径说明（悬停问号展示） */
+const METRIC_TIPS = {
+  healthScore: '综合在线率、任务成功率、告警扣分等加权计算，满分 100%。较昨日变化 = 今日健康度 − 昨日健康度。',
+  monthGrowth: '较上月增速 =（本月新增数字员工数 − 上月新增数）÷ 上月末总量 × 100%。',
+  avgTaskRate: '统计周期内全部在岗数字员工任务完成率的算术平均值。效能评级：≥95% 为 A+，≥90% 为 A，≥80% 为 B，其余为 C。',
+  activeUsers: '统计日内至少产生 1 次会话或任务的去重平台用户数。',
+  avgResponse: '统计周期内任务从创建到首次有效响应的平均耗时。',
+  levelShare: '级别占比 = 该级别数字员工数 ÷ 数字员工总数 × 100%。',
+  monthConsume: '本月累计 Tokens 消耗量；圆环占比 = 本月消耗 ÷ 月度配额 × 100%。环比 =（本月 − 上月）÷ 上月 × 100%。',
+  monthRemain: '预计月度结余 = 月度配额 − 本月已消耗（不足整月时按日均外推至月末）。结余占比 = 结余 ÷ 配额 × 100%。',
+  savedHours: '由数字员工替代人工完成的任务量 × 单任务标准工时估算得出。',
+  costReduction: '成本降低率 =（人工基准单次成本 − 数字员工单次成本）÷ 人工基准单次成本 × 100%。',
+  roi: 'ROI（投入产出比）= 产出效益估值 ÷ 平台投入成本。',
+  deptActiveRate: '部门活跃率 = min(99%, 部门活跃用户数 ÷ 基准用户容量 120 × 100%)。',
+  avgDeptActiveRate: '平均活跃率 = 各部门活跃率的算术平均值。单部门活跃率 = min(99%, 用户数 ÷ 120 × 100%)。',
+  deptTokens: 'Tokens 消耗按任务量估算：约等于任务数 × 1.5（单位：万）。',
+  tokenUsageRate: '消耗率 = 员工已用 Tokens ÷ 配额 Tokens × 100%。',
+  /** 完整效能排名 — 单员工口径（勿与驾驶舱汇总指标混淆） */
+  empTaskRate: '该数字员工在统计周期内：已完成任务数 ÷ 应完成任务数 × 100%。',
+  empTaskCount: '该数字员工在统计周期内创建并执行的任务总量（含定时任务与会话触发任务）。',
+  empUserCount: '统计周期内与该数字员工产生过交互的去重用户数。',
+  empSessionCount: '统计周期内用户与该数字员工产生的对话会话总数。',
+  empQuality: '综合任务完成质量、用户点赞/点踩反馈等评定的质量得分，满分约 100。',
+  empAgentCalls: '该数字员工关联智能体在统计周期内被调用的总次数。',
+  empTokens: '该数字员工在统计周期内已消耗的 Tokens 总量（单位：百万）。',
+} as const;
+
+const MetricHelp: React.FC<{ tip: string; light?: boolean }> = ({ tip, light }) => (
+  <AntTooltip title={tip} placement="top">
+    <QuestionCircleOutlined
+      className={`dash-metric-help${light ? ' dash-metric-help--light' : ''}`}
+      onClick={(e) => e.stopPropagation()}
+    />
+  </AntTooltip>
+);
+
+const MetricLabel: React.FC<{ children: ReactNode; tip?: string; light?: boolean }> = ({
+  children, tip, light,
+}) => (
+  <span className="dash-metric-label">
+    {children}
+    {tip ? <MetricHelp tip={tip} light={light} /> : null}
+  </span>
+);
+
 const CHART_GRID = '#eef0f3';
 const CHART_AXIS = '#8c8c8c';
 const tooltipStyle = {
@@ -52,14 +96,16 @@ const tooltipStyle = {
   padding: '8px 10px',
 };
 
-const employeeTokens = digitalEmployees.map((e) => ({
-  name: e.name,
-  id: e.id,
-  quota: e.tokensQuota / 1000000,
-  used: e.tokensUsed / 1000000,
-  rate: Math.round((e.tokensUsed / e.tokensQuota) * 100),
-  department: e.department,
-}));
+const employeeTokens = digitalEmployees
+  .map((e) => ({
+    name: e.name,
+    id: e.id,
+    quota: e.tokensQuota / 1000000,
+    used: e.tokensUsed / 1000000,
+    rate: Math.round((e.tokensUsed / e.tokensQuota) * 100),
+    department: e.department,
+  }))
+  .sort((a, b) => b.used - a.used);
 
 const efficiencyData = [
   { month: '2025-10', tasks: 2800, quality: 88, calls: 15200 },
@@ -75,8 +121,6 @@ type DeptRow = (typeof departmentUsage)[0];
 const getDeptActiveRate = (r: DeptRow) => Math.min(99, Math.round((r.users / 120) * 100));
 const getDeptTokens = (r: DeptRow) => Math.round(r.tasks * 1.5);
 
-const DEPT_ACCENTS = ['#1677ff', '#2f8bff', '#13c2c2', '#52c41a', '#fa8c16', '#722ed1', '#eb2f96', '#595959'];
-
 type KpiItem = {
   label: string;
   value: string | number;
@@ -85,15 +129,19 @@ type KpiItem = {
   meta?: ReactNode;
   metaClass?: string;
   tinted?: boolean;
+  /** 二次计算口径说明 */
+  tip?: string;
 };
 
-const KpiCard: React.FC<KpiItem> = ({ label, value, accent, icon, meta, metaClass, tinted }) => (
+const KpiCard: React.FC<KpiItem> = ({ label, value, accent, icon, meta, metaClass, tinted, tip }) => (
   <div
     className={`dash-kpi${tinted ? ' tinted' : ''}`}
     style={{ ['--kpi-accent' as string]: accent }}
   >
     <div className="dash-kpi-top">
-      <div className="dash-kpi-label">{label}</div>
+      <div className="dash-kpi-label">
+        <MetricLabel tip={tip}>{label}</MetricLabel>
+      </div>
       <div className="dash-kpi-icon">{icon}</div>
     </div>
     <div>
@@ -104,7 +152,6 @@ const KpiCard: React.FC<KpiItem> = ({ label, value, accent, icon, meta, metaClas
 );
 
 const Dashboard: React.FC = () => {
-  const navigate = useNavigate();
   const [dateRange, setDateRange] = useState<RangeValue>([
     dayjs().subtract(7, 'day'),
     dayjs(),
@@ -112,22 +159,65 @@ const Dashboard: React.FC = () => {
   const [showFullRanking, setShowFullRanking] = useState(false);
   const [showDeptDetail, setShowDeptDetail] = useState(false);
 
-  const hotEmployees = [...digitalEmployees]
+  const fullRankingData = digitalEmployees
+    .map((e) => ({
+      ...e,
+      taskCount: Math.floor(e.heat * 0.3) + 100,
+      qualityScore: Math.floor(e.taskCompleteRate * 0.95 + 5),
+      agentCalls: Math.floor(e.heat * 2) + 500,
+      userCount: Math.floor(e.heat / 10) + Math.max(8, Math.floor(e.likes / 4)),
+      sessionCount: Math.floor(e.heat * 0.45) + 40,
+      line: getEmployeeBusinessLine(e),
+      capLevel: getEmployeeCapabilityLevel(e),
+    }))
     .sort((a, b) => b.taskCompleteRate - a.taskCompleteRate)
-    .slice(0, 5);
+    .map((e, i) => ({ ...e, rank: i + 1 }));
 
-  const recentTasks = [...tasks]
-    .sort((a, b) => new Date(b.createTime).getTime() - new Date(a.createTime).getTime())
-    .slice(0, 5);
+  const exportRankingCsv = () => {
+    const statusLabel: Record<string, string> = {
+      ACTIVE: '在线',
+      TRAINING: '训练中',
+      SUSPENDED: '停用',
+      TERMINATED: '已退出',
+    };
+    const headers = [
+      '排名', '数字员工', '工号', '部门', '所属条线', '岗位', '级别',
+      '完成率(%)', '任务数', '用户数', '会话数', '质量', '调用',
+      'Tokens(M)', '点赞', '点踩', '热度', '运行状态',
+    ];
+    const rows = fullRankingData.map((r) => [
+      r.rank,
+      r.name,
+      r.employeeNumber ?? r.id,
+      r.department,
+      r.line,
+      r.position,
+      r.capLevel,
+      r.taskCompleteRate,
+      r.taskCount,
+      r.userCount,
+      r.sessionCount,
+      r.qualityScore,
+      r.agentCalls,
+      (r.tokensUsed / 1000000).toFixed(2),
+      r.likes,
+      r.dislikes,
+      r.heat,
+      statusLabel[r.status] ?? r.status,
+    ]);
+    const escape = (cell: string | number) => `"${String(cell).replace(/"/g, '""')}"`;
+    const csv = `\uFEFF${[headers, ...rows].map((row) => row.map(escape).join(',')).join('\n')}`;
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `数字员工效能排名_${dayjs().format('YYYYMMDD_HHmm')}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    message.success(`已导出 ${fullRankingData.length} 条效能排名`);
+  };
 
-  const fullRankingData = digitalEmployees.map((e, i) => ({
-    ...e,
-    rank: i + 1,
-    taskCount: Math.floor(e.heat * 0.3) + 100,
-    qualityScore: Math.floor(e.taskCompleteRate * 0.95 + 5),
-    agentCalls: Math.floor(e.heat * 2) + 500,
-  })).sort((a, b) => b.taskCompleteRate - a.taskCompleteRate);
-
+  const levelDistribution = getCapabilityLevelDistribution();
   const levelTotal = levelDistribution.reduce((s, x) => s + x.value, 0);
 
   const activeCount = digitalEmployees.filter((e) => e.status === 'ACTIVE').length;
@@ -146,13 +236,7 @@ const Dashboard: React.FC = () => {
       icon: <TeamOutlined />,
       meta: <><ArrowUpOutlined /> 较上月 {dashboardStats.monthNewPercent}%</>,
       metaClass: 'up',
-    },
-    {
-      label: '智能体总数',
-      value: dashboardStats.totalAgents.toLocaleString(),
-      accent: '#722ed1',
-      icon: <RobotOutlined />,
-      meta: <>自有占比 {dashboardStats.ownRatio}%</>,
+      tip: METRIC_TIPS.monthGrowth,
     },
     {
       label: 'Tokens 消耗',
@@ -171,6 +255,7 @@ const Dashboard: React.FC = () => {
       icon: <CheckCircleOutlined />,
       meta: <>效能评级 {dashboardStats.efficiencyGrade}</>,
       metaClass: 'up',
+      tip: METRIC_TIPS.avgTaskRate,
     },
     {
       label: '用户总数',
@@ -185,6 +270,7 @@ const Dashboard: React.FC = () => {
       accent: '#eb2f96',
       icon: <FireOutlined />,
       meta: <>当日活跃</>,
+      tip: METRIC_TIPS.activeUsers,
     },
     {
       label: '任务数',
@@ -192,6 +278,7 @@ const Dashboard: React.FC = () => {
       accent: '#13c2c2',
       icon: <DashboardOutlined />,
       meta: <>均响 {dashboardStats.avgResponseTime}</>,
+      tip: METRIC_TIPS.avgResponse,
     },
   ];
 
@@ -204,7 +291,6 @@ const Dashboard: React.FC = () => {
       }),
       { users: 0, sessions: 0, tasks: 0 },
     );
-    const maxTasks = Math.max(...departmentUsage.map((d) => d.tasks), 1);
     const avgActiveRate = Math.round(
       departmentUsage.reduce((s, d) => s + getDeptActiveRate(d), 0) / departmentUsage.length,
     );
@@ -215,9 +301,12 @@ const Dashboard: React.FC = () => {
         title: '排名',
         key: 'rank',
         width: 56,
-        render: (_: unknown, __: DeptRow, idx: number) => (
-          <span className={`dash-rank-badge ${idx < 3 ? 'top' : 'rest'}`}>{idx + 1}</span>
-        ),
+        render: (_: unknown, record: DeptRow) => {
+          const idx = sortedDepts.findIndex((d) => d.department === record.department);
+          return (
+            <span className={`dash-rank-badge ${idx < 3 ? 'top' : 'rest'}`}>{idx + 1}</span>
+          );
+        },
       },
       { title: '部门', dataIndex: 'department', key: 'department', width: 140 },
       {
@@ -245,7 +334,9 @@ const Dashboard: React.FC = () => {
         render: (v: number) => v.toLocaleString(),
       },
       {
-        title: 'Tokens 消耗',
+        title: (
+          <MetricLabel tip={METRIC_TIPS.deptTokens}>Tokens 消耗</MetricLabel>
+        ),
         key: 'tokens',
         width: 110,
         sorter: (a: DeptRow, b: DeptRow) => getDeptTokens(a) - getDeptTokens(b),
@@ -254,7 +345,9 @@ const Dashboard: React.FC = () => {
         ),
       },
       {
-        title: '活跃率',
+        title: (
+          <MetricLabel tip={METRIC_TIPS.deptActiveRate}>活跃率</MetricLabel>
+        ),
         key: 'activeRate',
         width: 160,
         sorter: (a: DeptRow, b: DeptRow) => getDeptActiveRate(a) - getDeptActiveRate(b),
@@ -316,94 +409,27 @@ const Dashboard: React.FC = () => {
             icon={<FireOutlined />}
             meta={<>部门均值</>}
             metaClass="up"
+            tip={METRIC_TIPS.avgDeptActiveRate}
           />
         </div>
 
         <section className="dash-section">
           <div className="dash-section-head">
-            <strong>部门速览</strong>
-            <span>按任务量排序 · 条形对比相对强度</span>
+            <strong>部门使用明细</strong>
+            <span>支持排序与翻页</span>
           </div>
-          <div className="dept-card-grid">
-            {sortedDepts.map((d, idx) => {
-              const rate = getDeptActiveRate(d);
-              const accent = DEPT_ACCENTS[idx % DEPT_ACCENTS.length];
-              const taskPct = Math.round((d.tasks / maxTasks) * 100);
-              return (
-                <div
-                  key={d.department}
-                  className="dept-card"
-                  style={{ ['--dept-accent' as string]: accent }}
-                >
-                  <div className="dept-card-top">
-                    <span className={`dash-rank-badge ${idx < 3 ? 'top' : 'rest'}`}>{idx + 1}</span>
-                    <strong>{d.department}</strong>
-                    <Tag
-                      color={rate >= 80 ? 'success' : rate >= 50 ? 'warning' : 'error'}
-                      style={{ marginInlineEnd: 0, fontSize: 11 }}
-                    >
-                      {rate}%
-                    </Tag>
-                  </div>
-                  <div className="dept-card-metrics">
-                    <div>
-                      <span>用户</span>
-                      <b>{d.users}</b>
-                    </div>
-                    <div>
-                      <span>会话</span>
-                      <b>{d.sessions.toLocaleString()}</b>
-                    </div>
-                    <div>
-                      <span>任务</span>
-                      <b>{d.tasks.toLocaleString()}</b>
-                    </div>
-                    <div>
-                      <span>Tokens</span>
-                      <b>{getDeptTokens(d)}万</b>
-                    </div>
-                  </div>
-                  <div className="dept-card-bar">
-                    <i style={{ width: `${taskPct}%` }} />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-
-        <section className="dash-section">
-          <div className="dash-section-head">
-            <strong>明细对照</strong>
-            <span>横向对比用户与任务量，表格支持排序</span>
-          </div>
-          <Card className="dash-panel" title="部门任务 vs 用户" style={{ marginBottom: 12 }}>
-            <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={sortedDepts} layout="vertical" margin={{ left: 4, right: 12, top: 4, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID} horizontal={false} />
-                <XAxis type="number" tick={{ fill: CHART_AXIS, fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis
-                  type="category"
-                  dataKey="department"
-                  width={88}
-                  tick={{ fontSize: 11, fill: CHART_AXIS }}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'rgba(22,119,255,0.04)' }} />
-                <Legend iconType="circle" wrapperStyle={{ fontSize: 11 }} />
-                <Bar dataKey="users" name="用户数" fill="#1677ff" radius={[0, 3, 3, 0]} maxBarSize={12} />
-                <Bar dataKey="tasks" name="任务数" fill="#69b1ff" radius={[0, 3, 3, 0]} maxBarSize={12} />
-              </BarChart>
-            </ResponsiveContainer>
-          </Card>
-          <Card className="dash-panel" title="部门使用明细">
+          <Card className="dash-panel">
             <Table
               className="dept-detail-table"
               dataSource={sortedDepts}
               columns={deptDetailColumns}
               rowKey="department"
-              pagination={false}
+              pagination={{
+                pageSize: 5,
+                showSizeChanger: true,
+                pageSizeOptions: [5, 10, 20],
+                showTotal: (total) => `共 ${total} 条`,
+              }}
               size="small"
             />
           </Card>
@@ -442,19 +468,25 @@ const Dashboard: React.FC = () => {
             <Card className="dash-panel" title="降本增效分析报告">
               <div style={{ padding: '2px 0 6px' }}>
                 <div style={{ marginBottom: 14 }}>
-                  <div style={{ fontSize: 12, color: 'rgba(0,0,0,0.45)', marginBottom: 2 }}>本月节省人力工时</div>
+                  <div style={{ fontSize: 12, color: 'rgba(0,0,0,0.45)', marginBottom: 2 }}>
+                    <MetricLabel tip={METRIC_TIPS.savedHours}>本月节省人力工时</MetricLabel>
+                  </div>
                   <div style={{ fontSize: 24, fontWeight: 700, color: '#52c41a' }}>
                     {efficiencyReport.savedHours} <span style={{ fontSize: 13, fontWeight: 400 }}>小时</span>
                   </div>
                 </div>
                 <div style={{ marginBottom: 14 }}>
-                  <div style={{ fontSize: 12, color: 'rgba(0,0,0,0.45)', marginBottom: 2 }}>平均单次任务成本降低</div>
+                  <div style={{ fontSize: 12, color: 'rgba(0,0,0,0.45)', marginBottom: 2 }}>
+                    <MetricLabel tip={METRIC_TIPS.costReduction}>平均单次任务成本降低</MetricLabel>
+                  </div>
                   <div style={{ fontSize: 24, fontWeight: 700, color: '#1677ff' }}>
                     {efficiencyReport.costReduction}%
                   </div>
                 </div>
                 <div style={{ marginBottom: 14 }}>
-                  <div style={{ fontSize: 12, color: 'rgba(0,0,0,0.45)', marginBottom: 2 }}>ROI (投入产出比)</div>
+                  <div style={{ fontSize: 12, color: 'rgba(0,0,0,0.45)', marginBottom: 2 }}>
+                    <MetricLabel tip={METRIC_TIPS.roi}>ROI (投入产出比)</MetricLabel>
+                  </div>
                   <div style={{ fontSize: 24, fontWeight: 700 }}>
                     {efficiencyReport.roi}
                   </div>
@@ -467,28 +499,97 @@ const Dashboard: React.FC = () => {
           </Col>
         </Row>
 
-        <Card className="dash-panel" title="完整效能排名">
+        <Card
+          className="dash-panel"
+          title="完整效能排名"
+          extra={
+            <Button type="primary" icon={<DownloadOutlined />} onClick={exportRankingCsv}>
+              导出
+            </Button>
+          }
+        >
           <Table
+            className="dash-ranking-table"
             size="small"
             dataSource={fullRankingData}
             rowKey="id"
-            pagination={{ pageSize: 20, showSizeChanger: true }}
+            pagination={{ pageSize: 20, showSizeChanger: true, showTotal: (t) => `共 ${t} 条` }}
+            scroll={{ x: 1480 }}
             columns={[
               {
-                title: '排名', key: 'rank', width: 56,
-                render: (_: unknown, __: unknown, idx: number) => (
-                  <span className={`dash-rank-badge ${idx < 3 ? 'top' : 'rest'}`}>{idx + 1}</span>
+                title: '排名', key: 'rank', width: 56, fixed: 'left',
+                render: (_: unknown, r: typeof fullRankingData[0]) => (
+                  <span className={`dash-rank-badge ${r.rank <= 3 ? 'top' : 'rest'}`}>{r.rank}</span>
                 ),
               },
-              { title: '数字员工', dataIndex: 'name', key: 'name' },
-              { title: '部门', dataIndex: 'department', key: 'department' },
-              { title: '岗位', dataIndex: 'position', key: 'position', ellipsis: true },
-              { title: '完成率', dataIndex: 'taskCompleteRate', key: 'taskCompleteRate', render: (v: number) => `${v}%`, sorter: (a: typeof fullRankingData[0], b: typeof fullRankingData[0]) => a.taskCompleteRate - b.taskCompleteRate },
-              { title: '任务数', dataIndex: 'taskCount', key: 'taskCount' },
-              { title: '质量', dataIndex: 'qualityScore', key: 'qualityScore' },
-              { title: '调用', dataIndex: 'agentCalls', key: 'agentCalls' },
-              { title: 'Tokens', key: 'tokens', render: (_: unknown, r: typeof fullRankingData[0]) => `${(r.tokensUsed / 1000000).toFixed(1)}M` },
-              { title: '级别', dataIndex: 'level', key: 'level', render: (l: string) => <Tag color="blue">{l}</Tag> },
+              { title: '数字员工', dataIndex: 'name', key: 'name', width: 130, fixed: 'left' },
+              {
+                title: '级别',
+                key: 'capabilityLevel',
+                width: 100,
+                render: (_: unknown, r: typeof fullRankingData[0]) => (
+                  <CapabilityLevelTag level={r.capLevel} />
+                ),
+              },
+              { title: '部门', dataIndex: 'department', key: 'department', width: 110 },
+              { title: '所属条线', dataIndex: 'line', key: 'line', width: 88 },
+              { title: '岗位', dataIndex: 'position', key: 'position', ellipsis: true, width: 180 },
+              {
+                title: <MetricLabel tip={METRIC_TIPS.empTaskRate}>完成率</MetricLabel>,
+                dataIndex: 'taskCompleteRate', key: 'taskCompleteRate', width: 100,
+                render: (v: number) => `${v}%`,
+                sorter: (a: typeof fullRankingData[0], b: typeof fullRankingData[0]) => a.taskCompleteRate - b.taskCompleteRate,
+                defaultSortOrder: 'descend' as const,
+              },
+              {
+                title: <MetricLabel tip={METRIC_TIPS.empTaskCount}>任务数</MetricLabel>,
+                dataIndex: 'taskCount', key: 'taskCount', width: 90,
+                sorter: (a: typeof fullRankingData[0], b: typeof fullRankingData[0]) => a.taskCount - b.taskCount,
+              },
+              {
+                title: <MetricLabel tip={METRIC_TIPS.empUserCount}>用户数</MetricLabel>,
+                dataIndex: 'userCount', key: 'userCount', width: 90,
+                sorter: (a: typeof fullRankingData[0], b: typeof fullRankingData[0]) => a.userCount - b.userCount,
+              },
+              {
+                title: <MetricLabel tip={METRIC_TIPS.empSessionCount}>会话数</MetricLabel>,
+                dataIndex: 'sessionCount', key: 'sessionCount', width: 90,
+                sorter: (a: typeof fullRankingData[0], b: typeof fullRankingData[0]) => a.sessionCount - b.sessionCount,
+                render: (v: number) => v.toLocaleString(),
+              },
+              {
+                title: <MetricLabel tip={METRIC_TIPS.empQuality}>质量</MetricLabel>,
+                dataIndex: 'qualityScore', key: 'qualityScore', width: 80,
+                sorter: (a: typeof fullRankingData[0], b: typeof fullRankingData[0]) => a.qualityScore - b.qualityScore,
+              },
+              {
+                title: <MetricLabel tip={METRIC_TIPS.empAgentCalls}>调用</MetricLabel>,
+                dataIndex: 'agentCalls', key: 'agentCalls', width: 90,
+                sorter: (a: typeof fullRankingData[0], b: typeof fullRankingData[0]) => a.agentCalls - b.agentCalls,
+              },
+              {
+                title: <MetricLabel tip={METRIC_TIPS.empTokens}>Tokens</MetricLabel>,
+                key: 'tokens', width: 80,
+                render: (_: unknown, r: typeof fullRankingData[0]) => `${(r.tokensUsed / 1000000).toFixed(1)}M`,
+                sorter: (a: typeof fullRankingData[0], b: typeof fullRankingData[0]) => a.tokensUsed - b.tokensUsed,
+              },
+              {
+                title: '点赞', dataIndex: 'likes', key: 'likes', width: 70,
+                sorter: (a: typeof fullRankingData[0], b: typeof fullRankingData[0]) => a.likes - b.likes,
+              },
+              {
+                title: '状态', dataIndex: 'status', key: 'status', width: 80,
+                render: (s: string) => {
+                  const map: Record<string, { color: string; text: string }> = {
+                    ACTIVE: { color: 'success', text: '在线' },
+                    TRAINING: { color: 'processing', text: '训练中' },
+                    SUSPENDED: { color: 'warning', text: '停用' },
+                    TERMINATED: { color: 'default', text: '已退出' },
+                  };
+                  const m = map[s] ?? { color: 'default', text: s };
+                  return <Tag color={m.color}>{m.text}</Tag>;
+                },
+              },
             ]}
           />
         </Card>
@@ -520,7 +621,8 @@ const Dashboard: React.FC = () => {
           <div className="dash-hero-glow" />
           <div className="dash-hero-health-body">
             <div className="dash-hero-health-label">
-              <HeartOutlined /> 系统运行健康度
+              <HeartOutlined />
+              <MetricLabel tip={METRIC_TIPS.healthScore} light>系统运行健康度</MetricLabel>
             </div>
             <div className="dash-hero-health-value">
               {dashboardStats.healthScore}<em>%</em>
@@ -592,7 +694,7 @@ const Dashboard: React.FC = () => {
             </div>
           </Card>
 
-          <Card className="dash-panel" title="级别分布">
+          <Card className="dash-panel" title={<MetricLabel tip={METRIC_TIPS.levelShare}>级别分布</MetricLabel>}>
             <div className="dash-pie-pane">
               <div className="dash-pie-wrap">
                 <ResponsiveContainer width="100%" height="100%">
@@ -626,7 +728,7 @@ const Dashboard: React.FC = () => {
                   return (
                     <div key={l.name} className="dash-legend-item">
                       <span className="dash-legend-dot" style={{ background: l.color }} />
-                      {l.name.replace(/^L\d\s/, '')} {pct}%
+                      {l.name} {l.value} · {pct}%
                     </div>
                   );
                 })}
@@ -645,7 +747,9 @@ const Dashboard: React.FC = () => {
         <div className="dash-insight-row">
           <div className="dash-insight">
             <div>
-              <div className="dash-insight-label">本月总消耗</div>
+              <div className="dash-insight-label">
+                <MetricLabel tip={METRIC_TIPS.monthConsume}>本月总消耗</MetricLabel>
+              </div>
               <div className="dash-insight-value">152.8M</div>
             </div>
             <div className="dash-ring-wrap">
@@ -662,7 +766,9 @@ const Dashboard: React.FC = () => {
           </div>
           <div className="dash-insight">
             <div>
-              <div className="dash-insight-label">预计月度结余</div>
+              <div className="dash-insight-label">
+                <MetricLabel tip={METRIC_TIPS.monthRemain}>预计月度结余</MetricLabel>
+              </div>
               <div className="dash-insight-value">47.2M</div>
             </div>
             <div className="dash-ring-wrap">
@@ -679,7 +785,9 @@ const Dashboard: React.FC = () => {
           </div>
           <div className="dash-insight">
             <div>
-              <div className="dash-insight-label">本月节省工时</div>
+              <div className="dash-insight-label">
+                <MetricLabel tip={METRIC_TIPS.savedHours}>本月节省工时</MetricLabel>
+              </div>
               <div className="dash-insight-value">
                 {efficiencyReport.savedHours}<span>h</span>
               </div>
@@ -688,7 +796,11 @@ const Dashboard: React.FC = () => {
               <div className="dash-ring" style={{ ['--ring-pct' as string]: 88, ['--ring-color' as string]: '#1677ff' }} />
               <span className="dash-ring-label">88%</span>
             </div>
-            <div className="dash-insight-meta">ROI {efficiencyReport.roi} · -{efficiencyReport.costReduction}%</div>
+            <div className="dash-insight-meta">
+              <MetricLabel tip={METRIC_TIPS.roi}>ROI {efficiencyReport.roi}</MetricLabel>
+              {' · '}
+              <MetricLabel tip={METRIC_TIPS.costReduction}>-{efficiencyReport.costReduction}%</MetricLabel>
+            </div>
             <div
               className="dash-insight-bar"
               style={{ ['--bar-w' as string]: '88%', ['--bar-from' as string]: '#69b1ff', ['--bar-to' as string]: '#1677ff' }}
@@ -696,65 +808,6 @@ const Dashboard: React.FC = () => {
               <i />
             </div>
           </div>
-        </div>
-      </section>
-
-      {/* ④ 消耗明细：构成 ‖ 员工表 */}
-      <section className="dash-section">
-        <div className="dash-section-head">
-          <strong>消耗明细</strong>
-          <span>场景构成与员工用量并列下钻</span>
-        </div>
-        <div className="dash-dual">
-          <Card className="dash-panel" title="Tokens 消耗构成">
-            <ResponsiveContainer width="100%" height={220}>
-              <PieChart>
-                <Pie
-                  data={tokensScenario}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={48}
-                  outerRadius={78}
-                  paddingAngle={2}
-                  dataKey="value"
-                  stroke="#fff"
-                  strokeWidth={2}
-                >
-                  {tokensScenario.map((entry, index) => (
-                    <Cell key={index} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip contentStyle={tooltipStyle} />
-              </PieChart>
-            </ResponsiveContainer>
-            <div className="dash-legend">
-              {tokensScenario.map((s) => (
-                <div key={s.name} className="dash-legend-item">
-                  <span className="dash-legend-dot" style={{ background: s.color }} />
-                  {s.name}
-                </div>
-              ))}
-            </div>
-          </Card>
-          <Card className="dash-panel" title="按员工 Tokens 消耗">
-            <Table
-              size="small"
-              dataSource={employeeTokens}
-              rowKey="id"
-              pagination={false}
-              scroll={{ y: 220 }}
-              columns={[
-                { title: '员工', dataIndex: 'name', key: 'name', ellipsis: true },
-                { title: '部门', dataIndex: 'department', key: 'department', ellipsis: true, width: 96 },
-                { title: '已用', dataIndex: 'used', key: 'used', width: 64, render: (v: number) => `${v.toFixed(1)}M` },
-                { title: '配额', dataIndex: 'quota', key: 'quota', width: 64, render: (v: number) => `${v.toFixed(1)}M` },
-                {
-                  title: '率', dataIndex: 'rate', key: 'rate', width: 58,
-                  render: (v: number) => <Tag color={v > 80 ? 'red' : v > 50 ? 'orange' : 'green'}>{v}%</Tag>,
-                },
-              ]}
-            />
-          </Card>
         </div>
       </section>
 
@@ -805,72 +858,101 @@ const Dashboard: React.FC = () => {
         </div>
       </section>
 
-      {/* ⑥ 运营动态 */}
+      {/* ⑥ 运营动态：按员工 Tokens */}
       <section className="dash-section">
         <div className="dash-section-head">
           <strong>运营动态</strong>
-          <span>效能榜与任务态紧凑对照</span>
+          <span>按员工 Tokens 消耗排行 · 效能明细见完整排名</span>
         </div>
-        <div className="dash-dual even">
-          <Card
-            className="dash-panel dash-list-card"
-            title="热门数字员工 TOP5"
-            extra={<Button type="link" size="small" onClick={() => setShowFullRanking(true)}>全部</Button>}
-          >
-            <List
-              size="small"
-              dataSource={hotEmployees}
-              renderItem={(emp, idx) => (
-                <List.Item>
-                  <List.Item.Meta
-                    avatar={<span className={`dash-rank-badge ${idx < 3 ? 'top' : 'rest'}`}>{idx + 1}</span>}
-                    title={emp.name}
-                    description={`${emp.taskCompleteRate}% · ${emp.department}`}
-                  />
-                  <Tag color="processing" style={{ marginInlineEnd: 0 }}>{emp.level}</Tag>
-                </List.Item>
-              )}
-            />
-          </Card>
-          <Card
-            className="dash-panel dash-list-card"
-            title="最近任务"
-            extra={<Button type="link" size="small" onClick={() => navigate('/admin/task-logs')}>全部</Button>}
-          >
-            <List
-              size="small"
-              dataSource={recentTasks}
-              renderItem={(task) => (
-                <List.Item>
-                  <List.Item.Meta
-                    avatar={
-                      task.status === '已完成' ? <CheckCircleOutlined style={{ color: '#52c41a', fontSize: 14 }} /> :
-                      task.status === '执行中' ? <ClockCircleOutlined style={{ color: '#1677ff', fontSize: 14 }} /> :
-                      task.status === '已失败' ? <WarningOutlined style={{ color: '#ff4d4f', fontSize: 14 }} /> :
-                      <ClockCircleOutlined style={{ color: '#999', fontSize: 14 }} />
-                    }
-                    title={task.title}
-                    description={
-                      <span>
-                        <Tag
-                          color={
-                            task.status === '已完成' ? 'success' :
-                            task.status === '执行中' ? 'processing' :
-                            task.status === '已失败' ? 'error' : 'default'
-                          }
-                          style={{ fontSize: 11 }}
-                        >
-                          {task.status}
-                        </Tag>
-                        {task.createTime}
-                      </span>
-                    }
-                  />
-                </List.Item>
-              )}
-            />
-          </Card>
-        </div>
+        <Card
+          className="dash-panel"
+          title="按员工 Tokens 消耗"
+          extra={
+            <Button type="link" size="small" onClick={() => setShowFullRanking(true)}>
+              效能排名 <RightOutlined />
+            </Button>
+          }
+        >
+          <Table
+            size="small"
+            dataSource={employeeTokens}
+            rowKey="id"
+            pagination={{ pageSize: 10, showSizeChanger: true, showTotal: (t) => `共 ${t} 条` }}
+            columns={[
+              {
+                title: '排名',
+                key: 'rank',
+                width: 56,
+                render: (_: unknown, record: (typeof employeeTokens)[0]) => {
+                  const idx = employeeTokens.findIndex((e) => e.id === record.id);
+                  return (
+                    <span className={`dash-rank-badge ${idx < 3 ? 'top' : 'rest'}`}>{idx + 1}</span>
+                  );
+                },
+              },
+              { title: '员工', dataIndex: 'name', key: 'name', ellipsis: true },
+              { title: '部门', dataIndex: 'department', key: 'department', ellipsis: true, width: 120 },
+              {
+                title: '已用',
+                dataIndex: 'used',
+                key: 'used',
+                width: 90,
+                sorter: (a: (typeof employeeTokens)[0], b: (typeof employeeTokens)[0]) => a.used - b.used,
+                defaultSortOrder: 'descend' as const,
+                render: (v: number) => `${v.toFixed(1)}M`,
+              },
+              {
+                title: '配额',
+                dataIndex: 'quota',
+                key: 'quota',
+                width: 90,
+                render: (v: number) => `${v.toFixed(1)}M`,
+              },
+              {
+                title: <MetricLabel tip={METRIC_TIPS.tokenUsageRate}>消耗率</MetricLabel>,
+                dataIndex: 'rate',
+                key: 'rate',
+                width: 100,
+                sorter: (a: (typeof employeeTokens)[0], b: (typeof employeeTokens)[0]) => a.rate - b.rate,
+                render: (v: number) => <Tag color={v > 80 ? 'red' : v > 50 ? 'orange' : 'green'}>{v}%</Tag>,
+              },
+            ]}
+          />
+        </Card>
+        <Card className="dash-panel" title="Tokens 消耗构成" style={{ marginTop: 12 }}>
+          <div className="dash-pie-pane" style={{ maxWidth: 560, margin: '0 auto' }}>
+            <div className="dash-pie-wrap" style={{ height: 220 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={tokensScenario}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={48}
+                    outerRadius={78}
+                    paddingAngle={2}
+                    dataKey="value"
+                    stroke="#fff"
+                    strokeWidth={2}
+                  >
+                    {tokensScenario.map((entry, index) => (
+                      <Cell key={index} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip contentStyle={tooltipStyle} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="dash-legend">
+              {tokensScenario.map((s) => (
+                <div key={s.name} className="dash-legend-item">
+                  <span className="dash-legend-dot" style={{ background: s.color }} />
+                  {s.name} {s.value}%
+                </div>
+              ))}
+            </div>
+          </div>
+        </Card>
       </section>
     </div>
   );

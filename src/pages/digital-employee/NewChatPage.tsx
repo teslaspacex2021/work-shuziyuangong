@@ -261,6 +261,7 @@ const NewChatPage: React.FC = () => {
               showAllWhenNoFlags={false}
               onSummonEmployee={() => setSummonVisible(true)}
               summonLabel="召唤员工"
+              onMentionEmployee={(emp) => handleSelectEmployee(emp.id)}
             />
           </div>
         </div>
