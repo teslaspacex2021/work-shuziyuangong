@@ -136,8 +136,9 @@ const TokensEfficiency: React.FC = () => {
                           <YAxis />
                           <Tooltip />
                           <Legend />
-                          <Bar dataKey="text" name="文本" fill="#1677ff" radius={[4, 4, 0, 0]} />
-                          <Bar dataKey="multimodal" name="多模态" fill="#1677ff" fillOpacity={0.3} radius={[4, 4, 0, 0]} />
+                          <Bar dataKey="input" name="输入" fill="#1677ff" radius={[4, 4, 0, 0]} />
+                          <Bar dataKey="output" name="输出" fill="#52c41a" radius={[4, 4, 0, 0]} />
+                          <Bar dataKey="total" name="总量" fill="#fa8c16" radius={[4, 4, 0, 0]} />
                         </BarChart>
                       </ResponsiveContainer>
                     </Card>

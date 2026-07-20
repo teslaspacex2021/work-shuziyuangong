@@ -1857,6 +1857,20 @@ export const scheduledTaskRuns: ScheduledTaskRun[] = [
   { id: 'STR012', taskId: 'ST004', status: '已完成', startTime: '2026-03-14 06:00', finishTime: '2026-03-14 06:14', duration: '14分钟', result: '数据质量巡检通过' },
 ];
 
+const scheduledTaskEmployeeMap = new Map(scheduledTasks.map((t) => [t.id, t.employeeId]));
+
+/** 统计周期内各数字员工定时任务执行次数（不含会话触发任务） */
+export const getEmployeeScheduledTaskRunCounts = (): Map<string, number> => {
+  const counts = new Map<string, number>();
+  scheduledTaskRuns.forEach((run) => {
+    if (run.status === '待执行') return;
+    const employeeId = scheduledTaskEmployeeMap.get(run.taskId);
+    if (!employeeId) return;
+    counts.set(employeeId, (counts.get(employeeId) ?? 0) + 1);
+  });
+  return counts;
+};
+
 export const conversations: ConversationItem[] = [
   { employeeId: 'DE-2026001', lastMessage: '已完成128条工单处理，平均响应2.3秒', lastTime: '10分钟前', unreadCount: 2 },
   { employeeId: 'DE-2026003', lastMessage: '3月营销周报正在生成中，预计30分钟完成', lastTime: '30分钟前', unreadCount: 0 },
@@ -1869,6 +1883,15 @@ export const dashboardStats = {
   totalEmployees: 1248,
   totalAgents: 3560,
   todayTokens: '45.2M',
+  /** 近 7 / 30 天上新数字员工数 */
+  newEmployees7d: 18,
+  newEmployees30d: 86,
+  /** 近 7 / 30 天 Tokens 消耗 */
+  tokens7d: '12.8M',
+  tokens30d: '48.6M',
+  /** 统计周期内输入 / 输出 Tokens */
+  tokensInput: '31.6M',
+  tokensOutput: '13.6M',
   avgTaskRate: 94.8,
   ownRatio: 65,
   outsourceRatio: 35,
@@ -1878,18 +1901,19 @@ export const dashboardStats = {
   efficiencyGrade: 'A+',
   totalUsers: 856,
   todayActiveUsers: 342,
-  todayTaskCount: 1580,
+  todaySessionCount: 1580,
   avgResponseTime: '2.1s',
+  avgSessionDuration: '4.6min',
 };
 
 export const tokensWeekly = [
-  { date: '03-06', text: 18200, multimodal: 4500 },
-  { date: '03-07', text: 21000, multimodal: 5200 },
-  { date: '03-08', text: 15600, multimodal: 3800 },
-  { date: '03-09', text: 19800, multimodal: 4100 },
-  { date: '03-10', text: 22500, multimodal: 5800 },
-  { date: '03-11', text: 24100, multimodal: 6200 },
-  { date: '03-12', text: 20800, multimodal: 5000 },
+  { date: '03-06', input: 13100, output: 9600, total: 22700 },
+  { date: '03-07', input: 15100, output: 11100, total: 26200 },
+  { date: '03-08', input: 11200, output: 8200, total: 19400 },
+  { date: '03-09', input: 13800, output: 10100, total: 23900 },
+  { date: '03-10', input: 16300, output: 12000, total: 28300 },
+  { date: '03-11', input: 17400, output: 12900, total: 30300 },
+  { date: '03-12', input: 14900, output: 10900, total: 25800 },
 ];
 
 export const userUsageTrend = [
@@ -1911,6 +1935,25 @@ export const monthlyStats = [
   { month: '2026-03', employees: 1248, users: 856, tokens: 152.8, tasks: 15200 },
 ];
 
+/** Tokens 消耗月度趋势（近 6 个月） */
+export const tokensMonthlyTrend = monthlyStats.map((m) => {
+  const total = Math.round(m.tokens * 10000);
+  return {
+    date: m.month,
+    input: Math.round(total * 0.68),
+    output: Math.round(total * 0.32),
+    total,
+  };
+});
+
+/** 用户使用月度趋势（近 6 个月） */
+export const userUsageMonthlyTrend = monthlyStats.map((m) => ({
+  date: m.month,
+  users: m.users,
+  sessions: Math.round(m.tasks * 1.85),
+  tasks: m.tasks,
+}));
+
 export const levelDistribution = [
   { name: '工具型', value: 0, color: CAPABILITY_LEVEL_COLORS.工具型 },
   { name: '智能型', value: 0, color: CAPABILITY_LEVEL_COLORS.智能型 },
@@ -1929,6 +1972,14 @@ export const getCapabilityLevelDistribution = () => {
     color: CAPABILITY_LEVEL_COLORS[name],
   }));
 };
+
+/** 按所属条线统计数字员工数量（返回全部条线，无数据记为 0） */
+export const getBusinessLineDistribution = () =>
+  BUSINESS_LINES.map((name) => ({
+    name,
+    value: digitalEmployees.filter((e) => getEmployeeBusinessLine(e) === name).length,
+    color: BUSINESS_LINE_COLORS[name],
+  }));
 
 export const departmentUsage = [
   { department: '客户服务部', users: 120, sessions: 5800, tasks: 3200 },
