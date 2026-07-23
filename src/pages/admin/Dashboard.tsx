@@ -1,5 +1,5 @@
 import React, { useState, useMemo, type ReactNode } from 'react';
-import { Card, Row, Col, Tag, Button, DatePicker, Table, Tooltip as AntTooltip, message, Input, Space, Select, Modal, Segmented, Avatar } from 'antd';
+import { Card, Tag, Button, DatePicker, Table, Tooltip as AntTooltip, message, Input, Space, Select, Modal, Segmented, Avatar } from 'antd';
 import {
   HeartOutlined,
   TeamOutlined,
@@ -269,7 +269,7 @@ type KpiItem = {
   stats?: KpiStat[];
   tinted?: boolean;
   /** 二次计算口径说明 */
-  tip?: string;
+  tip?: ReactNode;
   /** 右上角操作（如「更多」） */
   extra?: ReactNode;
 };
@@ -559,9 +559,16 @@ const TOKEN_TREND_LEGEND_KEYS: Record<string, string> = {
 };
 
 const resolveLegendDataKey = (
-  entry: { dataKey?: string | number; value?: string; payload?: { dataKey?: string | number } },
+  entry: {
+    dataKey?: string | number | ((obj: unknown) => unknown);
+    value?: string | number;
+    payload?: { dataKey?: string | number | ((obj: unknown) => unknown) };
+  },
   nameMap: Record<string, string>,
-) => String(entry.dataKey ?? entry.payload?.dataKey ?? nameMap[String(entry.value)] ?? '');
+) => {
+  const raw = entry.dataKey ?? entry.payload?.dataKey ?? nameMap[String(entry.value)] ?? '';
+  return typeof raw === 'function' ? String(nameMap[String(entry.value)] ?? '') : String(raw);
+};
 
 const TokensTrendChart: React.FC<{ data: TokenTrendRow[] }> = ({ data }) => {
   const [hiddenKeys, setHiddenKeys] = useState<Set<string>>(new Set());
