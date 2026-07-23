@@ -71,7 +71,7 @@ const AdminLayout: React.FC = () => {
         {
           key: '/admin/alerts',
           icon: <AlertOutlined />,
-          label: <span>数字人预警 <Badge count={3} size="small" offset={[6, -2]} /></span>,
+          label: <span>数字人预警 <Badge count={18} size="small" offset={[6, -2]} /></span>,
           permission: 'alerts',
         },
       ],
@@ -150,7 +150,7 @@ const AdminLayout: React.FC = () => {
                 { label: '审计角色', value: '审计角色' },
               ]}
             />
-            <Badge count={3} size="small">
+            <Badge count={18} size="small">
               <BellOutlined
                 style={{ fontSize: 16, cursor: 'pointer', color: 'rgba(0,0,0,0.65)' }}
                 onClick={() => navigate('/admin/alerts')}

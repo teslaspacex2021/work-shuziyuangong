@@ -132,6 +132,12 @@ const AlertsWarning: React.FC = () => {
       >
         <List
           dataSource={filteredAlerts}
+          pagination={{
+            pageSize: 8,
+            showSizeChanger: true,
+            pageSizeOptions: ['8', '12', '20'],
+            showTotal: (total) => `共 ${total} 条`,
+          }}
           renderItem={(item) => (
             <List.Item
               actions={[

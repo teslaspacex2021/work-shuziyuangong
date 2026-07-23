@@ -539,6 +539,7 @@
 .dash-kpi-strip .dash-kpi-value {
   font-size: 20px;
   margin: 6px 0 0;
+  white-space: nowrap;
 }
 
 /* —— 等高校对：趋势 ‖ 级别 —— */
@@ -1128,6 +1129,19 @@
 .dash-ranking-table .capability-level-tag {
   display: inline-block;
   white-space: nowrap;
+}
+
+.dash-dept-emp-modal-table .ant-table-thead > tr > th {
+  white-space: nowrap;
+}
+
+.dash-dept-emp-modal-table .ant-table-column-sorters {
+  flex-wrap: nowrap;
+}
+
+.dash-dept-emp-modal-table .dash-metric-label {
+  white-space: nowrap;
+  flex-wrap: nowrap;
 }
 
 @media (max-width: 1280px) {

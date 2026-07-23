@@ -1457,6 +1457,27 @@ export const alerts: AlertItem[] = [
   { id: 'A010', type: '绩效考评', title: '2025年Q4季度考核 - HR审核', description: '2025年第四季度基干及员工考核待HR审核', level: 'info', time: '2026-03-14 10:00', handled: false },
   { id: 'A011', type: '员工信息调整', title: '小翼·客服 信息变更审批', description: '小翼·客服的Tokens配额变更待审批', level: 'info', time: '2026-03-13 14:00', handled: false },
   { id: 'A012', type: '员工信息调整', title: '小翼·数据 岗位调整审批', description: '小翼·数据的岗位信息变更待审批', level: 'info', time: '2026-03-12 16:00', handled: false },
+  // 风险预警扩展数据（模拟列表数据较多场景）
+  { id: 'A013', type: '风险预警', title: '小翼·经分 API 调用频率超限', description: 'DE-2026010 近1小时调用大模型接口 1,280 次，超过阈值 1,000 次/小时', level: 'critical', time: '2026-03-12 11:45', handled: false },
+  { id: 'A014', type: '风险预警', title: '翼答智能体 平均响应延迟飙升', description: '翼答 V3.1 近30分钟 P95 延迟 8.6s，超过 SLA 阈值 5s', level: 'critical', time: '2026-03-12 11:20', handled: false },
+  { id: 'A015', type: '风险预警', title: 'IT运维手册 知识库同步失败', description: 'KB006 增量同步任务失败，已连续 2 次重试未成功，影响运维问答', level: 'critical', time: '2026-03-12 10:55', handled: false },
+  { id: 'A016', type: '风险预警', title: '小翼·客服 定时任务连续失败', description: 'DE-2026001「客户满意度周报」定时任务近 3 次执行失败，错误码 E_CONN_RESET', level: 'critical', time: '2026-03-12 10:30', handled: false },
+  { id: 'A017', type: '风险预警', title: '检测到异常 API 密钥调用', description: '来自未知 IP 段 203.0.113.0/24 的 API 调用 47 次，疑似密钥泄露', level: 'critical', time: '2026-03-12 09:15', handled: false },
+  { id: 'A018', type: '风险预警', title: '推理节点 GPU 显存占用过高', description: '集群 node-gpu-03 显存使用率 94%，可能影响小翼·数据、小翼·经分推理任务', level: 'critical', time: '2026-03-12 08:40', handled: true },
+  { id: 'A019', type: '风险预警', title: '小翼·人力 工作日高峰离线', description: 'DE-2026005 在 09:00–11:00 业务高峰时段处于离线状态，影响简历筛选', level: 'warning', time: '2026-03-12 08:20', handled: false },
+  { id: 'A020', type: '风险预警', title: '小翼·审计 Tokens 消耗异常激增', description: 'DE-2026004 今日 Tokens 消耗较 7 日均值高 218%，疑似批量任务未限流', level: 'warning', time: '2026-03-12 07:50', handled: false },
+  { id: 'A021', type: '风险预警', title: '训练数据集 质量抽检未通过', description: '批次 DS-20260311 抽检 500 条，标签一致率 78.4%，低于标准 90%', level: 'warning', time: '2026-03-11 22:10', handled: false },
+  { id: 'A022', type: '风险预警', title: 'CRM 集成 Webhook 超时', description: '小翼·市场商机同步至 CRM 的 Webhook 连续 5 次超时（>30s）', level: 'warning', time: '2026-03-11 20:35', handled: true },
+  { id: 'A023', type: '风险预警', title: '小翼·财务 越权工具调用尝试', description: 'DE-2026006 尝试调用未授权「预算调整」工具 3 次，已被策略拦截', level: 'critical', time: '2026-03-11 18:00', handled: false },
+  { id: 'A024', type: '风险预警', title: '用户满意度 周环比下降', description: '小翼·客服负责渠道本周满意度 3.2★，较上周下降 0.8★，低于预警线 3.5★', level: 'warning', time: '2026-03-11 17:30', handled: false },
+  { id: 'A025', type: '风险预警', title: '小翼·文件 智能体版本不一致', description: 'DE-2026009 绑定翼文件 V2.0，平台最新为 V2.3，存在能力缺失风险', level: 'warning', time: '2026-03-11 16:45', handled: true },
+  { id: 'A026', type: '风险预警', title: '向量库存储配额即将用尽', description: '知识库向量索引占用 92.6%（46.3GB/50GB），预计 3 天内满载', level: 'warning', time: '2026-03-11 15:20', handled: false },
+  { id: 'A027', type: '风险预警', title: '小翼·标注 微调任务停滞', description: '训练任务 TR-20260310 已 6 小时无进度更新，状态仍为「运行中」', level: 'critical', time: '2026-03-11 14:00', handled: false },
+  { id: 'A028', type: '风险预警', title: '同用户短时间大量会话', description: '用户 uid_88421 在 10 分钟内发起 86 次会话，疑似异常刷量', level: 'warning', time: '2026-03-11 13:25', handled: true },
+  { id: 'A029', type: '风险预警', title: '敏感词合规检测命中', description: '小翼·市场生成营销文案命中敏感词规则 12 次，已自动拦截发布', level: 'warning', time: '2026-03-11 11:50', handled: false },
+  { id: 'A030', type: '风险预警', title: '模型网关 SSL 证书即将过期', description: 'api.llm-gateway.internal 证书将于 7 天后过期，需尽快续签', level: 'warning', time: '2026-03-11 10:00', handled: false },
+  { id: 'A031', type: '风险预警', title: 'Elasticsearch 检索服务不可用', description: '知识检索依赖 ES 集群 health=red，小翼·客服、小翼·审计问答受影响', level: 'critical', time: '2026-03-10 16:20', handled: true },
+  { id: 'A032', type: '风险预警', title: '小翼·运维 能力评级待降级', description: 'DE-2026007 近30天任务完成率 41%，低于岗位基准 60%，建议能力复核', level: 'warning', time: '2026-03-10 14:30', handled: false },
 ];
 
 export const positions: PositionItem[] = [
@@ -1882,16 +1903,16 @@ export const conversations: ConversationItem[] = [
 export const dashboardStats = {
   totalEmployees: 1248,
   totalAgents: 3560,
-  todayTokens: '45.2M',
+  todayTokens: '0.45亿',
   /** 近 7 / 30 天上新数字员工数 */
   newEmployees7d: 18,
   newEmployees30d: 86,
   /** 近 7 / 30 天 Tokens 消耗 */
-  tokens7d: '12.8M',
-  tokens30d: '48.6M',
+  tokens7d: '0.13亿',
+  tokens30d: '0.49亿',
   /** 统计周期内输入 / 输出 Tokens */
-  tokensInput: '31.6M',
-  tokensOutput: '13.6M',
+  tokensInput: '0.32亿',
+  tokensOutput: '0.14亿',
   avgTaskRate: 94.8,
   ownRatio: 65,
   outsourceRatio: 35,
